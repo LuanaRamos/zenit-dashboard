@@ -4,6 +4,7 @@ from api.meta_client import MetaAdsClient
 from api.instagram_client import InstagramClient
 from schemas.meta import CampaignInsight, PageInsight
 from schemas.instagram import InstagramMedia
+import datetime
 
 @st.cache_resource
 def get_api_client() -> MetaAdsClient:
@@ -16,7 +17,7 @@ def get_instagram_client() -> InstagramClient:
     return InstagramClient()
 
 @st.cache_resource(ttl=3600)
-def fetch_campaigns_v6(date_preset: str) -> List[CampaignInsight]:
+def fetch_campaigns_v8(date_preset: str) -> List[CampaignInsight]:
     client = get_api_client()
     return client.get_campaign_insights(date_preset=date_preset)
 
@@ -25,22 +26,23 @@ def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
-def fetch_organic_v6(date_preset: str) -> List[InstagramMedia]:
+def fetch_organic_v8(date_preset: str) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
-    
-    Matemática Diamante:
-    - Cruza effective_instagram_story_id com ads para pegar Cliques e Impressões.
-    - Calcula CTR e Frequência ponderados.
-    - Subtrai o Reach Pago do Reach Total para revelar o Alcance Puramente Orgânico.
     """
     ig_client = get_instagram_client()
     meta_client = get_api_client()
     
-    # 1. Puxar as mídias recentes e o alcance global de cada uma
-    limit = 365 if date_preset == "maximum" else 40
-    media_list = ig_client.get_recent_media(limit=limit)
+    # 1. Puxar as mídias recentes usando paginação real baseada em data
+    if date_preset == "maximum":
+        # 1 ano exato para trás em Unix Timestamp
+        one_year_ago = int((datetime.datetime.now() - datetime.timedelta(days=365)).timestamp())
+        media_list = ig_client.get_recent_media(limit=100, since_timestamp=one_year_ago)
+    else:
+        # 30 dias exatos para trás em Unix Timestamp
+        thirty_days_ago = int((datetime.datetime.now() - datetime.timedelta(days=30)).timestamp())
+        media_list = ig_client.get_recent_media(limit=100, since_timestamp=thirty_days_ago)
     
     # 2. Puxar o dicionário unificado de anúncios (sem N+1 queries)
     ads_mapping = meta_client.get_ads_reach_mapping()
