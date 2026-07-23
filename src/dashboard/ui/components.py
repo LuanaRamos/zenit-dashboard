@@ -102,7 +102,7 @@ def render_general_campaigns(campaigns: List[CampaignInsight], title: str = "Out
     for c in campaigns:
         data.append({
             "Campanha": c.campaign_name,
-            "Objetivo": c.objective,
+            "Objetivo": c.objective_friendly,
             "Gastos (R$)": round(c.spend, 2),
             "Impressões": c.impressions,
             "Cliques": c.clicks,

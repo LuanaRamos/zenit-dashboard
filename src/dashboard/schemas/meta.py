@@ -6,6 +6,29 @@ class CampaignInsight(BaseModel):
     Representa as métricas de performance de uma campanha no Meta Ads.
     Todos os campos possuem valores default para evitar crashes se a Meta não retornar a chave.
     """
+    OBJECTIVE_MAPPING = {
+        "OUTCOME_AWARENESS": "Reconhecimento",
+        "OUTCOME_TRAFFIC": "Tráfego",
+        "OUTCOME_ENGAGEMENT": "Engajamento",
+        "OUTCOME_LEADS": "Cadastros",
+        "OUTCOME_APP_PROMOTION": "Promoção de App",
+        "OUTCOME_SALES": "Vendas",
+        "LINK_CLICKS": "Tráfego (Cliques no Link)",
+        "POST_ENGAGEMENT": "Engajamento",
+        "PAGE_LIKES": "Curtidas na Página",
+        "EVENT_RESPONSES": "Resposta a Eventos",
+        "MESSAGES": "Mensagens",
+        "VIDEO_VIEWS": "Visualizações de Vídeo",
+        "LEAD_GENERATION": "Geração de Cadastros",
+        "APP_INSTALLS": "Instalações do App",
+        "CONVERSIONS": "Conversões",
+        "PRODUCT_CATALOG_SALES": "Vendas do Catálogo",
+        "STORE_VISITS": "Visitas à Loja",
+        "BRAND_AWARENESS": "Reconhecimento de Marca",
+        "REACH": "Alcance",
+        "LOCAL_AWARENESS": "Reconhecimento Local"
+    }
+
     campaign_name: str = Field(default="Campanha Desconhecida", alias="campaign_name")
     campaign_id: str = Field(default="", alias="campaign_id")
     objective: str = Field(default="UNKNOWN", description="Objetivo ODAX da Campanha")
@@ -29,6 +52,11 @@ class CampaignInsight(BaseModel):
     cost_per_profile_visit: float = Field(default=0.0)
     
     roas: float = Field(default=0.0)
+
+    @property
+    def objective_friendly(self) -> str:
+        """Retorna o nome do objetivo traduzido e amigável para a UI."""
+        return self.OBJECTIVE_MAPPING.get(self.objective, self.objective)
 
     @classmethod
     def from_api_response(cls, data: dict[str, Any]) -> "CampaignInsight":
