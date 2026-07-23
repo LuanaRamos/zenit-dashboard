@@ -55,9 +55,9 @@ def main():
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Filtragem inteligente por Objetivo ODAX ou presença de métricas fortes
-            whatsapp_campaigns = [c for c in campaigns if c.objective == "OUTCOME_ENGAGEMENT" or c.whatsapp_starts > 0]
-            profile_campaigns = [c for c in campaigns if c.objective == "OUTCOME_TRAFFIC" or c.instagram_follows > 0 or c.profile_visits > 0]
+            # Filtragem inteligente por Objetivo ODAX, Legacy ou presença de métricas fortes
+            whatsapp_campaigns = [c for c in campaigns if c.objective in ["OUTCOME_ENGAGEMENT", "MESSAGES"] or c.whatsapp_starts > 0]
+            profile_campaigns = [c for c in campaigns if c.objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS"] or c.instagram_follows > 0 or c.profile_visits > 0]
             
             # As demais que não caíram nos filtros primários
             general_campaigns = [c for c in campaigns if c not in whatsapp_campaigns and c not in profile_campaigns]
