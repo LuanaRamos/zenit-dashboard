@@ -28,41 +28,57 @@ def main():
     if "data_loaded" not in st.session_state:
         st.session_state["data_loaded"] = False
         
-    render_sidebar()
+    selected_module = render_sidebar()
     
-    st.title("Visão Geral das Campanhas")
-    st.markdown("Acompanhe o retorno sobre o investimento da **CA MS - 01** em tempo real.")
-    
-    try:
-        # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
-        with st.spinner("Consultando Graph API..."):
-            campaigns = load_campaigns_data()
-            
-        if not campaigns:
-            st.warning("Nenhuma campanha encontrada nos últimos 30 dias.")
-            return
-            
-        # Agregações simples para os cards
-        total_spend = sum(c.spend for c in campaigns)
-        total_leads = sum(c.leads for c in campaigns)
-        avg_cpl = total_spend / total_leads if total_leads > 0 else 0.0
+    if selected_module == "📈 Visão Geral (Ads)":
+        st.title("Visão Geral das Campanhas")
+        st.markdown("Acompanhe o retorno sobre o investimento da **CA MS - 01** em tempo real.")
         
-        # Renderiza a UI
-        st.markdown("<br>", unsafe_allow_html=True)
-        render_metric_cards(total_spend, total_leads, avg_cpl)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        render_campaign_table(campaigns)
+        try:
+            # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
+            with st.spinner("Consultando Graph API..."):
+                campaigns = load_campaigns_data()
+                
+            if not campaigns:
+                st.warning("Nenhuma campanha encontrada nos últimos 30 dias.")
+                return
+                
+            # Agregações simples para os cards
+            total_spend = sum(c.spend for c in campaigns)
+            total_leads = sum(c.leads for c in campaigns)
+            avg_cpl = total_spend / total_leads if total_leads > 0 else 0.0
+            
+            # Renderiza a UI
+            st.markdown("<br>", unsafe_allow_html=True)
+            render_metric_cards(total_spend, total_leads, avg_cpl)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            render_campaign_table(campaigns)
 
-        st.session_state["data_loaded"] = True
+            st.session_state["data_loaded"] = True
+            
+        except MetaAPIError as e:
+            # Trata os erros de token, permissão ou rede amigavelmente na UI
+            st.error("Falha ao se conectar com a Meta API.")
+            st.exception(e)
+        except Exception as e:
+            st.error("Ocorreu um erro inesperado interno no Dashboard.")
+            st.exception(e)
+            
+    elif selected_module == "📱 Orgânico (Instagram)":
+        st.title("📱 Desempenho Orgânico (Instagram)")
+        st.markdown("Acompanhe as métricas do seu perfil do Instagram em tempo real.")
         
-    except MetaAPIError as e:
-        # Trata os erros de token, permissão ou rede amigavelmente na UI
-        st.error("Falha ao se conectar com a Meta API.")
-        st.exception(e)
-    except Exception as e:
-        st.error("Ocorreu um erro inesperado interno no Dashboard.")
-        st.exception(e)
+        # Placeholder bonito enquanto não temos a API do instagram integrada
+        st.info("👋 Olá! O módulo de relatórios orgânicos do Instagram está sendo construído.")
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Seguidores", "Em breve", "---")
+        col2.metric("Alcance", "Em breve", "---")
+        col3.metric("Engajamento", "Em breve", "---")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.warning("Para puxar os dados do Instagram, precisaremos de um token com as permissões **instagram_basic** e **instagram_manage_insights**, além de vincular a conta do Insta à página do Facebook.")
 
 if __name__ == "__main__":
     main()

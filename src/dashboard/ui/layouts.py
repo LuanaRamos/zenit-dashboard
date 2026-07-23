@@ -3,18 +3,17 @@ import streamlit as st
 def render_sidebar():
     """
     Configura e renderiza a barra lateral de navegação e filtros.
+    Retorna o módulo selecionado.
     """
     with st.sidebar:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/2560px-Meta_Platforms_Inc._logo.svg.png", width=150)
-        st.title("Meta Ads Dashboard")
+        st.markdown("## 🌐 Meta Platforms")
+        st.title("Zenit Dashboard")
         st.markdown("---")
         
-        st.markdown(
-            """
-            **Módulos**
-            - 📈 Visão Geral (Ads)
-            - 📱 Orgânico (Instagram)
-            """
+        # O rádio permite clicar e trocar de tela
+        selected_module = st.radio(
+            "Módulos",
+            ["📈 Visão Geral (Ads)", "📱 Orgânico (Instagram)"]
         )
         
         st.markdown("---")
@@ -23,3 +22,5 @@ def render_sidebar():
         if st.button("🔄 Forçar Atualização"):
             st.cache_data.clear()
             st.rerun()
+            
+    return selected_module
