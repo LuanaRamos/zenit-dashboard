@@ -6,10 +6,11 @@ from pathlib import Path
 # Adiciona o diretório dashboard ao path para permitir imports absolutos internos
 sys.path.append(str(Path(__file__).parent))
 
-from api.meta_client import MetaAPIError
-from ui.data_loader import load_campaigns_data
+from api.exceptions import MetaAPIError, InstagramAPIError
+from ui.data_loader import load_campaigns_data, load_organic_data
 from ui.layouts import render_sidebar
 from ui.components import render_metric_cards, render_campaign_table
+from ui.organic_components import render_organic_metrics_cards, render_posts_table
 
 
 # Configuração do Logging
@@ -67,18 +68,27 @@ def main():
             
     elif selected_module == "📱 Orgânico (Instagram)":
         st.title("📱 Desempenho Orgânico (Instagram)")
-        st.markdown("Acompanhe as métricas do seu perfil do Instagram em tempo real.")
+        st.markdown("Acompanhe e isole as métricas do seu perfil separando Tráfego Pago do Orgânico.")
         
-        # Placeholder bonito enquanto não temos a API do instagram integrada
-        st.info("👋 Olá! O módulo de relatórios orgânicos do Instagram está sendo construído.")
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Seguidores", "Em breve", "---")
-        col2.metric("Alcance", "Em breve", "---")
-        col3.metric("Engajamento", "Em breve", "---")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.warning("Para puxar os dados do Instagram, precisaremos de um token com as permissões **instagram_basic** e **instagram_manage_insights**, além de vincular a conta do Insta à página do Facebook.")
+        try:
+            with st.spinner("Consultando Instagram Graph API e extraindo dados dos anúncios..."):
+                media_list = load_organic_data()
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+            render_organic_metrics_cards(media_list)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            render_posts_table(media_list)
+            
+        except InstagramAPIError as e:
+            st.error("Falha de Comunicação com o Instagram.")
+            st.error(str(e))
+        except MetaAPIError as e:
+            st.error("Falha ao cruzar dados com os anúncios do Facebook.")
+            st.error(str(e))
+        except Exception as e:
+            st.error("Erro Inesperado.")
+            st.exception(e)
 
 if __name__ == "__main__":
     main()

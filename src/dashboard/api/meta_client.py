@@ -1,14 +1,11 @@
 import requests
 import logging
-from typing import List
+from typing import List, Dict, Any
 from core.config import settings
 from schemas.meta import CampaignInsight
+from api.exceptions import MetaAPIError
 
 logger = logging.getLogger(__name__)
-
-class MetaAPIError(Exception):
-    """Exceção customizada para erros da API da Meta."""
-    pass
 
 class MetaAdsClient:
     """
@@ -70,3 +67,72 @@ class MetaAdsClient:
             insights.append(CampaignInsight.from_api_response(item))
             
         return insights
+
+    def get_ads_reach_mapping(self) -> Dict[str, Dict[str, int]]:
+        """
+        Busca insights de todos os anúncios e agrupa pelo ID do post do Instagram
+        para cálculo do tráfego pago vs orgânico. Alta performance: Sem N+1 queries.
+        
+        Returns:
+            Dict[str, Dict[str, int]]: Mapa com a chave sendo o 'effective_instagram_story_id' e o 
+                                       valor sendo a soma de reach, impressions e clicks.
+        """
+        # Passo 1: Buscar insights de todos os ads na conta de uma vez (evita bater na API 50 vezes)
+        insights_endpoint = f"{self.ad_account_id}/insights"
+        insights_params = {
+            "level": "ad",
+            "fields": "ad_id,reach,impressions,clicks",
+            "date_preset": "maximum",
+            "limit": "1000"
+        }
+        
+        # Usamos uma lista para pegar todos os dados caso tenha paginação (aqui focamos nos primeiros 1000 ads)
+        try:
+            insights_data = self._make_request(insights_endpoint, insights_params).get("data", [])
+        except MetaAPIError as e:
+            logger.warning(f"Erro ao buscar insights de anúncios (Organic mapping): {e}")
+            return {}
+
+        # Mapeia ad_id -> métricas
+        ad_metrics_map = {}
+        for item in insights_data:
+            ad_id = item.get("ad_id")
+            if ad_id:
+                ad_metrics_map[ad_id] = {
+                    "reach": int(item.get("reach", 0)),
+                    "impressions": int(item.get("impressions", 0)),
+                    "clicks": int(item.get("clicks", 0))
+                }
+                
+        # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (effective_instagram_story_id)
+        ads_endpoint = f"{self.ad_account_id}/ads"
+        ads_params = {
+            "fields": "id,creative{effective_instagram_story_id}",
+            "limit": "1000"
+        }
+        
+        try:
+            ads_data = self._make_request(ads_endpoint, ads_params).get("data", [])
+        except MetaAPIError as e:
+            logger.warning(f"Erro ao buscar lista de anúncios (Organic mapping): {e}")
+            return {}
+            
+        # Passo 3: Agrupar as métricas baseadas no Instagram Post ID
+        ig_mapping = {}
+        for ad in ads_data:
+            ad_id = ad.get("id")
+            creative = ad.get("creative", {})
+            ig_id = creative.get("effective_instagram_story_id")
+            
+            # Se esse anúncio está atrelado a um post do IG e possui métricas registradas
+            if ig_id and ad_id in ad_metrics_map:
+                metrics = ad_metrics_map[ad_id]
+                
+                if ig_id not in ig_mapping:
+                    ig_mapping[ig_id] = {"reach": 0, "impressions": 0, "clicks": 0}
+                    
+                ig_mapping[ig_id]["reach"] += metrics["reach"]
+                ig_mapping[ig_id]["impressions"] += metrics["impressions"]
+                ig_mapping[ig_id]["clicks"] += metrics["clicks"]
+                
+        return ig_mapping
