@@ -16,16 +16,16 @@ def get_instagram_client() -> InstagramClient:
     return InstagramClient()
 
 @st.cache_resource(ttl=3600)
-def fetch_campaigns_v4() -> List[CampaignInsight]:
+def fetch_campaigns_v5(date_preset: str) -> List[CampaignInsight]:
     client = get_api_client()
-    return client.get_campaign_insights()
+    return client.get_campaign_insights(date_preset=date_preset)
 
 @st.cache_data(ttl=3600)
 def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
-def fetch_organic_v3() -> List[InstagramMedia]:
+def fetch_organic_v5(date_preset: str) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
@@ -39,7 +39,8 @@ def fetch_organic_v3() -> List[InstagramMedia]:
     meta_client = get_api_client()
     
     # 1. Puxar as mídias recentes e o alcance global de cada uma
-    media_list = ig_client.get_recent_media(limit=30)
+    limit = 200 if date_preset == "maximum" else 40
+    media_list = ig_client.get_recent_media(limit=limit)
     
     # 2. Puxar o dicionário unificado de anúncios (sem N+1 queries)
     ads_mapping = meta_client.get_ads_reach_mapping()

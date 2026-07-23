@@ -48,16 +48,16 @@ class MetaAdsClient:
             logger.error(f"Erro de rede ao consultar a Meta: {e}")
             raise MetaAPIError("Não foi possível conectar aos servidores da Meta. Verifique sua conexão.")
 
-    def get_campaign_insights(self) -> List[CampaignInsight]:
+    def get_campaign_insights(self, date_preset: str = "last_30d") -> List[CampaignInsight]:
         """
-        Busca os insights a nível de campanha dos últimos 30 dias.
+        Busca os insights a nível de campanha com base no período selecionado.
         Inclui o objetivo da campanha para renderização dinâmica (ODAX).
         """
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
             "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions",
-            "date_preset": "last_30d"
+            "date_preset": date_preset
         }
 
         data = self._make_request(endpoint, params)

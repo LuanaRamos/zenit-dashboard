@@ -16,6 +16,16 @@ def render_sidebar():
             ["📈 Visão Geral (Ads)", "📱 Orgânico (Instagram)"]
         )
         
+        # Filtro de Tempo Global
+        st.markdown("---")
+        periodo_selecionado = st.selectbox(
+            "Período de Análise",
+            ["Últimos 30 Dias", "Desde o Início (Máximo)"]
+        )
+        
+        # Mapear a escolha para o padrão da Meta API
+        date_preset = "maximum" if periodo_selecionado == "Desde o Início (Máximo)" else "last_30d"
+
         st.markdown("---")
         st.caption("Atualizado em tempo real via Meta Graph API v20.0")
         
@@ -24,4 +34,4 @@ def render_sidebar():
             st.cache_resource.clear()
             st.rerun()
             
-    return selected_module
+    return selected_module, date_preset
