@@ -16,7 +16,7 @@ def get_instagram_client() -> InstagramClient:
     return InstagramClient()
 
 @st.cache_data(ttl=3600)
-def load_campaigns_data() -> List[CampaignInsight]:
+def fetch_campaigns_data_v2() -> List[CampaignInsight]:
     client = get_api_client()
     return client.get_campaign_insights()
 
@@ -25,7 +25,7 @@ def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_data(ttl=900)
-def load_organic_data() -> List[InstagramMedia]:
+def fetch_organic_data_v2() -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
