@@ -51,11 +51,12 @@ class MetaAdsClient:
     def get_campaign_insights(self) -> List[CampaignInsight]:
         """
         Busca os insights a nível de campanha dos últimos 30 dias.
+        Inclui o objetivo da campanha para renderização dinâmica (ODAX).
         """
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,spend,impressions,clicks,cpc,cpm,actions",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions,instagram_follows",
             "date_preset": "last_30d"
         }
 

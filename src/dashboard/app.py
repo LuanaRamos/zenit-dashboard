@@ -9,7 +9,7 @@ sys.path.append(str(Path(__file__).parent))
 from api.exceptions import MetaAPIError, InstagramAPIError
 from ui.data_loader import load_campaigns_data, load_organic_data
 from ui.layouts import render_sidebar
-from ui.components import render_metric_cards, render_campaign_table
+from ui.components import render_metric_cards, render_whatsapp_campaigns, render_profile_campaigns, render_general_campaigns
 from ui.organic_components import render_organic_metrics_cards, render_posts_table
 
 
@@ -54,7 +54,22 @@ def main():
             render_metric_cards(total_spend, total_leads, avg_cpl)
             
             st.markdown("<br>", unsafe_allow_html=True)
-            render_campaign_table(campaigns)
+            
+            # Filtragem inteligente por Objetivo ODAX ou presença de métricas fortes
+            whatsapp_campaigns = [c for c in campaigns if c.objective == "OUTCOME_ENGAGEMENT" or c.whatsapp_starts > 0]
+            profile_campaigns = [c for c in campaigns if c.objective == "OUTCOME_TRAFFIC" or c.instagram_follows > 0 or c.profile_visits > 0]
+            
+            # As demais que não caíram nos filtros primários
+            general_campaigns = [c for c in campaigns if c not in whatsapp_campaigns and c not in profile_campaigns]
+
+            # Renderizar Dinamicamente
+            render_whatsapp_campaigns(whatsapp_campaigns)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            render_profile_campaigns(profile_campaigns)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            render_general_campaigns(general_campaigns)
 
             st.session_state["data_loaded"] = True
             

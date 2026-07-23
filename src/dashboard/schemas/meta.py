@@ -8,13 +8,26 @@ class CampaignInsight(BaseModel):
     """
     campaign_name: str = Field(default="Campanha Desconhecida", alias="campaign_name")
     campaign_id: str = Field(default="", alias="campaign_id")
+    objective: str = Field(default="UNKNOWN", description="Objetivo ODAX da Campanha")
     spend: float = Field(default=0.0)
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
+    
+    # Métricas Específicas Dinâmicas
     leads: int = Field(default=0)
     cpl: float = Field(default=0.0)
+    
+    whatsapp_starts: int = Field(default=0, description="Conversas Iniciadas por Mensagem")
+    cost_per_whatsapp: float = Field(default=0.0)
+    
+    instagram_follows: int = Field(default=0, description="Seguidores no Instagram Gerados")
+    cost_per_follower: float = Field(default=0.0)
+    
+    profile_visits: int = Field(default=0, description="Visitas ao Perfil")
+    cost_per_profile_visit: float = Field(default=0.0)
+    
     roas: float = Field(default=0.0)
 
     @classmethod
@@ -27,6 +40,7 @@ class CampaignInsight(BaseModel):
         parsed_data = {
             "campaign_name": data.get("campaign_name", "Campanha Desconhecida"),
             "campaign_id": data.get("campaign_id", ""),
+            "objective": data.get("objective", "UNKNOWN"),
             "spend": float(data.get("spend", 0.0)),
             "impressions": int(data.get("impressions", 0)),
             "clicks": int(data.get("clicks", 0)),
@@ -34,22 +48,43 @@ class CampaignInsight(BaseModel):
             "cpm": float(data.get("cpm", 0.0))
         }
 
-        # Extrair leads (actions -> action_type == 'lead')
+        # Analisar o array de 'actions' para buscar eventos específicos
         actions = data.get("actions", [])
+        
         leads = 0
+        whatsapp_starts = 0
+        instagram_follows = int(data.get("instagram_follows", 0)) # Pode vir na raiz na API nova
+        profile_visits = 0
+        
         for action in actions:
-            if action.get("action_type") == "lead":
-                leads = int(action.get("value", 0))
-                break
-        parsed_data["leads"] = leads
+            act_type = action.get("action_type", "")
+            val = int(action.get("value", 0))
+            
+            if act_type == "lead":
+                leads += val
+            elif act_type == "onsite_conversion.messaging_conversation_started_7d" or "message" in act_type:
+                whatsapp_starts += val
+            elif act_type == "instagram_follows":
+                instagram_follows += val
+            elif act_type == "onsite_conversion.post_engagement" or "profile" in act_type:
+                profile_visits += val
 
-        # Calcular CPL se houver leads
+        parsed_data["leads"] = leads
+        parsed_data["whatsapp_starts"] = whatsapp_starts
+        parsed_data["instagram_follows"] = instagram_follows
+        parsed_data["profile_visits"] = profile_visits
+
+        # Calcular Custos
+        spend = parsed_data["spend"]
         if leads > 0:
-            parsed_data["cpl"] = parsed_data["spend"] / leads
-        
-        # O ROAS exigiria extrair do purchase_roas, vamos deixar 0.0 se não for e-commerce
-        # ou se não estiver no dict de action_values
-        
+            parsed_data["cpl"] = spend / leads
+        if whatsapp_starts > 0:
+            parsed_data["cost_per_whatsapp"] = spend / whatsapp_starts
+        if instagram_follows > 0:
+            parsed_data["cost_per_follower"] = spend / instagram_follows
+        if profile_visits > 0:
+            parsed_data["cost_per_profile_visit"] = spend / profile_visits
+            
         return cls(**parsed_data)
 
 class PageInsight(BaseModel):
