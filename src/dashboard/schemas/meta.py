@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import BaseModel, Field
 
 class CampaignInsight(BaseModel):
@@ -6,7 +6,7 @@ class CampaignInsight(BaseModel):
     Representa as métricas de performance de uma campanha no Meta Ads.
     Todos os campos possuem valores default para evitar crashes se a Meta não retornar a chave.
     """
-    OBJECTIVE_MAPPING = {
+    OBJECTIVE_MAPPING: ClassVar[dict[str, str]] = {
         "OUTCOME_AWARENESS": "Reconhecimento",
         "OUTCOME_TRAFFIC": "Tráfego",
         "OUTCOME_ENGAGEMENT": "Engajamento",
