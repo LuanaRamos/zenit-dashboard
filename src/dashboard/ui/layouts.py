@@ -20,11 +20,11 @@ def render_sidebar():
         st.markdown("---")
         periodo_selecionado = st.selectbox(
             "Período de Análise",
-            ["Últimos 30 Dias", "Desde o Início (Máximo)"]
+            ["Últimos 30 Dias", "Máximo (Ads: Sempre | Orgânico: 1 Ano)"]
         )
         
         # Mapear a escolha para o padrão da Meta API
-        date_preset = "maximum" if periodo_selecionado == "Desde o Início (Máximo)" else "last_30d"
+        date_preset = "maximum" if "Máximo" in periodo_selecionado else "last_30d"
 
         st.markdown("---")
         st.caption("Atualizado em tempo real via Meta Graph API v20.0")
