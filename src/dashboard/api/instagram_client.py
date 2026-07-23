@@ -48,12 +48,14 @@ class InstagramClient:
             logger.error(f"Erro de rede ao consultar o Instagram: {e}")
             raise InstagramAPIError("Não foi possível conectar aos servidores do Instagram. Verifique sua conexão.")
 
-    def get_recent_media(self, limit: int = 50) -> List[InstagramMedia]:
+    def get_recent_media(self, limit: int = 50, since_timestamp: int = None) -> List[InstagramMedia]:
         """
         Busca as publicações recentes da conta do Instagram e seus insights agregados.
+        Suporta filtro real de data (since) com paginação automática.
         
         Args:
-            limit (int): Número máximo de posts a retornar.
+            limit (int): Número de posts por página (max 100 recomendado).
+            since_timestamp (int, optional): Unix timestamp para puxar posts a partir dessa data.
             
         Returns:
             List[InstagramMedia]: Lista com as publicações parseadas e tipadas rigorosamente.
@@ -63,9 +65,37 @@ class InstagramClient:
             "fields": "id,caption,media_url,permalink,timestamp,like_count,comments_count,insights.metric(reach)",
             "limit": str(limit)
         }
+        
+        if since_timestamp:
+            params["since"] = str(since_timestamp)
 
-        data = self._make_request(endpoint, params)
-        media_items_data = data.get("data", [])
+        media_items_data = []
+        
+        # Loop de Paginação (com teto de segurança de 5 chamadas = 500 posts max para não travar a UI)
+        max_pages = 5
+        current_page = 0
+        
+        while current_page < max_pages:
+            try:
+                data = self._make_request(endpoint, params)
+                page_data = data.get("data", [])
+                if not page_data:
+                    break
+                    
+                media_items_data.extend(page_data)
+                
+                # Checar se há próxima página
+                paging = data.get("paging", {})
+                if "cursors" in paging and "after" in paging["cursors"]:
+                    params["after"] = paging["cursors"]["after"]
+                else:
+                    break  # Fim da paginação
+                
+                current_page += 1
+                
+            except Exception as e:
+                logger.warning(f"Erro durante a paginação do Instagram: {e}")
+                break
         
         media_list = []
         for item in media_items_data:
