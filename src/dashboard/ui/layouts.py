@@ -21,6 +21,7 @@ def render_sidebar():
         
         if st.button("🔄 Forçar Atualização"):
             st.cache_data.clear()
+            st.cache_resource.clear()
             st.rerun()
             
     return selected_module

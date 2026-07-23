@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 
 from api.exceptions import MetaAPIError, InstagramAPIError
-from ui.data_loader import fetch_campaigns_data_v2, fetch_organic_data_v2
+from ui.data_loader import fetch_campaigns_v3, fetch_organic_v3
 from ui.layouts import render_sidebar
 from ui.components import render_metric_cards, render_whatsapp_campaigns, render_profile_campaigns, render_general_campaigns
 from ui.organic_components import render_organic_metrics_cards, render_posts_table
@@ -38,7 +38,7 @@ def main():
         try:
             # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
             with st.spinner("Consultando Graph API..."):
-                campaigns = fetch_campaigns_data_v2()
+                campaigns = fetch_campaigns_v3()
                 
             if not campaigns:
                 st.warning("Nenhuma campanha encontrada nos últimos 30 dias.")
@@ -87,7 +87,7 @@ def main():
         
         try:
             with st.spinner("Consultando Instagram Graph API e extraindo dados dos anúncios..."):
-                media_list = fetch_organic_data_v2()
+                media_list = fetch_organic_v3()
                 
             st.markdown("<br>", unsafe_allow_html=True)
             render_organic_metrics_cards(media_list)
