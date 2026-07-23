@@ -56,7 +56,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions,instagram_follows",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions",
             "date_preset": "last_30d"
         }
 

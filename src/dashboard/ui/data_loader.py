@@ -16,7 +16,7 @@ def get_instagram_client() -> InstagramClient:
     return InstagramClient()
 
 @st.cache_resource(ttl=3600)
-def fetch_campaigns_v3() -> List[CampaignInsight]:
+def fetch_campaigns_v4() -> List[CampaignInsight]:
     client = get_api_client()
     return client.get_campaign_insights()
 
