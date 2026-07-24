@@ -131,12 +131,27 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         # View Mode Logic
         if "Apenas Orgânico" in view_mode:
             reach = m.organic_reach
+            likes = m.like_count
+            shares = m.shares
+            saved = m.saved
+            follows = m.follows
+            profile_visits = m.profile_visits
             if reach == 0 and m.paid_reach > 0: continue # Purely paid post
         elif "Apenas Pago" in view_mode:
             reach = m.paid_reach
+            likes = m.paid_likes
+            shares = m.paid_shares
+            saved = m.paid_saved
+            follows = 0 # Follows attribution in ads is handled in profile campaigns
+            profile_visits = 0
             if reach == 0: continue # Purely organic post
         else:
             reach = m.organic_reach + m.paid_reach
+            likes = m.total_likes
+            shares = m.total_shares
+            saved = m.total_saved
+            follows = m.follows
+            profile_visits = m.profile_visits
 
         # Fix attribute names matching InstagramMedia schema
         row = {
@@ -144,16 +159,16 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
             "Publicação": m.caption[:45] + "..." if m.caption else "Sem legenda",
             "Data": m.timestamp.split("T")[0] if m.timestamp else "-",
             "Alcance": reach,
-            "Likes": m.like_count,
+            "Likes": likes,
             "Comentários": m.comments_count,
-            "Shares": m.shares,
-            "Salvos": m.saved,
-            "Seguidores": m.follows,
-            "Visitas Perfil": m.profile_visits,
+            "Shares": shares,
+            "Salvos": saved,
+            "Seguidores": follows,
+            "Visitas Perfil": profile_visits,
         }
         
-        # Link in raw HTML
-        row["Visualizar no IG"] = f'<a href="{m.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if m.permalink else ""
+        # Link in raw HTML for st.markdown, but we are switching to st.dataframe which supports clickable URLs if configured, but let's just use the URL
+        row["Visualizar no IG"] = m.permalink
         data.append(row)
 
     # 2. Process Stories
@@ -170,10 +185,10 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
                 "Likes": s.replies, # Stories don't have public likes in the same way, using replies or 0
                 "Comentários": s.replies,
                 "Shares": 0,
-                "Salvos": "-",
-                "Seguidores": "-",
+                "Salvos": 0,
+                "Seguidores": 0,
                 "Visitas Perfil": 0,
-                "Visualizar no IG": f'<a href="{s.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if s.permalink else ""
+                "Visualizar no IG": s.permalink
             }
             data.append(row)
 
@@ -200,5 +215,21 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
     # Sort
     df = df.sort_values(by="Alcance", ascending=False)
     
-    # Render with glass table layout
-    render_glass_table(df)
+    # Use native st.dataframe for sorting and resizing
+    st.dataframe(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Visualizar no IG": st.column_config.LinkColumn(
+                "Link", help="Clique para abrir no Instagram", max_chars=100
+            ),
+            "Alcance": st.column_config.NumberColumn(format="%d"),
+            "Likes": st.column_config.NumberColumn(format="%d"),
+            "Comentários": st.column_config.NumberColumn(format="%d"),
+            "Shares": st.column_config.NumberColumn(format="%d"),
+            "Salvos": st.column_config.NumberColumn(format="%d"),
+            "Seguidores": st.column_config.NumberColumn(format="%d"),
+            "Visitas Perfil": st.column_config.NumberColumn(format="%d"),
+        }
+    )

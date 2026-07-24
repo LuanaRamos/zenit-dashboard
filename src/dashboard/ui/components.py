@@ -5,22 +5,28 @@ import plotly.graph_objects as go
 
 def render_glass_table(df: pd.DataFrame, currency_cols: list[str] = None) -> None:
     currency_cols = currency_cols or []
-    html = '<div class="glass-table-container"><table class="glass-table"><thead><tr>'
-    for col in df.columns: html += f"<th>{col}</th>"
-    html += "</tr></thead><tbody>"
-    for _, row in df.iterrows():
-        html += "<tr>"
-        for col, val in zip(df.columns, row):
-            if col in currency_cols and isinstance(val, (int, float)):
-                val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            elif isinstance(val, (int, float)):
-                val_str = f"{int(val):,}".replace(",", ".") if isinstance(val, int) or val.is_integer() else f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            else:
-                val_str = str(val)
-            html += f"<td>{val_str}</td>"
-        html += "</tr>"
-    html += "</tbody></table></div>"
-    st.markdown(html, unsafe_allow_html=True)
+    
+    # Configure columns
+    column_config = {}
+    for col in df.columns:
+        if col in currency_cols:
+            column_config[col] = st.column_config.NumberColumn(
+                col, format="R$ %.2f"
+            )
+        else:
+            # If it's numeric, format cleanly
+            if pd.api.types.is_numeric_dtype(df[col]):
+                column_config[col] = st.column_config.NumberColumn(
+                    col, format="%d"
+                )
+    
+    # Render with Streamlit's native dataframe which supports sorting and dark mode
+    st.dataframe(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        column_config=column_config
+    )
 
 def render_metric_card(label: str, value: str, delta: str = None, delta_type: str = "normal", help_text: str = None) -> None:
     help_html = f"<div style='font-size: 0.75rem; color: #8B949E; margin-top: 4px;'>{help_text}</div>" if help_text else ""
