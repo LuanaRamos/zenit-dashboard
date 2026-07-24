@@ -138,17 +138,18 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         else:
             reach = m.organic_reach + m.paid_reach
 
+        # Fix attribute names matching InstagramMedia schema
         row = {
             "Tipo": "🎬 Reels" if m.media_type == "VIDEO" else "📱 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
             "Publicação": m.caption[:45] + "..." if m.caption else "Sem legenda",
-            "Data": m.timestamp.strftime("%d/%m/%Y") if m.timestamp else "-",
+            "Data": m.timestamp.split("T")[0] if m.timestamp else "-",
             "Alcance": reach,
             "Likes": m.like_count,
             "Comentários": m.comments_count,
-            "Shares": m.shares_count,
-            "Salvos": m.saves_count,
-            "Seguidores": m.follows_count,
-            "Visitas Perfil": m.profile_visits_count,
+            "Shares": m.shares,
+            "Salvos": m.saved,
+            "Seguidores": m.follows,
+            "Visitas Perfil": m.profile_visits,
         }
         
         # Link in raw HTML
@@ -164,15 +165,15 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
             row = {
                 "Tipo": "⏱️ Story",
                 "Publicação": s.caption[:45] + "..." if s.caption else "Story 24h",
-                "Data": s.timestamp.strftime("%d/%m/%Y") if s.timestamp else "-",
+                "Data": s.timestamp.split("T")[0] if s.timestamp else "-",
                 "Alcance": s.reach,
                 "Likes": s.replies, # Stories don't have public likes in the same way, using replies or 0
                 "Comentários": s.replies,
-                "Shares": s.shares_count,
+                "Shares": 0,
                 "Salvos": "-",
                 "Seguidores": "-",
-                "Visitas Perfil": s.profile_visits_count,
-                "Visualizar no IG": "-"
+                "Visitas Perfil": 0,
+                "Visualizar no IG": f'<a href="{s.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if s.permalink else ""
             }
             data.append(row)
 
