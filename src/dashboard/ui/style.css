@@ -3,11 +3,9 @@
 :root {
   --primary: #FDBA21; /* Zenit Gold */
   --bg-dark: #07090E; /* Dashdark Ultra Dark */
-  --bg-card: rgba(21, 26, 35, 0.45); /* More transparent for true glass */
   --text-primary: #FFFFFF;
-  --text-muted: #A0A6B1; /* Impeccable A11y Contrast */
-  --border-color: rgba(255, 255, 255, 0.08); /* Glass Border */
-  --success: #10B981; /* Premium Green */
+  --text-muted: #A0A6B1; 
+  --success: #10B981; 
 }
 
 /* Remove default Streamlit padding */
@@ -17,26 +15,46 @@
     max-width: 1200px !important;
 }
 
-/* Style Metric Cards to look like sleek dashboard cards */
+/* =========================================
+   1. TRUE BACKGROUND FOR GLASSMORPHISM
+   ========================================= */
+/* We need a textured/glowing background so the blur actually distorts something */
+[data-testid="stAppViewContainer"] {
+    background-color: var(--bg-dark) !important;
+    background-image: 
+        radial-gradient(circle at 0% 0%, rgba(253, 186, 33, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px !important;
+    background-attachment: fixed !important;
+}
+
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* =========================================
+   2. GLASS METRIC CARDS
+   ========================================= */
 [data-testid="stMetric"] {
-    background: rgba(255, 255, 255, 0.02) !important; /* True glass background */
-    backdrop-filter: blur(16px) saturate(180%) !important; /* Premium glass filter */
+    background: rgba(15, 20, 30, 0.5) !important; /* Extremely transparent dark blue */
+    backdrop-filter: blur(16px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.2) !important; /* Glass shine edge */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.25) !important; /* Top rim light */
     border-radius: 16px !important;
     padding: 24px !important;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important; /* Soft deep shadow */
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important; 
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 [data-testid="stMetric"]:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(253, 186, 33, 0.15) !important; /* Zenit Gold Glow */
-    border-color: rgba(253, 186, 33, 0.3) !important;
+    box-shadow: 0 12px 40px rgba(253, 186, 33, 0.2) !important;
+    border-color: rgba(253, 186, 33, 0.4) !important;
 }
 
-/* Metric Label */
 [data-testid="stMetricLabel"] {
     color: var(--text-muted) !important;
     font-size: 0.9rem !important;
@@ -44,49 +62,33 @@
     margin-bottom: 8px !important;
 }
 
-/* Metric Value */
 [data-testid="stMetricValue"] {
     color: var(--text-primary) !important;
-    font-size: clamp(2rem, 5vw, 3.5rem) !important; /* Massive Bolder fluid typography */
-    font-weight: 800 !important; /* Black weight */
-    letter-spacing: -2px !important; /* Super tight tracking */
+    font-size: clamp(2rem, 5vw, 3.5rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -2px !important;
 }
 
-/* Metric Delta */
 [data-testid="stMetricDelta"] {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
 }
 
-/* Hide default streamlit header/footer */
-header {visibility: hidden !important;}
-footer {visibility: hidden !important;}
-
-/* Sidebar Styling */
-[data-testid="stSidebar"] {
-    background-color: var(--bg-dark) !important;
-    border-right: 1px solid var(--border-color) !important;
-}
-
-/* Make headers prominent */
-h1, h2, h3, h4 {
-    font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
-}
-
-/* Glass Table Styles */
+/* =========================================
+   3. GLASS TABLE
+   ========================================= */
 .glass-table-container {
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 24px;
-    margin-top: 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-    overflow-x: auto;
+    background: rgba(15, 20, 30, 0.5) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+    padding: 24px !important;
+    margin-top: 24px !important;
+    margin-bottom: 24px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    overflow-x: auto !important;
 }
 
 .glass-table {
@@ -100,113 +102,129 @@ h1, h2, h3, h4 {
 .glass-table th {
     text-align: left;
     padding: 12px 16px;
-    color: var(--text-primary); /* Bolder: white instead of muted */
-    font-weight: 700; /* Bolder */
-    font-size: 14px; /* Impeccable legibility rule */
-    border-bottom: 2px solid rgba(255, 255, 255, 0.15); /* Stronger border */
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
 }
 
 .glass-table td {
     padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02); /* Very subtle line */
     font-weight: 500;
+    color: #E2E8F0;
 }
 
 .glass-table tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
-/* Hide streamlit dataframe completely */
 [data-testid="stDataFrame"] {
     display: none !important;
 }
 
+/* =========================================
+   4. PREMIUM SIDEBAR & RADIO BUTTONS
+   ========================================= */
+[data-testid="stSidebar"] {
+    background-color: rgba(7, 9, 14, 0.8) !important; /* Dark glass sidebar */
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Advanced Radio Button Override */
+.stRadio [role="radiogroup"] {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stRadio [role="radiogroup"] label[data-baseweb="radio"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    padding: 16px 20px !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Hide the native circle SVG */
+.stRadio [role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
+    display: none !important;
+}
+
+/* Hover state */
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Text inside radio */
+.stRadio [role="radiogroup"] label[data-baseweb="radio"] p {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    margin: 0 !important;
+    transition: color 0.2s ease !important;
+}
+
+/* Selected state (using Streamlit internal checked logic) 
+   Streamlit adds data-checked or similar, but the safest way without JS is to rely on primaryColor bleed or :has() */
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has(input:checked),
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([aria-checked="true"]),
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([data-checked="true"]) {
+    background: rgba(253, 186, 33, 0.15) !important;
+    border-color: rgba(253, 186, 33, 0.5) !important;
+    box-shadow: 0 0 15px rgba(253, 186, 33, 0.2) !important;
+}
+
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p,
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([aria-checked="true"]) p,
+.stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([data-checked="true"]) p {
+    color: var(--primary) !important;
+    font-weight: 700 !important;
+}
+
+/* Make headers prominent */
+h1, h2, h3, h4 {
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
 h1 {
-    background: linear-gradient(90deg, #FFFFFF, #FDBA21); /* Gold gradient */
+    background: linear-gradient(90deg, #FFFFFF, #FDBA21); 
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 30px !important;
-    font-size: 3.2rem !important; /* Massive */
+    font-size: 3.2rem !important; 
     font-weight: 800 !important;
     letter-spacing: -2px !important;
 }
 
-/* Adjust divider */
 hr {
-    border-color: var(--border-color) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* =========================================
-   TRUE GLOBAL BACKGROUND FOR GLASSMORPHISM
+   5. DELIGHT: Animations & Scrollbars
    ========================================= */
-.stApp {
-    background: radial-gradient(circle at 15% 50%, rgba(253, 186, 33, 0.08), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.08), transparent 25%),
-                #07090E !important;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(253, 186, 33, 0.5); }
 
-[data-testid="stAppViewContainer"] {
-    background: transparent !important;
-}
-
-[data-testid="stHeader"] {
-    background: transparent !important;
-}
-
-/* =========================================
-   CLEAN SIDEBAR SELECTOR
-   ========================================= */
-/* Revert the broken radio overrides and just use a clean layout */
-.stRadio > label {
-    font-weight: 600 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: 15px !important;
-}
-
-/* =========================================
-   IMPECCABLE DELIGHT: Custom Scrollbars
-   ========================================= */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(253, 186, 33, 0.5); /* Zenit Gold on hover */
-}
-
-/* =========================================
-   IMPECCABLE DELIGHT: Smooth Animations
-   ========================================= */
 @keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Fade in the main container */
-.block-container {
-    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Elements start hidden and fade in */
+.block-container { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 [data-testid="stMetric"], .glass-table-container, [data-testid="stPlotlyChart"] {
-    opacity: 0;
-    animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Stagger the animations (Waterfall effect) */
 [data-testid="stMetric"]:nth-child(1) { animation-delay: 0.1s; }
 [data-testid="stMetric"]:nth-child(2) { animation-delay: 0.2s; }
 [data-testid="stMetric"]:nth-child(3) { animation-delay: 0.3s; }
