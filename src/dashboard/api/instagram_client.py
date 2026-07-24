@@ -39,7 +39,7 @@ class InstagramClient:
             response.raise_for_status()
             data = response.json()
             if "instagram_business_account" in data:
-                return data["instagram_business_account"]["id"]
+                return str(data["instagram_business_account"]["id"])
             else:
                 logger.error(f"Nenhum Instagram vinculado à Página {self.page_id}.")
                 # Retorna o ID antigo como fallback para não quebrar completamente
