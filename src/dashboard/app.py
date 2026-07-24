@@ -40,8 +40,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+def load_css():
+    css_path = Path(__file__).parent / "ui" / "style.css"
+    if css_path.exists():
+        with open(css_path, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 def main() -> None:  # noqa: C901
+    # Aplica o CSS global do Zenit
+    load_css()
+    
     # Inicializa variáveis no session state caso necessário (Best Practice Streamlit)
     if "data_loaded" not in st.session_state:
         st.session_state["data_loaded"] = False
