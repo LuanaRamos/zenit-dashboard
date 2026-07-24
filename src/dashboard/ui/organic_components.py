@@ -3,6 +3,30 @@ import pandas as pd
 from typing import List
 from schemas.instagram import InstagramMedia, InstagramStory
 
+try:
+    from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+    HAS_AGGRID = True
+except ImportError:
+    HAS_AGGRID = False
+
+# Formatador JavaScript para o AgGrid: Exibe numeros com ponto no padrao pt-BR (ex: 4.400)
+# mas mantem a ordenacao inteiramente numerica
+NUMBER_FORMATTER = JsCode("""
+function(params) {
+    if (params.value === undefined || params.value === null) return '0';
+    return Number(params.value).toLocaleString('pt-BR');
+}
+""") if HAS_AGGRID else None
+
+# Renderizador JavaScript de Link para abrir posts diretamente
+LINK_RENDERER = JsCode("""
+function(params) {
+    if (!params.value) return '';
+    return '<a href="' + params.value + '" target="_blank" style="color: #4da6ff; text-decoration: none; font-weight: 600;">Abrir post 🔗</a>';
+}
+""") if HAS_AGGRID else None
+
+
 def render_organic_metrics_cards(media_list: List[InstagramMedia]):
     """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
@@ -59,11 +83,37 @@ def _ms_to_hhmmss(ms: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def _render_aggrid_table(df: pd.DataFrame, numeric_cols: List[str], link_col: str = "Visualizar no IG"):
+    """Funcao auxiliar para configurar e renderizar o AgGrid com estilo e ordenacao."""
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(resizable=True, sortable=True, filter=True)
+    
+    # Aplica formatador pt-BR com ponto para colunas numericas
+    for col in numeric_cols:
+        if col in df.columns:
+            gb.configure_column(col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER)
+            
+    # Aplica renderizador de Link
+    if link_col in df.columns:
+        gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
+
+    grid_options = gb.build()
+    
+    AgGrid(
+        df,
+        gridOptions=grid_options,
+        allow_unsafe_jscode=True,
+        theme="streamlit",
+        fit_columns_on_grid_load=True,
+        height=350
+    )
+
+
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
     """
     Renderiza a tabela de publicacoes.
-    - Colunas numericas: valores int para ordenacao correta (format='%d' = printf valido).
-    - Colunas de tempo: string HH:MM:SS zero-padded (ordena corretamente mesmo sendo string).
+    - Se streamlit-aggrid instalado: Usa AgGrid com formatacao de milhar em pt-BR (ponto) e ordenacao numerica.
+    - Fallback: st.dataframe nativo.
     """
     if stories_list is None:
         stories_list = []
@@ -95,28 +145,21 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         st.markdown("#### Desempenho de Stories (Últimas 24h)")
         data = [{
             "Resumo": "Story Ativo",
-            "Alcance":   s.reach,
-            "Avanços":  s.taps_forward,
-            "Voltas":    s.taps_back,
-            "Saídas":   s.exits,
-            "Respostas": s.replies,
+            "Alcance":   int(s.reach),
+            "Avanços":  int(s.taps_forward),
+            "Voltas":    int(s.taps_back),
+            "Saídas":   int(s.exits),
+            "Respostas": int(s.replies),
             "Visualizar no IG": s.permalink
         } for s in stories_list]
             
         df_stories = pd.DataFrame(data)
-        st.dataframe(
-            df_stories,
-            use_container_width=True,
-            column_config={
-                "Alcance":   st.column_config.NumberColumn("Alcance",   format="%d"),
-                "Avanços":  st.column_config.NumberColumn("Avanços",   format="%d"),
-                "Voltas":    st.column_config.NumberColumn("Voltas",    format="%d"),
-                "Saídas":   st.column_config.NumberColumn("Saídas",   format="%d"),
-                "Respostas": st.column_config.NumberColumn("Respostas", format="%d"),
-                "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir Story")
-            },
-            hide_index=True
-        )
+        num_cols = ["Alcance", "Avanços", "Voltas", "Saídas", "Respostas"]
+        
+        if HAS_AGGRID:
+            _render_aggrid_table(df_stories, num_cols)
+        else:
+            st.dataframe(df_stories, use_container_width=True, hide_index=True)
         return
 
     # --- Feed / Reels ---
@@ -137,22 +180,21 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
     for m in filtered_media:
         short_caption = m.caption[:40].replace('\n', ' ') + "..." if len(m.caption) > 40 else m.caption
         
-        # Valores NUMERICOS (int) para que a ordenacao do Streamlit funcione corretamente
         if data_view == "Apenas Orgânico":
-            likes  = m.like_count
-            reach  = m.organic_reach
-            shares = m.shares
-            saved  = m.saved
+            likes  = int(m.like_count)
+            reach  = int(m.organic_reach)
+            shares = int(m.shares)
+            saved  = int(m.saved)
         elif data_view == "Apenas Pago (Ads)":
-            likes  = m.paid_likes
-            reach  = m.paid_reach
-            shares = m.paid_shares
-            saved  = m.paid_saved
+            likes  = int(m.paid_likes)
+            reach  = int(m.paid_reach)
+            shares = int(m.paid_shares)
+            saved  = int(m.paid_saved)
         else:  # Total Mix
-            likes  = m.total_likes
-            reach  = m.reach
-            shares = m.total_shares
-            saved  = m.total_saved
+            likes  = int(m.total_likes)
+            reach  = int(m.reach)
+            shares = int(m.total_shares)
+            saved  = int(m.total_saved)
 
         row: dict = {
             "Publicação": short_caption,
@@ -164,35 +206,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
-                # HH:MM:SS com zero-padding ordena corretamente mesmo sendo string
                 row["Watch Time Total"] = _ms_to_hhmmss(m.ig_reels_video_view_total_time)
                 row["Retenção Média"]  = _ms_to_hhmmss(m.ig_reels_avg_watch_time)
             else:
-                row["Seguidores"]        = m.follows
-                row["Visitas ao Perfil"] = m.profile_visits
+                row["Seguidores"]        = int(m.follows)
+                row["Visitas ao Perfil"] = int(m.profile_visits)
         
         row["Visualizar no IG"] = m.permalink
         data.append(row)
         
     df = pd.DataFrame(data).fillna(0)
+    num_cols = ["Likes", "Alcance", "Shares", "Salvos", "Seguidores", "Visitas ao Perfil"]
     
-    # format='%d' = printf valido - exibe inteiro sem casas decimais
-    # Streamlit NAO suporta separador de milhar via NumberColumn (sem printf para isso)
-    col_config: dict = {
-        "Likes":   st.column_config.NumberColumn("Likes",   format="%d"),
-        "Alcance": st.column_config.NumberColumn("Alcance", format="%d"),
-        "Shares":  st.column_config.NumberColumn("Shares",  format="%d"),
-        "Salvos":  st.column_config.NumberColumn("Salvos",  format="%d"),
-        "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
-    }
-    
-    if data_view != "Apenas Pago (Ads)" and media_type_filter != "Reels":
-        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",       format="%d")
-        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format="%d")
-    
-    st.dataframe(
-        df,
-        use_container_width=True,
-        column_config=col_config,
-        hide_index=True
-    )
+    if HAS_AGGRID:
+        _render_aggrid_table(df, num_cols)
+    else:
+        st.dataframe(df, use_container_width=True, hide_index=True)
