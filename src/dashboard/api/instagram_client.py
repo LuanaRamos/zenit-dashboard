@@ -13,11 +13,13 @@ class InstagramClient:
     Cliente para comunicação direta com a Graph API do Instagram.
     Responsável por fazer o fetch de publicações orgânicas e seus insights.
     """
+    # URL base para requests normais (versionada)
     BASE_URL = "https://graph.facebook.com/v22.0"
+    # URL para Batch Requests (SEM versão — exigência da Graph API)
+    BATCH_URL = "https://graph.facebook.com"
 
     def __init__(self):
         self.token = settings.meta_master_token
-        # O ID do Instagram é vinculado à página (obtido anteriormente na auditoria)
         self.instagram_account_id = "17841449425333311"
 
     def _make_request(self, endpoint: str, params: dict = None) -> dict:
@@ -85,29 +87,32 @@ class InstagramClient:
                 logger.warning(f"Erro durante a paginação do Instagram: {e}")
                 break
         
-        # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
+        # Batch Request para puxar Insights sem N+1 queries
+        # IMPORTANTE: BATCH_URL nao leva versao na URL raiz.
+        # A versao vai dentro de cada relative_url do batch item.
         insights_map = {}
         batch_requests = []
         for i, item in enumerate(media_items_data):
             ig_id = item.get("id")
             media_product_type = item.get("media_product_type", "")
             if media_product_type == "REELS":
-                metrics = "reach,saved,shares,plays,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time"
+                # 'plays' foi depreciado na v22.0
+                metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time"
             else:
                 metrics = "reach,saved,shares,profile_activity,profile_visits,follows"
             
             batch_requests.append({
                 "method": "GET",
-                "relative_url": f"{ig_id}/insights?metric={metrics}"
+                "relative_url": f"/v22.0/{ig_id}/insights?metric={metrics}"
             })
             
         for i in range(0, len(batch_requests), 50):
             chunk = batch_requests[i:i+50]
             try:
                 batch_res = requests.post(
-                    self.BASE_URL,
+                    self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=15
+                    timeout=20
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
@@ -116,6 +121,8 @@ class InstagramClient:
                         req_idx = i + j
                         ig_id = media_items_data[req_idx]["id"]
                         insights_map[ig_id] = body.get("data", [])
+                    else:
+                        logger.warning(f"Batch item {i+j} retornou code={response_item.get('code')}")
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights: {e}")
 
@@ -182,7 +189,7 @@ class InstagramClient:
             metrics = "reach,exits,replies,taps_forward,taps_back"
             batch_requests.append({
                 "method": "GET",
-                "relative_url": f"{ig_id}/insights?metric={metrics}"
+                "relative_url": f"/v22.0/{ig_id}/insights?metric={metrics}"
             })
             
         insights_map = {}
@@ -190,9 +197,9 @@ class InstagramClient:
             chunk = batch_requests[i:i+50]
             try:
                 batch_res = requests.post(
-                    self.BASE_URL,
+                    self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=15
+                    timeout=20
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
