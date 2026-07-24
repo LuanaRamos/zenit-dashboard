@@ -81,13 +81,12 @@ def main() -> None:  # noqa: C901
             avg_cpa = total_spend / total_conversions if total_conversions > 0 else 0.0
 
             # Renderiza a UI
+            # --- BENTO GRID: Topo ---
             st.write("")
-            render_metric_cards(total_spend, total_conversions, avg_cpa)
-
-            st.write("")
-            
-            ch1, ch2 = st.columns([1, 1])
-            with ch2:
+            top_c1, top_c2 = st.columns([1.5, 1])
+            with top_c1:
+                render_metric_cards(total_spend, total_conversions, avg_cpa)
+            with top_c2:
                 render_objective_pie_chart(campaigns)
 
             st.write("")
@@ -114,14 +113,16 @@ def main() -> None:  # noqa: C901
                 if c not in whatsapp_campaigns and c not in profile_campaigns
             ]
 
-            # Renderizar Dinamicamente
+            # --- BENTO GRID: Meio (WhatsApp) ---
             render_whatsapp_campaigns(whatsapp_campaigns)
             st.write("")
 
-            render_profile_campaigns(profile_campaigns)
-            st.write("")
-
-            render_general_campaigns(general_campaigns)
+            # --- BENTO GRID: Base (Demais Campanhas Lado a Lado) ---
+            b_c1, b_c2 = st.columns([1, 1])
+            with b_c1:
+                render_profile_campaigns(profile_campaigns)
+            with b_c2:
+                render_general_campaigns(general_campaigns)
 
             st.session_state["data_loaded"] = True
 
