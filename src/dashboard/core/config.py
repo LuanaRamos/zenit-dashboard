@@ -13,14 +13,14 @@ class Settings(BaseSettings):
     )
 
     # Configurações do App na Meta
-    meta_app_id: str = Field(
-        ..., alias="META_APP_ID", description="ID do Aplicativo na Meta"
+    meta_app_id: str | None = Field(
+        None, alias="META_APP_ID", description="ID do Aplicativo na Meta"
     )
-    meta_app_secret: SecretStr = Field(
-        ..., alias="META_APP_SECRET", description="Secret do Aplicativo na Meta"
+    meta_app_secret: SecretStr | None = Field(
+        None, alias="META_APP_SECRET", description="Secret do Aplicativo na Meta"
     )
-    meta_redirect_uri: str = Field(
-        ...,
+    meta_redirect_uri: str | None = Field(
+        None,
         alias="META_REDIRECT_URI",
         description="URI de Redirecionamento configurada no App",
     )
