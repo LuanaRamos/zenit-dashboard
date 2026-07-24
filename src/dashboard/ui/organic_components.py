@@ -6,7 +6,7 @@ from schemas.instagram import InstagramMedia
 def render_organic_metrics_cards(media_list: List[InstagramMedia]):
     """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
-        st.info("Nenhuma publicação orgânica encontrada recente.")
+        st.info("Nenhuma publicação encontrada no período selecionado.")
         return
 
     # Cálculos para visão geral
@@ -24,7 +24,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
         st.metric(
             label="Alcance Total Global", 
             value=f"{total_reach:,}".replace(",", "."),
-            help="Soma do alcance de todas as fontes (Orgânico + Tráfego Pago)"
+            help="Total de pessoas alcançadas (Orgânico + Pago)."
         )
         
     with cols[1]:
@@ -33,7 +33,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
             value=f"{total_organic_reach:,}".replace(",", "."),
             delta=f"{pct_organic:.1f}% do Total",
             delta_color="normal",
-            help="Pessoas alcançadas sem interferência de anúncios."
+            help="Pessoas alcançadas naturalmente, sem o uso de anúncios."
         )
         
     with cols[2]:
@@ -42,7 +42,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
             value=f"{total_paid_reach:,}".replace(",", "."),
             delta=f"{pct_paid:.1f}% do Total",
             delta_color="off",
-            help="Alcance gerado porque o post foi impulsionado no Ads."
+            help="Pessoas alcançadas através de impulsionamento pago."
         )
 
 
@@ -79,12 +79,12 @@ def render_posts_table(media_list: List[InstagramMedia]):
             "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
             "CTR Anúncio (%)": st.column_config.NumberColumn(
                 "CTR Anúncio (%)", 
-                help="Porcentagem PONDERADA de pessoas que clicaram no link do anúncio desse post.",
+                help="Taxa de pessoas que viram e clicaram no anúncio (Média Ponderada).",
                 format="%.2f"
             ),
             "Frequência Anúncio": st.column_config.NumberColumn(
                 "Frequência (Ads)",
-                help="Quantas vezes cada pessoa viu o anúncio em média.",
+                help="Quantas vezes, em média, o anúncio foi exibido para a mesma pessoa.",
                 format="%.2f"
             )
         },

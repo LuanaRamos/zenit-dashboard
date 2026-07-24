@@ -32,16 +32,16 @@ def main():
     selected_module, date_preset = render_sidebar()
     
     if selected_module == "📈 Visão Geral (Ads)":
-        st.title("Visão Geral das Campanhas")
-        st.markdown("Acompanhe o retorno sobre o investimento da **CA MS - 01** em tempo real.")
+        st.title("Resumo de Campanhas")
+        st.markdown("Acompanhe o retorno sobre investimento (ROI) da conta **CA MS - 01**.")
         
         try:
             # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
-            with st.spinner("Consultando Graph API..."):
+            with st.spinner("Buscando dados das campanhas..."):
                 campaigns = fetch_campaigns_v8(date_preset)
                 
             if not campaigns:
-                st.warning("Nenhuma campanha encontrada nos últimos 30 dias.")
+                st.warning("Nenhuma campanha ativa encontrada nesse período.")
                 return
                 
             # Agregações simples para os cards
@@ -75,18 +75,18 @@ def main():
             
         except MetaAPIError as e:
             # Trata os erros de token, permissão ou rede amigavelmente na UI
-            st.error("Falha ao se conectar com a Meta API.")
+            st.error("Não foi possível conectar à Meta. Verifique sua conexão ou se o token de acesso expirou.")
             st.exception(e)
         except Exception as e:
-            st.error("Ocorreu um erro inesperado interno no Dashboard.")
+            st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
             st.exception(e)
             
     elif selected_module == "📱 Orgânico (Instagram)":
-        st.title("📱 Desempenho Orgânico (Instagram)")
-        st.markdown("Acompanhe e isole as métricas do seu perfil separando Tráfego Pago do Orgânico.")
+        st.title("📱 Desempenho no Instagram")
+        st.markdown("Veja o impacto real das suas publicações, separando o alcance orgânico do pago.")
         
         try:
-            with st.spinner("Consultando Instagram Graph API e extraindo dados dos anúncios..."):
+            with st.spinner("Cruzando dados do Instagram e anúncios..."):
                 media_list = fetch_organic_v12(date_preset)
                 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -96,13 +96,13 @@ def main():
             render_posts_table(media_list)
             
         except InstagramAPIError as e:
-            st.error("Falha de Comunicação com o Instagram.")
+            st.error("Não foi possível comunicar com o Instagram.")
             st.error(str(e))
         except MetaAPIError as e:
-            st.error("Falha ao cruzar dados com os anúncios do Facebook.")
+            st.error("Falha ao tentar cruzar dados com os anúncios do Facebook.")
             st.error(str(e))
         except Exception as e:
-            st.error("Erro Inesperado.")
+            st.error("Ocorreu um erro inesperado. Tente novamente.")
             st.exception(e)
 
 if __name__ == "__main__":
