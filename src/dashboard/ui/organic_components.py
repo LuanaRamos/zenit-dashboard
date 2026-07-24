@@ -18,20 +18,24 @@ function(params) {
 }
 """) if HAS_AGGRID else None
 
-# Renderizador JavaScript de Link para abrir posts diretamente (retorna elemento DOM para evitar escape de HTML)
+# Renderizador JavaScript de Link usando o contrato oficial de Componente de Celula do AG Grid
 LINK_RENDERER = JsCode("""
-function(params) {
-    if (!params.value) return '';
-    const a = document.createElement('a');
-    a.href = params.value;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.color = '#4da6ff';
-    a.style.textDecoration = 'none';
-    a.style.fontWeight = '600';
-    a.innerText = 'Abrir post 🔗';
-    return a;
-}
+function UrlRenderer() {}
+UrlRenderer.prototype.init = function(params) {
+    this.eGui = document.createElement('a');
+    if (params.value) {
+        this.eGui.href = params.value;
+        this.eGui.target = '_blank';
+        this.eGui.rel = 'noopener noreferrer';
+        this.eGui.style.color = '#4da6ff';
+        this.eGui.style.textDecoration = 'none';
+        this.eGui.style.fontWeight = '600';
+        this.eGui.innerHTML = 'Abrir post 🔗';
+    }
+};
+UrlRenderer.prototype.getGui = function() {
+    return this.eGui;
+};
 """) if HAS_AGGRID else None
 
 
@@ -63,7 +67,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
             value=f"{total_organic_reach:,}".replace(",", "."),
             delta=f"{pct_organic:.1f}% do Total",
             delta_color="normal",
-            help="Pessoas alcançadas naturally, sem o uso de anúncios."
+            help="Pessoas alcançadas naturalmente, sem o uso de anúncios."
         )
         
     with cols[2]:
@@ -101,7 +105,7 @@ def _render_aggrid_table(df: pd.DataFrame, numeric_cols: List[str], link_col: st
         if col in df.columns:
             gb.configure_column(col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER)
             
-    # Aplica renderizador de Link (retornando elemento DOM)
+    # Aplica renderizador de Link (contrato de Classe AG Grid Component)
     if link_col in df.columns:
         gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
 
