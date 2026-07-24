@@ -1,11 +1,14 @@
 from typing import Any, ClassVar
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class CampaignInsight(BaseModel):
     """
     Representa as métricas de performance de uma campanha no Meta Ads.
     Todos os campos possuem valores default para evitar crashes se a Meta não retornar a chave.
     """
+
     model_config = ConfigDict(frozen=True)
     OBJECTIVE_MAPPING: ClassVar[dict[str, str]] = {
         "OUTCOME_AWARENESS": "Reconhecimento",
@@ -27,7 +30,7 @@ class CampaignInsight(BaseModel):
         "STORE_VISITS": "Visitas à Loja",
         "BRAND_AWARENESS": "Reconhecimento de Marca",
         "REACH": "Alcance",
-        "LOCAL_AWARENESS": "Reconhecimento Local"
+        "LOCAL_AWARENESS": "Reconhecimento Local",
     }
 
     campaign_name: str = Field(default="Campanha Desconhecida", alias="campaign_name")
@@ -38,25 +41,38 @@ class CampaignInsight(BaseModel):
     clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
-    
+
     # Métricas Específicas Dinâmicas
     leads: int = Field(default=0)
     cpl: float = Field(default=0.0)
-    
-    whatsapp_starts: int = Field(default=0, description="Conversas Iniciadas por Mensagem")
+
+    whatsapp_starts: int = Field(
+        default=0, description="Conversas Iniciadas por Mensagem"
+    )
     cost_per_whatsapp: float = Field(default=0.0)
-    
-    instagram_follows: int = Field(default=0, description="Seguidores no Instagram Gerados")
+
+    instagram_follows: int = Field(
+        default=0, description="Seguidores no Instagram Gerados"
+    )
     cost_per_follower: float = Field(default=0.0)
-    
+
     profile_visits: int = Field(default=0, description="Visitas ao Perfil")
     cost_per_profile_visit: float = Field(default=0.0)
-    
+
     roas: float = Field(default=0.0)
 
     @property
     def objective_friendly(self) -> str:
-        """Retorna o nome do objetivo traduzido e amigável para a UI."""
+        """Retorna o nome do objetivo traduzido e amigável para a UI, baseado no comportamento real da campanha."""
+        if self.whatsapp_starts > 0 or self.objective == "MESSAGES":
+            return "Mensagens (WhatsApp/Direct)"
+        if self.profile_visits > 0 or self.instagram_follows > 0:
+            return "Visitas ao Perfil / Seguidores"
+        if self.objective == "OUTCOME_ENGAGEMENT":
+            return "Mensagens / Engajamento"
+        if self.objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS"]:
+            return "Tráfego no Perfil"
+            
         return self.OBJECTIVE_MAPPING.get(self.objective, self.objective)
 
     @classmethod
@@ -65,6 +81,7 @@ class CampaignInsight(BaseModel):
         Gera um insight a partir de um dicionário retornado pela API da Meta,
         fazendo o parse correto de valores aninhados (como actions e action_values).
         """
+        # Extrair dados básicos que já vem na raiz
         parsed_data = {
             "campaign_name": data.get("campaign_name", "Campanha Desconhecida"),
             "campaign_id": data.get("campaign_id", ""),
@@ -73,26 +90,35 @@ class CampaignInsight(BaseModel):
             "impressions": int(data.get("impressions", 0)),
             "clicks": int(data.get("clicks", 0)),
             "cpc": float(data.get("cpc", 0.0)),
-            "cpm": float(data.get("cpm", 0.0))
+            "cpm": float(data.get("cpm", 0.0)),
         }
 
+        # Analisar o array de 'actions' para buscar eventos específicos
         actions = data.get("actions", [])
+
         leads = 0
         whatsapp_starts = 0
-        instagram_follows = int(data.get("instagram_follows", 0))
+        instagram_follows = int(
+            data.get("instagram_follows", 0)
+        )  # Pode vir na raiz na API nova
         profile_visits = 0
-        
+
         for action in actions:
             act_type = action.get("action_type", "")
             val = int(action.get("value", 0))
-            
+
             if act_type == "lead":
                 leads += val
-            elif act_type == "onsite_conversion.messaging_conversation_started_7d" or "message" in act_type:
+            elif (
+                act_type == "onsite_conversion.messaging_conversation_started_7d"
+                or "message" in act_type
+            ):
                 whatsapp_starts += val
             elif act_type == "instagram_follows":
                 instagram_follows += val
-            elif act_type == "onsite_conversion.post_engagement" or "profile" in act_type:
+            elif (
+                act_type == "onsite_conversion.post_engagement" or "profile" in act_type
+            ):
                 profile_visits += val
 
         parsed_data["leads"] = leads
@@ -100,6 +126,7 @@ class CampaignInsight(BaseModel):
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
 
+        # Calcular Custos
         spend = parsed_data["spend"]
         if leads > 0:
             parsed_data["cpl"] = spend / leads
@@ -109,13 +136,15 @@ class CampaignInsight(BaseModel):
             parsed_data["cost_per_follower"] = spend / instagram_follows
         if profile_visits > 0:
             parsed_data["cost_per_profile_visit"] = spend / profile_visits
-            
+
         return cls(**parsed_data)
+
 
 class PageInsight(BaseModel):
     """
     Métricas da página/Instagram orgânico.
     """
+
     model_config = ConfigDict(frozen=True)
     followers: int = Field(default=0)
     reach: int = Field(default=0)
