@@ -225,10 +225,5 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
     st.dataframe(
         styled_df,
         hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Visualizar no IG": st.column_config.LinkColumn(
-                "Link", help="Clique para abrir no Instagram", max_chars=100
-            )
-        }
+        use_container_width=True
     )
