@@ -2,11 +2,11 @@
 
 :root {
   --primary: #FDBA21; /* Zenit Gold */
-  --bg-dark: #0B0E14; /* Dashdark Premium Background */
-  --bg-card: #151A23; /* Dashdark Premium Surface */
+  --bg-dark: #07090E; /* Dashdark Ultra Dark */
+  --bg-card: rgba(21, 26, 35, 0.6); /* Translucent Glass */
   --text-primary: #FFFFFF;
   --text-muted: #8E95A3; /* Dashdark Muted Text */
-  --border-color: #222A3B; /* Subtle Blue-Grey Border */
+  --border-color: rgba(255, 255, 255, 0.08); /* Glass Border */
   --success: #10B981; /* Premium Green */
 }
 
@@ -19,18 +19,20 @@
 
 /* Style Metric Cards to look like sleek dashboard cards */
 [data-testid="stMetric"] {
-    background-color: var(--bg-card) !important;
+    background: var(--bg-card) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 16px !important; /* Premium larger radius */
-    padding: 24px !important; /* More breathing room */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 [data-testid="stMetric"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(253, 186, 33, 0.12) !important; /* Premium subtle gold glow */
-    border-color: #313D53 !important;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(253, 186, 33, 0.15) !important; /* Zenit Gold Glow */
+    border-color: rgba(253, 186, 33, 0.3) !important;
 }
 
 /* Metric Label */
@@ -65,17 +67,58 @@ footer {visibility: hidden !important;}
     border-right: 1px solid var(--border-color) !important;
 }
 
-/* Dataframe/Table overrides */
-[data-testid="stDataFrame"] {
-    border: 1px solid var(--border-color) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-
 /* Make headers prominent */
-h1, h2, h3 {
+h1, h2, h3, h4 {
     font-weight: 700 !important;
     letter-spacing: -0.02em !important;
+}
+
+/* Glass Table Styles */
+.glass-table-container {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    margin-top: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    overflow-x: auto;
+}
+
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+.glass-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-table td {
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-weight: 500;
+}
+
+.glass-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Hide streamlit dataframe completely */
+[data-testid="stDataFrame"] {
+    display: none !important;
 }
 
 h1 {

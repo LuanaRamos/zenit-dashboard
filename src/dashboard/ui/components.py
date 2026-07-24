@@ -1,6 +1,31 @@
 import pandas as pd
 import streamlit as st
 from schemas.meta import CampaignInsight
+import plotly.graph_objects as go
+
+
+def render_glass_table(df: pd.DataFrame) -> None:
+    """Renderiza uma tabela HTML customizada com efeito glassmorphism."""
+    html = '<div class="glass-table-container"><table class="glass-table"><thead><tr>'
+    # Headers
+    for col in df.columns:
+        html += f'<th>{col}</th>'
+    html += '</tr></thead><tbody>'
+    
+    # Rows
+    for _, row in df.iterrows():
+        html += '<tr>'
+        for val in row:
+            # Format numbers if float
+            if isinstance(val, float):
+                val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if "R$" in str(df.columns) or val > 0 else str(val)
+                html += f'<td>{val_str}</td>'
+            else:
+                html += f'<td>{val}</td>'
+        html += '</tr>'
+        
+    html += '</tbody></table></div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def render_metric_cards(total_spend: float, total_conversions: int, avg_cpa: float) -> None:
@@ -55,49 +80,38 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
         )
 
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    render_glass_table(df)
 
-    # Elegant Bar Chart for Cost per Message using Plotly
+    # Premium Area Chart for Cost per Message using Plotly
     if any(c.whatsapp_starts > 0 for c in campaigns):
-        st.markdown("**Comparativo: Custo por Conversa**")
-        
-        import plotly.express as px
+        st.markdown("<br><h4 style='color: white; font-weight: 600;'>Desempenho de Custo</h4>", unsafe_allow_html=True)
         
         chart_data = pd.DataFrame(
             {
-                "Campanha": [
-                    c.campaign_name for c in campaigns if c.whatsapp_starts > 0
-                ],
-                "Custo (R$)": [
-                    c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0
-                ],
+                "Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0],
+                "Custo (R$)": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0],
             }
         )
         
-        fig = px.bar(
-            chart_data,
-            x="Campanha",
-            y="Custo (R$)",
-            text="Custo (R$)",
-            color_discrete_sequence=["#25D366"]
-        )
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=chart_data["Campanha"],
+            y=chart_data["Custo (R$)"],
+            mode='lines+markers',
+            line=dict(color='#FDBA21', width=3, shape='spline', smoothing=1.3),
+            marker=dict(size=10, color='#07090E', line=dict(width=2, color='#FDBA21')),
+            fill='tozeroy',
+            fillcolor='rgba(253, 186, 33, 0.15)' # Efeito vidro (glass) da Zenit
+        ))
         
-        # Define uma largura máxima para as barras se houver poucas campanhas
-        bar_width = 0.3 if len(chart_data) == 1 else (0.5 if len(chart_data) == 2 else None)
-        
-        fig.update_traces(
-            texttemplate='R$ %{text:.2f}', 
-            textposition='outside',
-            width=bar_width
-        )
         fig.update_layout(
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            xaxis_title="",
-            yaxis_title="",
-            xaxis=dict(showgrid=False, zeroline=False, showline=False, showticklabels=True),
-            yaxis=dict(showgrid=False, zeroline=False, showline=False, showticklabels=False),
-            margin=dict(l=0, r=0, t=30, b=0)
+            xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8E95A3"),
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, color="#8E95A3", tickprefix="R$ "),
+            margin=dict(l=0, r=0, t=20, b=0),
+            height=320,
+            hovermode="x unified"
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
@@ -130,7 +144,7 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
         )
 
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    render_glass_table(df)
 
 
 def render_general_campaigns(
@@ -163,4 +177,4 @@ def render_general_campaigns(
         )
 
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    render_glass_table(df)
