@@ -4,54 +4,124 @@ from schemas.meta import CampaignInsight
 import plotly.graph_objects as go
 
 
-def render_glass_table(df: pd.DataFrame) -> None:
-    """Renderiza uma tabela HTML customizada com efeito glassmorphism."""
-    html = '<div class="glass-table-container"><table class="glass-table"><thead><tr>'
-    # Headers
-    for col in df.columns:
-        html += f'<th>{col}</th>'
-    html += '</tr></thead><tbody>'
+def render_glass_table(df: pd.DataFrame, currency_cols: list[str] = None) -> None:
+    """
+    Renderiza uma tabela HTML customizada com estilo glassmorphism.
+    Garante que colunas numéricas tenham a formatação correta e usa currency_cols
+    para formatar colunas monetárias de forma explícita.
+    """
+    currency_cols = currency_cols or []
     
-    # Rows
+    html = '<div class="glass-table-container"><table class="glass-table">'
+    
+    # Headers
+    html += "<thead><tr>"
+    for col in df.columns:
+        html += f"<th>{col}</th>"
+    html += "</tr></thead>"
+    
+    # Body
+    html += "<tbody>"
     for _, row in df.iterrows():
-        html += '<tr>'
-        for val in row:
-            # Format numbers if float
-            if isinstance(val, float):
-                val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if "R$" in str(df.columns) or val > 0 else str(val)
-                html += f'<td>{val_str}</td>'
+        html += "<tr>"
+        for col, val in zip(df.columns, row):
+            # Check explicit currency formatting
+            if col in currency_cols and isinstance(val, (int, float)):
+                val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            elif isinstance(val, (int, float)):
+                # Normal number format
+                if isinstance(val, int) or val.is_integer():
+                    val_str = f"{int(val):,}".replace(",", ".")
+                else:
+                    val_str = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             else:
-                html += f'<td>{val}</td>'
-        html += '</tr>'
-        
-    html += '</tbody></table></div>'
+                val_str = str(val)
+                
+            html += f"<td>{val_str}</td>"
+        html += "</tr>"
+    
+    html += "</tbody></table></div>"
     st.markdown(html, unsafe_allow_html=True)
 
 
+def render_metric_card(label: str, value: str, delta: str = None, delta_type: str = "green", help_text: str = None) -> None:
+    """Renderiza um card de métrica unificado."""
+    delta_html = f'<div style="margin-top: 0.2rem;"><span class="metric-pill-{delta_type}">{delta}</span></div>' if delta else ""
+    help_html = f'<div class="metric-card-title" style="margin-top: 0.2rem;">{help_text}</div>' if help_text else ""
+    
+    st.markdown(f"""<div class="glass-card">
+        <div class="metric-card-title">{label}</div>
+        <div class="metric-card-value">{value}</div>
+        {delta_html}
+        {help_html}
+    </div>""", unsafe_allow_html=True)
+
 def render_metric_cards(total_spend: float, total_conversions: int, avg_cpa: float) -> None:
     """
-    Renderiza uma linha de cards com métricas principais usando st.columns.
+    Renderiza uma linha de cards com métricas principais usando glass-cards premium.
     """
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            label="💰 Investimento Total",
-            value=f"R$ {total_spend:,.2f}".replace(",", "X")
-            .replace(".", ",")
-            .replace("X", "."),
+    cols = st.columns(3)
+    
+    with cols[0]:
+        render_metric_card(
+            label='<i class="bi bi-currency-dollar"></i> Investimento Total',
+            value=f"R$ {total_spend:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            help_text="Custo total das campanhas ativas"
         )
 
-    with col2:
-        st.metric(label="🎯 Total de Conversões (Geral)", value=f"{total_conversions}")
-
-    with col3:
-        st.metric(
-            label="📉 Custo por Conversão (Geral)",
-            value=f"R$ {avg_cpa:,.2f}".replace(",", "X")
-            .replace(".", ",")
-            .replace("X", "."),
+    with cols[1]:
+        render_metric_card(
+            label='<i class="bi bi-lightning-charge"></i> Conversões',
+            value=f"{total_conversions:,}".replace(",", "."),
+            help_text="Leads e mensagens geradas"
         )
+
+    with cols[2]:
+        cpa_color = "green" if avg_cpa < 10 else "gold" if avg_cpa < 20 else "red"
+        render_metric_card(
+            label='<i class="bi bi-graph-down"></i> CPA Médio',
+            value=f"R$ {avg_cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            delta="Custo por conversão",
+            delta_type=cpa_color
+        )
+
+
+def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
+    """Renderiza um gráfico de pizza mostrando a distribuição de gastos por objetivo da campanha."""
+    st.markdown("<br>#### 🎯 Distribuição de Investimento por Objetivo", unsafe_allow_html=True)
+    
+    spend_by_obj = {}
+    for c in campaigns:
+        obj = c.objective_friendly
+        spend_by_obj[obj] = spend_by_obj.get(obj, 0.0) + c.spend
+        
+    labels = list(spend_by_obj.keys())
+    values = list(spend_by_obj.values())
+    
+    if not labels or sum(values) == 0:
+        st.info("Não há dados de investimento suficientes para gerar o gráfico.")
+        return
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.6,
+                marker={"colors": ["#ffb300", "#5af8fb", "#1877f2", "#e89a00", "#10B981", "#8B5CF6"]},
+            )
+        ]
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"color": "#FFFFFF"},
+        margin={"l": 0, "r": 0, "t": 20, "b": 0},
+        showlegend=True,
+        legend={"orientation": "h", "y": -0.1},
+        height=320
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
@@ -80,7 +150,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
         )
 
     df = pd.DataFrame(data)
-    render_glass_table(df)
+    render_glass_table(df, currency_cols=["Gastos (R$)", "Custo por Conversa (R$)"])
 
     # Premium Area Chart for Cost per Message using Plotly
     if any(c.whatsapp_starts > 0 for c in campaigns):
@@ -144,7 +214,7 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
         )
 
     df = pd.DataFrame(data)
-    render_glass_table(df)
+    render_glass_table(df, currency_cols=["Gastos (R$)", "Custo por Clique (R$)", "Custo por Seguidor (R$)"])
 
 
 def render_general_campaigns(
@@ -177,4 +247,4 @@ def render_general_campaigns(
         )
 
     df = pd.DataFrame(data)
-    render_glass_table(df)
+    render_glass_table(df, currency_cols=["Gastos (R$)", "CPL (R$)", "CPM (R$)"])

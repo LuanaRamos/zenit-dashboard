@@ -23,6 +23,7 @@ from api.exceptions import InstagramAPIError, MetaAPIError  # noqa: E402
 from ui.components import (  # noqa: E402
     render_general_campaigns,
     render_metric_cards,
+    render_objective_pie_chart,
     render_profile_campaigns,
     render_whatsapp_campaigns,
 )
@@ -33,9 +34,9 @@ from ui.organic_components import render_organic_metrics_cards, render_posts_tab
 # Configuração do Logging
 logging.basicConfig(level=logging.INFO)  # noqa: E402
 
-# Configuração inicial da página SEMPRE no topo
+# Configuração da página DEVE ser a primeira chamada
 st.set_page_config(
-    page_title="Meta Ads | Zenit Dashboard",
+    page_title="Zenit Analytics",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -84,6 +85,12 @@ def main() -> None:  # noqa: C901
             render_metric_cards(total_spend, total_conversions, avg_cpa)
 
             st.write("")
+            
+            ch1, ch2 = st.columns([1, 1])
+            with ch2:
+                render_objective_pie_chart(campaigns)
+
+            st.write("")
 
             # Filtragem inteligente por Objetivo ODAX, Legacy ou presença de métricas fortes
             whatsapp_campaigns = [
@@ -124,11 +131,11 @@ def main() -> None:  # noqa: C901
             st.error(
                 "Não foi possível conectar à Meta. Verifique sua conexão ou se o token de acesso expirou."
             )
-            st.exception(e)
+            # Tratado pela UI amigável e logs via Sentry
         except Exception as e:
             sentry_sdk.capture_exception(e)
             st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
-            st.exception(e)
+            # Tratado pela UI amigável e logs via Sentry
 
     elif selected_module == "Orgânico (Instagram)":
         st.title("📱 Desempenho no Instagram")
@@ -158,7 +165,7 @@ def main() -> None:  # noqa: C901
         except Exception as e:
             sentry_sdk.capture_exception(e)
             st.error("Ocorreu um erro inesperado. Tente novamente.")
-            st.exception(e)
+            # Tratado pela UI amigável e logs via Sentry
 
 
 if __name__ == "__main__":
