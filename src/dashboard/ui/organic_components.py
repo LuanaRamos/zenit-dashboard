@@ -44,8 +44,24 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
         )
 
 
+def _ms_to_hhmmss(ms: float) -> str:
+    """
+    Converte milissegundos em string HH:MM:SS com zero-padding.
+    
+    Zero-padding garante que a ordenacao alfabetica coincide com a numerica:
+    '00:09:03' < '00:45:01' < '06:29:00' - correto em ambas as ordens.
+    """
+    if not ms or ms <= 0:
+        return "00:00:00"
+    total_s = int(ms / 1000)
+    hours   = total_s // 3600
+    minutes = (total_s % 3600) // 60
+    seconds = total_s % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
-    """Renderiza a tabela com valores NUMERICOS para ordenacao correta por coluna."""
+    """Renderiza a tabela com valores numericos (para ordenacao) e tempo em HH:MM:SS."""
     if stories_list is None:
         stories_list = []
         
@@ -89,10 +105,10 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
             df_stories,
             use_container_width=True,
             column_config={
-                "Alcance": st.column_config.NumberColumn("Alcance", format="%d"),
-                "Avanços": st.column_config.NumberColumn("Avanços", format="%d"),
-                "Voltas": st.column_config.NumberColumn("Voltas", format="%d"),
-                "Saídas": st.column_config.NumberColumn("Saídas", format="%d"),
+                "Alcance":   st.column_config.NumberColumn("Alcance",   format="%d"),
+                "Avanços":  st.column_config.NumberColumn("Avanços",   format="%d"),
+                "Voltas":    st.column_config.NumberColumn("Voltas",    format="%d"),
+                "Saídas":   st.column_config.NumberColumn("Saídas",   format="%d"),
                 "Respostas": st.column_config.NumberColumn("Respostas", format="%d"),
                 "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir Story")
             },
@@ -118,7 +134,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
     for m in filtered_media:
         short_caption = m.caption[:40].replace('\n', ' ') + "..." if len(m.caption) > 40 else m.caption
         
-        # Valores NUMERICOS (nao string) para que a ordenacao funcione corretamente
+        # Valores NUMERICOS para que a ordenacao funcione corretamente
         if data_view == "Apenas Orgânico":
             likes  = m.like_count
             reach  = m.organic_reach
@@ -137,20 +153,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
 
         row: dict = {
             "Publicação": short_caption,
-            "Likes": likes,
+            "Likes":   likes,
             "Alcance": reach,
-            "Shares": shares,
-            "Salvos": saved,
+            "Shares":  shares,
+            "Salvos":  saved,
         }
         
-        # Watch time apenas nos modos que incluem dados organicos
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
-                # Guardar em SEGUNDOS (float) para ordenacao numerica correta
-                row["Watch Time (min)"] = round(m.ig_reels_video_view_total_time / 60_000, 1)
-                row["Retenção Média (s)"] = round(m.ig_reels_avg_watch_time / 1000, 1)
+                # HH:MM:SS com zero-padding ordena corretamente mesmo sendo string
+                row["Watch Time Total"] = _ms_to_hhmmss(m.ig_reels_video_view_total_time)
+                row["Retenção Média"]  = _ms_to_hhmmss(m.ig_reels_avg_watch_time)
             else:
-                row["Seguidores (Follows)"] = m.follows
+                row["Seguidores"]        = m.follows
                 row["Visitas ao Perfil"] = m.profile_visits
         
         row["Visualizar no IG"] = m.permalink
@@ -158,7 +173,6 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         
     df = pd.DataFrame(data).fillna(0)
     
-    # Column config: formata a exibicao mas mantem valores numericos para ordenacao
     col_config: dict = {
         "Likes":   st.column_config.NumberColumn("Likes",   format="%d"),
         "Alcance": st.column_config.NumberColumn("Alcance", format="%d"),
@@ -167,12 +181,9 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
     }
     
-    if data_view != "Apenas Pago (Ads)" and media_type_filter == "Reels":
-        col_config["Watch Time (min)"]   = st.column_config.NumberColumn("Watch Time",      format="%.1f min")
-        col_config["Retenção Média (s)"] = st.column_config.NumberColumn("Retenção Média", format="%.1f s")
-    elif data_view != "Apenas Pago (Ads)":
-        col_config["Seguidores (Follows)"] = st.column_config.NumberColumn("Seguidores",      format="%d")
-        col_config["Visitas ao Perfil"]    = st.column_config.NumberColumn("Visitas ao Perfil", format="%d")
+    if data_view != "Apenas Pago (Ads)" and media_type_filter != "Reels":
+        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",      format="%d")
+        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format="%d")
     
     st.dataframe(
         df,
