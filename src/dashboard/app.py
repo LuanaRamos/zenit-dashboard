@@ -65,14 +65,13 @@ def main() -> None:  # noqa: C901
                 )
                 return
 
-            # Agregações simples para os cards
             total_spend = sum(c.spend for c in campaigns)
-            total_leads = sum(c.leads for c in campaigns)
-            avg_cpl = total_spend / total_leads if total_leads > 0 else 0.0
+            total_conversions = sum((c.leads + c.whatsapp_starts) for c in campaigns)
+            avg_cpa = total_spend / total_conversions if total_conversions > 0 else 0.0
 
             # Renderiza a UI
             st.write("")
-            render_metric_cards(total_spend, total_leads, avg_cpl)
+            render_metric_cards(total_spend, total_conversions, avg_cpa)
 
             st.write("")
 
