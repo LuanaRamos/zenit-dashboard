@@ -2,54 +2,8 @@ import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
 from schemas.instagram import InstagramMedia, InstagramStory
-from ui.components import render_metric_card
+from ui.components import render_metric_card, render_glass_table
 from typing import Any
-
-try:
-    from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
-
-    HAS_AGGRID = True
-except ImportError:
-    HAS_AGGRID = False
-
-# Formatador JavaScript para o AgGrid: Exibe numeros com ponto no padrao pt-BR (ex: 4.400)
-NUMBER_FORMATTER = (
-    JsCode("""
-function(params) {
-    if (params.value === undefined || params.value === null) return '0';
-    return Number(params.value).toLocaleString('pt-BR');
-}
-""")
-    if HAS_AGGRID
-    else None
-)
-
-# Renderizador JavaScript de Link usando o contrato oficial de Componente de Celula do AG Grid
-LINK_RENDERER = (
-    JsCode("""
-(function() {
-    function UrlRenderer() {}
-    UrlRenderer.prototype.init = function(params) {
-        this.eGui = document.createElement('a');
-        if (params.value) {
-            this.eGui.href = params.value;
-            this.eGui.target = '_blank';
-            this.eGui.rel = 'noopener noreferrer';
-            this.eGui.style.color = '#00f0ff';
-            this.eGui.style.textDecoration = 'none';
-            this.eGui.style.fontWeight = '600';
-            this.eGui.innerHTML = 'Abrir post ↗';
-        }
-    };
-    UrlRenderer.prototype.getGui = function() {
-        return this.eGui;
-    };
-    return UrlRenderer;
-})()
-""")
-    if HAS_AGGRID
-    else None
-)
 
 
 def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
@@ -141,42 +95,6 @@ def _ms_to_hhmmss(ms: float) -> str:
     seconds = total_s % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-
-def _render_aggrid_table(
-    df: pd.DataFrame, numeric_cols: list[str], link_col: str = "Visualizar no IG"
-) -> None:
-    gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(resizable=True, sortable=True, filter=True)
-
-    for col in numeric_cols:
-        if col in df.columns:
-            gb.configure_column(
-                col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER
-            )
-
-    if link_col in df.columns:
-        gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
-
-    grid_options = gb.build()
-
-    AgGrid(
-        df,
-        gridOptions=grid_options,
-        allow_unsafe_jscode=True,
-        theme="balham-dark",
-        fit_columns_on_grid_load=True,
-        height=350,
-        custom_css={
-            ".ag-root-wrapper": {"background-color": "#141722", "border": "1px solid rgba(255, 255, 255, 0.05)", "border-radius": "12px"},
-            ".ag-header": {"background-color": "#141722", "border-bottom": "1px solid rgba(255, 255, 255, 0.05)"},
-            ".ag-header-cell-text": {"color": "#8B949E", "font-weight": "500"},
-            ".ag-row": {"border-bottom-color": "rgba(255, 255, 255, 0.02)"},
-            ".ag-row-hover": {"background-color": "rgba(255, 255, 255, 0.02) !important"},
-            ".ag-cell": {"color": "#E2E8F0"},
-        }
-    )
-
-
 def render_posts_table(
     media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
 ) -> None:
@@ -212,10 +130,10 @@ def render_posts_table(
                     "transition": "all 0.2s ease",
                 },
                 "nav-link-selected": {
-                    "background": "rgba(0, 240, 255, 0.1)",
-                    "border": "1px solid rgba(0, 240, 255, 0.2)",
+                    "background": "rgba(255, 179, 0, 0.1)",
+                    "border": "1px solid rgba(255, 179, 0, 0.2)",
                     "box-shadow": "none",
-                    "color": "#00f0ff",
+                    "color": "#FFB300",
                     "font-weight": "600"
                 },
             }
@@ -246,18 +164,13 @@ def render_posts_table(
                 "Voltas": int(s.taps_back),
                 "Saídas": int(s.exits),
                 "Respostas": int(s.replies),
-                "Visualizar no IG": s.permalink,
+                "Visualizar no IG": f'<a href="{s.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if s.permalink else "",
             }
             for s in stories_list
         ]
 
         df_stories = pd.DataFrame(data)
-        num_cols = ["Alcance", "Avanços", "Voltas", "Saídas", "Respostas"]
-
-        if HAS_AGGRID:
-            _render_aggrid_table(df_stories, num_cols)
-        else:
-            st.dataframe(df_stories, use_container_width=True, hide_index=True)
+        render_glass_table(df_stories)
         return
 
     # --- Feed / Reels ---
@@ -322,20 +235,8 @@ def render_posts_table(
                 row["Seguidores"] = int(m.follows)
                 row["Visitas ao Perfil"] = int(m.profile_visits)
 
-        row["Visualizar no IG"] = m.permalink
+        row["Visualizar no IG"] = f'<a href="{m.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if m.permalink else ""
         data.append(row)
 
     df = pd.DataFrame(data).fillna(0)
-    num_cols = [
-        "Likes",
-        "Alcance",
-        "Shares",
-        "Salvos",
-        "Seguidores",
-        "Visitas ao Perfil",
-    ]
-
-    if HAS_AGGRID:
-        _render_aggrid_table(df, num_cols)
-    else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    render_glass_table(df)
