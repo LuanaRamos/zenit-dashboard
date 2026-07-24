@@ -1,25 +1,32 @@
-import streamlit as st
+from typing import Any
 import pandas as pd
-from typing import List
+import streamlit as st
+from streamlit_option_menu import option_menu
 from schemas.instagram import InstagramMedia, InstagramStory
 
 try:
     from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
     HAS_AGGRID = True
 except ImportError:
     HAS_AGGRID = False
 
 # Formatador JavaScript para o AgGrid: Exibe numeros com ponto no padrao pt-BR (ex: 4.400)
 # mas mantem a ordenacao inteiramente numerica
-NUMBER_FORMATTER = JsCode("""
+NUMBER_FORMATTER = (
+    JsCode("""
 function(params) {
     if (params.value === undefined || params.value === null) return '0';
     return Number(params.value).toLocaleString('pt-BR');
 }
-""") if HAS_AGGRID else None
+""")
+    if HAS_AGGRID
+    else None
+)
 
 # Renderizador JavaScript de Link usando o contrato oficial de Componente de Celula do AG Grid
-LINK_RENDERER = JsCode("""
+LINK_RENDERER = (
+    JsCode("""
 (function() {
     function UrlRenderer() {}
     UrlRenderer.prototype.init = function(params) {
@@ -39,47 +46,52 @@ LINK_RENDERER = JsCode("""
     };
     return UrlRenderer;
 })()
-""") if HAS_AGGRID else None
+""")
+    if HAS_AGGRID
+    else None
+)
 
 
-def render_organic_metrics_cards(media_list: List[InstagramMedia]):
+def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
     """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
-        st.info("Você não publicou conteúdo orgânico recentemente. Poste um Reels ou Carrossel no Instagram para acompanhar seu alcance gratuito aqui.")
+        st.info(
+            "Você não publicou conteúdo orgânico recentemente. Poste um Reels ou Carrossel no Instagram para acompanhar seu alcance gratuito aqui."
+        )
         return
 
     total_organic_reach = sum(m.organic_reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
     total_reach = total_organic_reach + total_paid_reach
-    
+
     pct_organic = (total_organic_reach / total_reach * 100) if total_reach > 0 else 0
     pct_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
     st.markdown(f"### Visão Geral ({len(media_list)} Publicações)")
     cols = st.columns(3)
-    
+
     with cols[0]:
         st.metric(
-            label="Alcance Total Global", 
+            label="Alcance Total Global",
             value=f"{total_reach:,}".replace(",", "."),
-            help="Total de pessoas alcançadas (Orgânico + Pago)."
+            help="Total de pessoas alcançadas (Orgânico + Pago).",
         )
-        
+
     with cols[1]:
         st.metric(
-            label="Alcance Puramente Orgânico", 
+            label="Alcance Puramente Orgânico",
             value=f"{total_organic_reach:,}".replace(",", "."),
             delta=f"{pct_organic:.1f}% do Total",
             delta_color="normal",
-            help="Pessoas alcançadas naturalmente, sem o uso de anúncios."
+            help="Pessoas alcançadas naturalmente, sem o uso de anúncios.",
         )
-        
+
     with cols[2]:
         st.metric(
-            label="Alcance via Ads (Pago)", 
+            label="Alcance via Ads (Pago)",
             value=f"{total_paid_reach:,}".replace(",", "."),
             delta=f"{pct_paid:.1f}% do Total",
             delta_color="off",
-            help="Pessoas alcançadas através de impulsionamento pago."
+            help="Pessoas alcançadas através de impulsionamento pago.",
         )
 
 
@@ -92,39 +104,45 @@ def _ms_to_hhmmss(ms: float) -> str:
     if not ms or ms <= 0:
         return "00:00:00"
     total_s = int(ms / 1000)
-    hours   = total_s // 3600
+    hours = total_s // 3600
     minutes = (total_s % 3600) // 60
     seconds = total_s % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
-def _render_aggrid_table(df: pd.DataFrame, numeric_cols: List[str], link_col: str = "Visualizar no IG"):
+def _render_aggrid_table(
+    df: pd.DataFrame, numeric_cols: list[str], link_col: str = "Visualizar no IG"
+) -> None:
     """Funcao auxiliar para configurar e renderizar o AgGrid com estilo e ordenacao."""
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_default_column(resizable=True, sortable=True, filter=True)
-    
+
     # Aplica formatador pt-BR com ponto para colunas numericas
     for col in numeric_cols:
         if col in df.columns:
-            gb.configure_column(col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER)
-            
+            gb.configure_column(
+                col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER
+            )
+
     # Aplica renderizador de Link
     if link_col in df.columns:
         gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
 
     grid_options = gb.build()
-    
+
     AgGrid(
         df,
         gridOptions=grid_options,
         allow_unsafe_jscode=True,
         theme="streamlit",
         fit_columns_on_grid_load=True,
-        height=350
+        height=350,
     )
 
 
-def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
+def render_posts_table(  # noqa: C901
+    media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
+) -> None:  # noqa: C901  # noqa: C901
     """
     Renderiza a tabela de publicacoes.
     - Se streamlit-aggrid instalado: Usa AgGrid com formatacao de milhar em pt-BR (ponto) e ordenacao numerica.
@@ -132,45 +150,76 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
     """
     if stories_list is None:
         stories_list = []
-        
+
     st.markdown("### Análise Individual por Publicação")
-    
+
     view_col, format_col = st.columns([1, 1])
-    
+
     with view_col:
-        data_view = st.radio(
-            "Visão de Dados:",
-            ["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
-            horizontal=True,
-            help="Decida como os dados numéricos devem ser exibidos nas tabelas abaixo."
+        st.markdown("<h4 style='color: #9c9ca3; font-size: 0.9rem; margin-bottom: 10px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
+        data_view = option_menu(
+            menu_title=None,
+            options=["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
+            icons=["pie-chart-fill", "hash", "cash-coin"],
+            default_index=0,
+            orientation="horizontal",
+            styles={
+                "container": {"padding": "0!important", "background-color": "transparent"},
+                "icon": {"color": "#9c9ca3", "font-size": "14px"},
+                "nav-link": {
+                    "font-size": "13px",
+                    "text-align": "center",
+                    "margin": "0px",
+                    "--hover-color": "rgba(30, 30, 36, 0.85)",
+                    "border-radius": "0.5rem",
+                    "padding": "8px 12px",
+                    "border": "1px solid transparent",
+                    "color": "#9c9ca3",
+                    "font-family": "Inter, sans-serif",
+                    "font-weight": "600",
+                    "transition": "all 0.2s ease",
+                },
+                "nav-link-selected": {
+                    "background": "rgba(24, 24, 28, 0.7)",
+                    "border": "1px solid rgba(255, 179, 0, 0.25)",
+                    "box-shadow": "0px 4px 24px rgba(255, 179, 0, 0.12)",
+                    "color": "#ffb300",
+                    "font-weight": "700"
+                },
+            }
         )
-        
+
     with format_col:
         media_type_filter = st.selectbox(
             "Filtrar por Formato:",
-            ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"]
+            ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"],
         )
-        
+
     # --- Stories ---
     if media_type_filter == "Stories (Ativos 24h)":
         if not stories_list:
-            st.info("Você não tem Stories ativos no momento. Publique algo para acompanhar o desempenho aqui.")
+            st.info(
+                "Você não tem Stories ativos no momento. Publique algo para acompanhar o desempenho aqui."
+            )
             return
-            
+
         st.markdown("#### Desempenho de Stories (Últimas 24h)")
-        data = [{
-            "Resumo": "Story Ativo",
-            "Alcance":   int(s.reach),
-            "Avanços":  int(s.taps_forward),
-            "Voltas":    int(s.taps_back),
-            "Saídas":   int(s.exits),
-            "Respostas": int(s.replies),
-            "Visualizar no IG": s.permalink
-        } for s in stories_list]
-            
+        data = [
+            {
+                "Resumo": "Story Ativo",
+                "Alcance": int(s.reach),
+                "Avanços": int(s.taps_forward),
+                "Voltas": int(s.taps_back),
+                "Saídas": int(s.exits),
+                "Respostas": int(s.replies),
+                "Visualizar no IG": s.permalink,
+            }
+            for s in stories_list
+        ]
+
         df_stories = pd.DataFrame(data)
         num_cols = ["Alcance", "Avanços", "Voltas", "Saídas", "Respostas"]
-        
+
         if HAS_AGGRID:
             _render_aggrid_table(df_stories, num_cols)
         else:
@@ -180,61 +229,79 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
     # --- Feed / Reels ---
     filtered_media = []
     for m in media_list:
-        if media_type_filter == "Reels" and m.media_product_type == "REELS":
+        if (
+            media_type_filter == "Reels"
+            and m.media_product_type == "REELS"
+            or media_type_filter == "Carrossel"
+            and m.media_type == "CAROUSEL_ALBUM"
+            or (
+                media_type_filter == "Post Estático"
+                and m.media_type in ["IMAGE", "VIDEO"]
+                and m.media_product_type != "REELS"
+            )
+        ):
             filtered_media.append(m)
-        elif media_type_filter == "Carrossel" and m.media_type == "CAROUSEL_ALBUM":
-            filtered_media.append(m)
-        elif media_type_filter == "Post Estático" and m.media_type in ["IMAGE", "VIDEO"] and m.media_product_type != "REELS":
-            filtered_media.append(m)
-            
+
     if not filtered_media:
         st.info(f"Nenhum {media_type_filter} encontrado neste período.")
         return
 
     data = []
     for m in filtered_media:
-        short_caption = m.caption[:40].replace('\n', ' ') + "..." if len(m.caption) > 40 else m.caption
-        
-        if data_view == "Apenas Orgânico":
-            likes  = int(m.like_count)
-            reach  = int(m.organic_reach)
-            shares = int(m.shares)
-            saved  = int(m.saved)
-        elif data_view == "Apenas Pago (Ads)":
-            likes  = int(m.paid_likes)
-            reach  = int(m.paid_reach)
-            shares = int(m.paid_shares)
-            saved  = int(m.paid_saved)
-        else:  # Total Mix
-            likes  = int(m.total_likes)
-            reach  = int(m.reach)
-            shares = int(m.total_shares)
-            saved  = int(m.total_saved)
+        short_caption = (
+            m.caption[:40].replace("\n", " ") + "..."
+            if len(m.caption) > 40
+            else m.caption
+        )
 
-        row: dict = {
+        if data_view == "Apenas Orgânico":
+            likes = int(m.like_count)
+            reach = int(m.organic_reach)
+            shares = int(m.shares)
+            saved = int(m.saved)
+        elif data_view == "Apenas Pago (Ads)":
+            likes = int(m.paid_likes)
+            reach = int(m.paid_reach)
+            shares = int(m.paid_shares)
+            saved = int(m.paid_saved)
+        else:  # Total Mix
+            likes = int(m.total_likes)
+            reach = int(m.reach)
+            shares = int(m.total_shares)
+            saved = int(m.total_saved)
+
+        row: dict[str, Any] = {
             "Publicação": short_caption,
-            "Likes":   likes,
+            "Likes": likes,
             "Alcance": reach,
-            "Shares":  shares,
-            "Salvos":  saved,
+            "Shares": shares,
+            "Salvos": saved,
         }
-        
+
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
-                row["Watch Time Total"] = _ms_to_hhmmss(m.ig_reels_video_view_total_time)
-                row["Retenção Média"]  = _ms_to_hhmmss(m.ig_reels_avg_watch_time)
+                row["Watch Time Total"] = _ms_to_hhmmss(
+                    m.ig_reels_video_view_total_time
+                )
+                row["Retenção Média"] = _ms_to_hhmmss(m.ig_reels_avg_watch_time)
             else:
-                row["Seguidores"]        = int(m.follows)
+                row["Seguidores"] = int(m.follows)
                 row["Visitas ao Perfil"] = int(m.profile_visits)
-        
+
         row["Visualizar no IG"] = m.permalink
         data.append(row)
-        
+
     df = pd.DataFrame(data).fillna(0)
-    num_cols = ["Likes", "Alcance", "Shares", "Salvos", "Seguidores", "Visitas ao Perfil"]
-    
+    num_cols = [
+        "Likes",
+        "Alcance",
+        "Shares",
+        "Salvos",
+        "Seguidores",
+        "Visitas ao Perfil",
+    ]
+
     if HAS_AGGRID:
         _render_aggrid_table(df, num_cols)
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
-
