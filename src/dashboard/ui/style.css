@@ -136,17 +136,42 @@
     margin: 0 !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
 }
 
-/* Hide the native circle SVG/div */
-[data-testid="stRadio"] label > div:first-child, 
-[data-testid="stRadio"] label svg,
-[data-testid="stRadio"] label input[type="radio"] {
+/* =========================================================
+   NUCLEAR OPTION: Destroy the Streamlit Radio Circle
+   ========================================================= */
+/* 1. Target the first child div (usually the circle container) */
+[data-testid="stRadio"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
     display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    width: 0px !important;
+    height: 0px !important;
     opacity: 0 !important;
+    position: absolute !important;
+    visibility: hidden !important;
 }
+
+/* 2. Target the exact internal structure of the radio SVG */
+[data-testid="stRadio"] label div[class*="radio"] {
+    display: none !important;
+}
+
+/* 3. Hide any actual inputs or svgs */
+[data-testid="stRadio"] label input,
+[data-testid="stRadio"] label svg {
+    display: none !important;
+}
+
+/* Make sure the text container takes full width and resets padding */
+[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
+}
+/* ========================================================= */
 
 /* Hover state */
 [data-testid="stRadio"] label:hover {
