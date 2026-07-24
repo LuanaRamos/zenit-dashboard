@@ -1,8 +1,8 @@
-from typing import Any
 import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
-from schemas.instagram import InstagramMedia, InstagramStory
+from schemas.meta import InstagramMedia, InstagramStory
+from ui.components import render_metric_card
 
 try:
     from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
@@ -66,34 +66,77 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
 
     pct_organic = (total_organic_reach / total_reach * 100) if total_reach > 0 else 0
     pct_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
+    
     st.markdown(f"### Visão Geral ({len(media_list)} Publicações)")
     cols = st.columns(3)
 
     with cols[0]:
-        st.metric(
-            label="Alcance Total Global",
+        render_metric_card(
+            label='<i class="bi bi-people"></i> Alcance Total Global',
             value=f"{total_reach:,}".replace(",", "."),
-            help="Total de pessoas alcançadas (Orgânico + Pago).",
+            help_text="Orgânico + Pago"
         )
 
     with cols[1]:
-        st.metric(
-            label="Alcance Puramente Orgânico",
+        render_metric_card(
+            label='<i class="bi bi-phone"></i> Alcance Puramente Orgânico',
             value=f"{total_organic_reach:,}".replace(",", "."),
             delta=f"{pct_organic:.1f}% do Total",
-            delta_color="normal",
-            help="Pessoas alcançadas naturalmente, sem o uso de anúncios.",
+            delta_type="green"
         )
 
     with cols[2]:
-        st.metric(
-            label="Alcance via Ads (Pago)",
+        render_metric_card(
+            label='<i class="bi bi-megaphone"></i> Alcance via Ads (Pago)',
             value=f"{total_paid_reach:,}".replace(",", "."),
             delta=f"{pct_paid:.1f}% do Total",
-            delta_color="off",
-            help="Pessoas alcançadas através de impulsionamento pago.",
+            delta_type="gold"
         )
 
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- Top Posts Bento Grid ---
+    if media_list:
+        st.markdown("#### 🔥 Top Posts de Maior Alcance")
+        # Sort by total reach
+        top_posts = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)[:3]
+        
+        b1, b2, b3 = st.columns(3)
+        cols = [b1, b2, b3]
+        
+        for idx, post in enumerate(top_posts):
+            with cols[idx]:
+                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
+                likes = post.like_count
+                reach = post.organic_reach + post.paid_reach
+                
+                # Choose icon based on type
+                if post.media_product_type == "REELS":
+                    icon = "🎬"
+                elif post.media_type == "CAROUSEL_ALBUM":
+                    icon = "📸"
+                else:
+                    icon = "📱"
+                
+                st.markdown(f"""
+                <div class="glass-card" style="margin-bottom: 1rem; height: 100%;">
+                    <div class="top-post-card">
+                        <div class="top-post-icon">{icon}</div>
+                        <div class="top-post-info">
+                            <div class="top-post-caption" title="{post.caption}">{short_text}</div>
+                            <div class="top-post-stats">
+                                👁️ {reach:,} <span style="margin: 0 4px;">•</span> ❤️ {likes:,}
+                            </div>
+                            <div class="top-post-link-wrapper">
+                                <a href="{post.permalink}" target="_blank" class="top-post-link">Ver no Instagram ↗</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """.replace(",", "."), unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
 def _ms_to_hhmmss(ms: float) -> str:
     """
@@ -134,7 +177,7 @@ def _render_aggrid_table(
         df,
         gridOptions=grid_options,
         allow_unsafe_jscode=True,
-        theme="streamlit",
+        theme="balham-dark",
         fit_columns_on_grid_load=True,
         height=350,
     )
