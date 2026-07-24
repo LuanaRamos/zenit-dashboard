@@ -162,3 +162,4 @@ def main() -> None:  # noqa: C901
 
 if __name__ == "__main__":
     main()
+# Force hot reload
