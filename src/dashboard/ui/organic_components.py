@@ -6,7 +6,7 @@ from schemas.instagram import InstagramMedia
 def render_organic_metrics_cards(media_list: List[InstagramMedia]):
     """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
-        st.info("Nenhuma publicação encontrada no período selecionado.")
+        st.info("Você não publicou conteúdo orgânico recentemente. Poste um Reels ou Carrossel no Instagram para acompanhar seu alcance gratuito aqui.")
         return
 
     # Cálculos para visão geral

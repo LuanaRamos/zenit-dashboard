@@ -41,7 +41,7 @@ def main():
                 campaigns = fetch_campaigns_v8(date_preset)
                 
             if not campaigns:
-                st.warning("Nenhuma campanha ativa encontrada nesse período.")
+                st.warning("Não localizamos campanhas ativas neste período. Acesse o Gerenciador de Anúncios da Meta para ativar suas campanhas e visualizar o retorno aqui.")
                 return
                 
             # Agregações simples para os cards

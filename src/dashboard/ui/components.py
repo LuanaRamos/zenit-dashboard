@@ -35,7 +35,7 @@ def render_whatsapp_campaigns(campaigns: List[CampaignInsight]):
     st.markdown("### 💬 Campanhas de Mensagens (WhatsApp/Direct)")
     
     if not campaigns:
-        st.info("Nenhuma campanha de mensagens ativa no momento.")
+        st.info("Você não tem campanhas de mensagens rodando no momento. Ative uma campanha focada em WhatsApp ou Direct para ver os resultados aqui.")
         return
         
     data = []
@@ -70,7 +70,7 @@ def render_profile_campaigns(campaigns: List[CampaignInsight]):
     st.markdown("### 📸 Campanhas de Seguidores e Visitas ao Perfil")
     
     if not campaigns:
-        st.info("Nenhuma campanha de seguidores ou visitas ativa.")
+        st.info("Você não teve campanhas de Tráfego focadas em atrair seguidores ou visitas no período. Crie uma para começar a medir.")
         return
         
     data = []
@@ -95,7 +95,7 @@ def render_general_campaigns(campaigns: List[CampaignInsight], title: str = "Out
     st.markdown(f"### 🌐 {title}")
     
     if not campaigns:
-        st.info("Nenhuma campanha encontrada nesta categoria.")
+        st.info("Não há campanhas com outros objetivos (como Cadastros) ativas no período. Teste novos formatos para expandir sua estratégia.")
         return
         
     data = []
