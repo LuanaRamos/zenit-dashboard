@@ -3,28 +3,39 @@ import streamlit as st
 from schemas.meta import CampaignInsight
 import plotly.graph_objects as go
 
+def format_br_currency(val):
+    if pd.isna(val): return "-"
+    if isinstance(val, (int, float)):
+        return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return str(val)
+
+def format_br_number(val):
+    if pd.isna(val): return "-"
+    if isinstance(val, (int, float)):
+        if isinstance(val, float) and not val.is_integer():
+            return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{int(val):,}".replace(",", ".")
+    return str(val)
+
 def render_glass_table(df: pd.DataFrame, currency_cols: list[str] = None) -> None:
     currency_cols = currency_cols or []
     
-    # Configure columns
-    column_config = {}
+    # Create format dict for Pandas styling
+    format_dict = {}
     for col in df.columns:
         if col in currency_cols:
-            column_config[col] = st.column_config.NumberColumn(
-                col, format="R$%.2f"  # Fixed to remove space, which often breaks sprintf
-            )
-        else:
-            if pd.api.types.is_numeric_dtype(df[col]):
-                column_config[col] = st.column_config.NumberColumn(
-                    col
-                )
+            format_dict[col] = format_br_currency
+        elif pd.api.types.is_numeric_dtype(df[col]):
+            format_dict[col] = format_br_number
+            
+    # Apply styling
+    styled_df = df.style.format(format_dict)
     
     # Render with Streamlit's native dataframe which supports sorting and dark mode
     st.dataframe(
-        df,
+        styled_df,
         hide_index=True,
-        use_container_width=True,
-        column_config=column_config
+        use_container_width=True
     )
 
 def render_metric_card(label: str, value: str, delta: str = None, delta_type: str = "normal", help_text: str = None) -> None:

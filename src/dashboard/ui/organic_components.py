@@ -215,21 +215,20 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
     # Sort
     df = df.sort_values(by="Alcance", ascending=False)
     
+    # Import formatter
+    from ui.components import format_br_number
+    
+    format_dict = {col: format_br_number for col in num_cols if col in df.columns}
+    styled_df = df.style.format(format_dict)
+    
     # Use native st.dataframe for sorting and resizing
     st.dataframe(
-        df,
+        styled_df,
         hide_index=True,
         use_container_width=True,
         column_config={
             "Visualizar no IG": st.column_config.LinkColumn(
                 "Link", help="Clique para abrir no Instagram", max_chars=100
-            ),
-            "Alcance": st.column_config.NumberColumn(),
-            "Likes": st.column_config.NumberColumn(),
-            "Comentários": st.column_config.NumberColumn(),
-            "Shares": st.column_config.NumberColumn(),
-            "Salvos": st.column_config.NumberColumn(),
-            "Seguidores": st.column_config.NumberColumn(),
-            "Visitas Perfil": st.column_config.NumberColumn(),
+            )
         }
     )
