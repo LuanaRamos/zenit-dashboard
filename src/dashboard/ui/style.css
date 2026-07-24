@@ -57,3 +57,49 @@
 
 h1, h2, h3, h4 { font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.02em !important; }
 h1 { margin-bottom: 30px !important; font-size: 2.8rem !important; font-weight: 800 !important; }
+
+/* Impeccable Motion System */
+@keyframes float-up-reveal {
+    from { 
+        opacity: 0.01; 
+        transform: translateY(20px) scale(0.98); 
+        filter: blur(4px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+        filter: blur(0px); 
+    }
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* Base entrance for components */
+    .glass-card, .glass-table-container, [data-testid="stPlotlyChart"] {
+        animation: float-up-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0.01;
+    }
+    
+    /* Staggered load for cards in columns */
+    div[data-testid="column"]:nth-child(1) .glass-card { animation-delay: 0.05s; }
+    div[data-testid="column"]:nth-child(2) .glass-card { animation-delay: 0.15s; }
+    div[data-testid="column"]:nth-child(3) .glass-card { animation-delay: 0.25s; }
+    
+    /* Chart and Table entrance delay */
+    [data-testid="stPlotlyChart"] { animation-delay: 0.35s; }
+    .glass-table-container { animation-delay: 0.45s; }
+    
+    /* Specific hover animation for the Pie Chart SVG group */
+    [data-testid="stPlotlyChart"] .main-svg .pielayer {
+        transform-origin: center;
+        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    [data-testid="stPlotlyChart"]:hover .main-svg .pielayer {
+        transform: scale(1.03) rotate(2deg);
+    }
+}
