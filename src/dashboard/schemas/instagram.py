@@ -20,4 +20,9 @@ class InstagramMedia(BaseModel):
     paid_clicks: int = Field(default=0, description="Soma de cliques no link (Ads)")
     paid_ctr: float = Field(default=0.0, description="CTR Ponderado Pago (%)")
     paid_frequency: float = Field(default=0.0, description="Frequência Ponderada Paga")
+    paid_likes: int = Field(default=0, description="Soma de curtidas pagas nos anúncios (Dark Posts)")
     organic_reach: int = Field(default=0, description="Alcance puramente orgânico (Total - Pago)")
+
+    @property
+    def total_likes(self) -> int:
+        return self.like_count + self.paid_likes
