@@ -20,6 +20,7 @@ class MetaAdsClient:
         self.token = settings.meta_master_token
         self.ad_account_id = settings.ad_account_id
         self.page_id = settings.page_id
+        self.session = requests.Session()
 
     def _make_request(self, endpoint: str, params: dict = None) -> dict:
         """
@@ -33,7 +34,7 @@ class MetaAdsClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
@@ -42,7 +43,7 @@ class MetaAdsClient:
             
             logger.error(f"Erro na API da Meta: {error_msg}")
             
-            if "Session has expired" in error_msg or "Error validating access token" in error_msg:
+            if "Session has expired" or "Error validating access token" in error_msg:
                 raise MetaAPIError("O seu Token expirou ou é inválido. Por favor, gere um novo no portal de desenvolvedores e atualize o arquivo .env.")
             
             raise MetaAPIError(f"Erro ao consultar o Meta Ads: {error_msg}")
