@@ -1,11 +1,12 @@
 from typing import Any, ClassVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class CampaignInsight(BaseModel):
     """
     Representa as métricas de performance de uma campanha no Meta Ads.
     Todos os campos possuem valores default para evitar crashes se a Meta não retornar a chave.
     """
+    model_config = ConfigDict(frozen=True)
     OBJECTIVE_MAPPING: ClassVar[dict[str, str]] = {
         "OUTCOME_AWARENESS": "Reconhecimento",
         "OUTCOME_TRAFFIC": "Tráfego",
@@ -64,7 +65,6 @@ class CampaignInsight(BaseModel):
         Gera um insight a partir de um dicionário retornado pela API da Meta,
         fazendo o parse correto de valores aninhados (como actions e action_values).
         """
-        # Extrair dados básicos que já vem na raiz
         parsed_data = {
             "campaign_name": data.get("campaign_name", "Campanha Desconhecida"),
             "campaign_id": data.get("campaign_id", ""),
@@ -76,12 +76,10 @@ class CampaignInsight(BaseModel):
             "cpm": float(data.get("cpm", 0.0))
         }
 
-        # Analisar o array de 'actions' para buscar eventos específicos
         actions = data.get("actions", [])
-        
         leads = 0
         whatsapp_starts = 0
-        instagram_follows = int(data.get("instagram_follows", 0)) # Pode vir na raiz na API nova
+        instagram_follows = int(data.get("instagram_follows", 0))
         profile_visits = 0
         
         for action in actions:
@@ -102,7 +100,6 @@ class CampaignInsight(BaseModel):
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
 
-        # Calcular Custos
         spend = parsed_data["spend"]
         if leads > 0:
             parsed_data["cpl"] = spend / leads
@@ -119,6 +116,7 @@ class PageInsight(BaseModel):
     """
     Métricas da página/Instagram orgânico.
     """
+    model_config = ConfigDict(frozen=True)
     followers: int = Field(default=0)
     reach: int = Field(default=0)
     engagement: int = Field(default=0)
