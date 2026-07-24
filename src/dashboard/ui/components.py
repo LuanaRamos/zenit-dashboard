@@ -119,10 +119,11 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
             {
                 "Campanha": c.campaign_name,
                 "Gastos (R$)": round(c.spend, 2),
+                "Cliques no Link": c.clicks,
+                "Custo por Clique (R$)": round(c.cpc, 2),
+                "Visitas ao Perfil": c.profile_visits,
                 "Seguidores Gerados": c.instagram_follows,
                 "Custo por Seguidor (R$)": round(c.cost_per_follower, 2),
-                "Visitas ao Perfil": c.profile_visits,
-                "Custo por Visita (R$)": round(c.cost_per_profile_visit, 2),
             }
         )
 
