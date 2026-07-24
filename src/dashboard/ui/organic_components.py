@@ -44,15 +44,30 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
         )
 
 
-def _format_compact(val: int) -> str:
+def _format_compact(val) -> str:
     """Função utilitária (Dataviz) para encurtar números para K ou M."""
     if pd.isna(val):
         return "0"
+    val = int(val)
     if val >= 1_000_000:
         return f"{val/1_000_000:.1f}M"
     elif val >= 1_000:
         return f"{val/1_000:.1f}K"
-    return str(int(val))
+    return str(val)
+
+def _format_duration(ms: float) -> str:
+    """Converte milissegundos da API em string legível (ex: 2h 3m, 45m 1s, 9s)."""
+    if not ms or ms <= 0:
+        return "0s"
+    total_s = int(ms / 1000)
+    hours = total_s // 3600
+    minutes = (total_s % 3600) // 60
+    seconds = total_s % 60
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    if minutes > 0:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
 
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
     """Renderiza a tabela linha a linha filtrada por tipo de conteúdo e visão de dados."""
@@ -155,11 +170,9 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         # então ocultamos no Paid mode para evitar laranjas misturadas com maçãs.
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
-                # API devolve em ms, convertendo para segundos:
-                watch_time_s = m.ig_reels_video_view_total_time / 1000.0 if m.ig_reels_video_view_total_time > 0 else 0
-                avg_watch_time_s = m.ig_reels_avg_watch_time / 1000.0 if m.ig_reels_avg_watch_time > 0 else 0
-                row["Watch Time Total"] = f"{watch_time_s:.1f}s"
-                row["Retenção Média"] = f"{avg_watch_time_s:.1f}s"
+                # _format_duration já converte ms -> formato legível (ex: 45m 1s)
+                row["Watch Time Total"] = _format_duration(m.ig_reels_video_view_total_time)
+                row["Retenção Média"] = _format_duration(m.ig_reels_avg_watch_time)
             else:
                 row["Seguidores (Follows)"] = _format_compact(m.follows)
                 row["Visitas ao Perfil"] = _format_compact(m.profile_visits)
@@ -167,7 +180,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         row["Visualizar no IG"] = m.permalink
         data.append(row)
         
-    df = pd.DataFrame(data).fillna(0)
+    df = pd.DataFrame(data).fillna("0")
     
     st.dataframe(
         df,
