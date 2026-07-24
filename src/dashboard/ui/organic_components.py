@@ -108,7 +108,7 @@ def _render_aggrid_table(df: pd.DataFrame, numeric_cols: List[str], link_col: st
         if col in df.columns:
             gb.configure_column(col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER)
             
-    # Aplica renderizador de Link (contrato de Classe AG Grid Component)
+    # Aplica renderizador de Link
     if link_col in df.columns:
         gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
 
@@ -237,3 +237,4 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         _render_aggrid_table(df, num_cols)
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
+
