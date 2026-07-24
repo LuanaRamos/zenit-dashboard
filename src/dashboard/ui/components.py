@@ -81,7 +81,15 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             text="Custo (R$)",
             color_discrete_sequence=["#25D366"]
         )
-        fig.update_traces(texttemplate='R$ %{text:.2f}', textposition='outside')
+        
+        # Define uma largura máxima para as barras se houver poucas campanhas
+        bar_width = 0.3 if len(chart_data) == 1 else (0.5 if len(chart_data) == 2 else None)
+        
+        fig.update_traces(
+            texttemplate='R$ %{text:.2f}', 
+            textposition='outside',
+            width=bar_width
+        )
         fig.update_layout(
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
