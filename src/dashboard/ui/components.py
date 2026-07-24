@@ -11,13 +11,12 @@ def render_glass_table(df: pd.DataFrame, currency_cols: list[str] = None) -> Non
     for col in df.columns:
         if col in currency_cols:
             column_config[col] = st.column_config.NumberColumn(
-                col, format="R$ %.2f"
+                col, format="R$%.2f"  # Fixed to remove space, which often breaks sprintf
             )
         else:
-            # If it's numeric, format cleanly
             if pd.api.types.is_numeric_dtype(df[col]):
                 column_config[col] = st.column_config.NumberColumn(
-                    col, format="%d"
+                    col
                 )
     
     # Render with Streamlit's native dataframe which supports sorting and dark mode

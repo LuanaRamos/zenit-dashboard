@@ -168,7 +168,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         }
         
         # Link in raw HTML for st.markdown, but we are switching to st.dataframe which supports clickable URLs if configured, but let's just use the URL
-        row["Visualizar no IG"] = m.permalink
+        row["Visualizar no IG"] = m.permalink if m.permalink else None
         data.append(row)
 
     # 2. Process Stories
@@ -188,7 +188,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
                 "Salvos": 0,
                 "Seguidores": 0,
                 "Visitas Perfil": 0,
-                "Visualizar no IG": s.permalink
+                "Visualizar no IG": s.permalink if s.permalink else None
             }
             data.append(row)
 
@@ -224,12 +224,12 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
             "Visualizar no IG": st.column_config.LinkColumn(
                 "Link", help="Clique para abrir no Instagram", max_chars=100
             ),
-            "Alcance": st.column_config.NumberColumn(format="%d"),
-            "Likes": st.column_config.NumberColumn(format="%d"),
-            "Comentários": st.column_config.NumberColumn(format="%d"),
-            "Shares": st.column_config.NumberColumn(format="%d"),
-            "Salvos": st.column_config.NumberColumn(format="%d"),
-            "Seguidores": st.column_config.NumberColumn(format="%d"),
-            "Visitas Perfil": st.column_config.NumberColumn(format="%d"),
+            "Alcance": st.column_config.NumberColumn(),
+            "Likes": st.column_config.NumberColumn(),
+            "Comentários": st.column_config.NumberColumn(),
+            "Shares": st.column_config.NumberColumn(),
+            "Salvos": st.column_config.NumberColumn(),
+            "Seguidores": st.column_config.NumberColumn(),
+            "Visitas Perfil": st.column_config.NumberColumn(),
         }
     )
