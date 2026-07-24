@@ -9,20 +9,20 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
     Retorna o módulo selecionado.
     """
     with st.sidebar:
-        # Dashdark X Logo styling (Cyan and White)
+        # Zenit Logo styling (Gold and Dark)
         st.markdown(
             """
-            <div style="padding: 10px 0 20px 0; text-align: left; display: flex; align-items: center; gap: 10px;">
-                <div style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #00f0ff, #b026ff);"></div>
-                <h2 style="margin:0; font-size: 1.5rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
-                    <span style="color: #ffffff;">Dashdark</span> <span style="color: #00f0ff;">X</span>
+            <div style="padding: 10px 0 24px 0; text-align: left; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #FFB300, #FF6F00); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>
+                <h2 style="margin:0; font-size: 1.4rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
+                    <span style="color: #ffffff;">Zenit</span><span style="color: #FFB300;">Analytics</span>
                 </h2>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
         selected_module = option_menu(
             menu_title=None,
             options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
@@ -34,14 +34,14 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                     "padding": "0!important", 
                     "background-color": "transparent",
                 },
-                "icon": {"color": "#8B949E", "font-size": "18px"},
+                "icon": {"color": "#8B949E", "font-size": "16px"},
                 "nav-link": {
-                    "font-size": "15px",
+                    "font-size": "14px",
                     "text-align": "left",
-                    "margin": "0px 0px 8px 0px",
-                    "--hover-color": "rgba(255, 255, 255, 0.03)",
-                    "border-radius": "8px",
-                    "padding": "12px 16px",
+                    "margin": "0px 0px 6px 0px",
+                    "--hover-color": "rgba(255, 255, 255, 0.02)",
+                    "border-radius": "6px",
+                    "padding": "10px 14px",
                     "border": "1px solid transparent",
                     "color": "#8B949E",
                     "font-family": "Inter, sans-serif",
@@ -49,19 +49,19 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                     "transition": "all 0.2s ease",
                 },
                 "nav-link-selected": {
-                    "background": "rgba(176, 38, 255, 0.1)",
-                    "border": "1px solid rgba(176, 38, 255, 0.2)",
+                    "background": "rgba(255, 179, 0, 0.08)",
+                    "border": "1px solid rgba(255, 179, 0, 0.15)",
                     "box-shadow": "none",
-                    "color": "#ffffff",
+                    "color": "#FFB300",
                     "font-weight": "600"
                 },
             }
         )
         
-        # Override icon color when selected to Magenta Neon
+        # Override icon color when selected to Zenit Gold
         st.markdown("""
         <style>
-        .nav-item .active i { color: #b026ff !important; }
+        .nav-item .active i { color: #FFB300 !important; }
         </style>
         """, unsafe_allow_html=True)
 
