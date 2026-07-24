@@ -49,12 +49,15 @@ def render_metric_card(label: str, value: str, delta: str = None, delta_type: st
     delta_html = f'<div style="margin-top: 0.2rem;"><span class="metric-pill-{delta_type}">{delta}</span></div>' if delta else ""
     help_html = f'<div class="metric-card-title" style="margin-top: 0.2rem;">{help_text}</div>' if help_text else ""
     
-    st.markdown(f"""<div class="glass-card">
-        <div class="metric-card-title">{label}</div>
-        <div class="metric-card-value">{value}</div>
-        {delta_html}
-        {help_html}
-    </div>""", unsafe_allow_html=True)
+    html = f"""<div class="glass-card">
+<div class="metric-card-title">{label}</div>
+<div style="display: flex; align-items: center; margin-top: 0.5rem;">
+<div class="metric-card-value" style="margin: 0;">{value}</div>
+{delta_html}
+</div>
+{help_html}
+</div>"""
+    st.markdown(html, unsafe_allow_html=True)
 
 def render_metric_cards(total_spend: float, total_conversions: int, avg_cpa: float) -> None:
     """
@@ -88,7 +91,7 @@ def render_metric_cards(total_spend: float, total_conversions: int, avg_cpa: flo
 
 def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     """Renderiza um gráfico de pizza mostrando a distribuição de gastos por objetivo da campanha."""
-    st.markdown("<br>#### 🎯 Distribuição de Investimento por Objetivo", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #ffffff; font-weight: 600; margin-top: 1rem; margin-bottom: 1rem;'>🎯 Distribuição de Investimento</h4>", unsafe_allow_html=True)
     
     spend_by_obj = {}
     for c in campaigns:
