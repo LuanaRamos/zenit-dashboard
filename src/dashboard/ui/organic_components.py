@@ -64,9 +64,9 @@ def render_posts_table(media_list: List[InstagramMedia]):
             "Likes": m.total_likes,
             "Alcance Orgânico": m.organic_reach,
             "Alcance Pago": m.paid_reach,
-            "CTR Anúncio (%)": round(m.paid_ctr, 2) if m.paid_reach > 0 else "-",
-            "Frequência Anúncio": round(m.paid_frequency, 2) if m.paid_reach > 0 else "-",
-            "Link": m.permalink
+            "CTR Anúncio (%)": round(m.paid_ctr, 2) if m.paid_reach > 0 else None,
+            "Frequência Anúncio": round(m.paid_frequency, 2) if m.paid_reach > 0 else None,
+            "Visualizar no IG": m.permalink
         })
         
     df = pd.DataFrame(data)
@@ -76,7 +76,7 @@ def render_posts_table(media_list: List[InstagramMedia]):
         df,
         use_container_width=True,
         column_config={
-            "Link": st.column_config.LinkColumn("Visualizar no IG"),
+            "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
             "CTR Anúncio (%)": st.column_config.NumberColumn(
                 "CTR Anúncio (%)", 
                 help="Porcentagem PONDERADA de pessoas que clicaram no link do anúncio desse post.",
