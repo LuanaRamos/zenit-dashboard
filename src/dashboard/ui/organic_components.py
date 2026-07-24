@@ -20,22 +20,25 @@ function(params) {
 
 # Renderizador JavaScript de Link usando o contrato oficial de Componente de Celula do AG Grid
 LINK_RENDERER = JsCode("""
-function UrlRenderer() {}
-UrlRenderer.prototype.init = function(params) {
-    this.eGui = document.createElement('a');
-    if (params.value) {
-        this.eGui.href = params.value;
-        this.eGui.target = '_blank';
-        this.eGui.rel = 'noopener noreferrer';
-        this.eGui.style.color = '#4da6ff';
-        this.eGui.style.textDecoration = 'none';
-        this.eGui.style.fontWeight = '600';
-        this.eGui.innerHTML = 'Abrir post 🔗';
-    }
-};
-UrlRenderer.prototype.getGui = function() {
-    return this.eGui;
-};
+(function() {
+    function UrlRenderer() {}
+    UrlRenderer.prototype.init = function(params) {
+        this.eGui = document.createElement('a');
+        if (params.value) {
+            this.eGui.href = params.value;
+            this.eGui.target = '_blank';
+            this.eGui.rel = 'noopener noreferrer';
+            this.eGui.style.color = '#4da6ff';
+            this.eGui.style.textDecoration = 'none';
+            this.eGui.style.fontWeight = '600';
+            this.eGui.innerHTML = 'Abrir post 🔗';
+        }
+    };
+    UrlRenderer.prototype.getGui = function() {
+        return this.eGui;
+    };
+    return UrlRenderer;
+})()
 """) if HAS_AGGRID else None
 
 
