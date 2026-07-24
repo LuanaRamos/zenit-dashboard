@@ -1,10 +1,10 @@
-/* Zenit Brand Colors & Dashboard Overrides */
+/* Zenit Brand Colors & Dashboard Overrides (from code.html) */
 
 :root {
-  --primary: #FDBA21; /* Zenit Gold */
-  --bg-dark: #07090E; /* Dashdark Ultra Dark */
-  --text-primary: #FFFFFF;
-  --text-muted: #A0A6B1; 
+  --primary: #ffb300; /* Zenit Gold */
+  --bg-dark: #0c0c0e; /* Surface Dark */
+  --text-primary: #ffffff;
+  --text-muted: #9c9ca3; 
   --success: #10B981; 
 }
 
@@ -16,18 +16,10 @@
 }
 
 /* =========================================
-   1. TRUE BACKGROUND FOR GLASSMORPHISM
+   1. BACKGROUND
    ========================================= */
-/* We need a textured/glowing background so the blur actually distorts something */
 [data-testid="stAppViewContainer"] {
     background-color: var(--bg-dark) !important;
-    background-image: 
-        radial-gradient(circle at 0% 0%, rgba(253, 186, 33, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
-    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px !important;
-    background-attachment: fixed !important;
 }
 
 [data-testid="stHeader"] {
@@ -38,21 +30,19 @@
    2. GLASS METRIC CARDS
    ========================================= */
 [data-testid="stMetric"] {
-    background: rgba(15, 20, 30, 0.5) !important; /* Extremely transparent dark blue */
-    backdrop-filter: blur(16px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.25) !important; /* Top rim light */
-    border-radius: 16px !important;
+    background: rgba(24, 24, 28, 0.7) !important; 
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 0.5rem !important;
     padding: 24px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important; 
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 [data-testid="stMetric"]:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(253, 186, 33, 0.2) !important;
-    border-color: rgba(253, 186, 33, 0.4) !important;
+    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
+    border-color: rgba(255, 179, 0, 0.25) !important;
+    background: rgba(30, 30, 36, 0.85) !important;
 }
 
 [data-testid="stMetricLabel"] {
@@ -78,16 +68,14 @@
    3. GLASS TABLE
    ========================================= */
 .glass-table-container {
-    background: rgba(15, 20, 30, 0.5) !important;
-    backdrop-filter: blur(16px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    border-radius: 16px !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+    background: rgba(24, 24, 28, 0.7) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 0.5rem !important;
     padding: 24px !important;
     margin-top: 24px !important;
     margin-bottom: 24px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
     overflow-x: auto !important;
 }
 
@@ -127,9 +115,7 @@
    4. PREMIUM SIDEBAR & RADIO BUTTONS
    ========================================= */
 [data-testid="stSidebar"] {
-    background-color: rgba(7, 9, 14, 0.8) !important; /* Dark glass sidebar */
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
+    background-color: var(--bg-dark) !important; 
     border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
@@ -141,9 +127,9 @@
 }
 
 .stRadio [role="radiogroup"] label[data-baseweb="radio"] {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
+    background: rgba(24, 24, 28, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 0.5rem !important;
     padding: 16px 20px !important;
     margin: 0 !important;
     cursor: pointer !important;
@@ -157,8 +143,9 @@
 
 /* Hover state */
 .stRadio [role="radiogroup"] label[data-baseweb="radio"]:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
+    border-color: rgba(255, 179, 0, 0.25) !important;
+    background: rgba(30, 30, 36, 0.85) !important;
 }
 
 /* Text inside radio */
@@ -170,14 +157,13 @@
     transition: color 0.2s ease !important;
 }
 
-/* Selected state (using Streamlit internal checked logic) 
-   Streamlit adds data-checked or similar, but the safest way without JS is to rely on primaryColor bleed or :has() */
+/* Selected state (using Streamlit internal checked logic) */
 .stRadio [role="radiogroup"] label[data-baseweb="radio"]:has(input:checked),
 .stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([aria-checked="true"]),
 .stRadio [role="radiogroup"] label[data-baseweb="radio"]:has([data-checked="true"]) {
-    background: rgba(253, 186, 33, 0.15) !important;
-    border-color: rgba(253, 186, 33, 0.5) !important;
-    box-shadow: 0 0 15px rgba(253, 186, 33, 0.2) !important;
+    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
+    border-color: rgba(255, 179, 0, 0.25) !important;
+    background: rgba(30, 30, 36, 0.85) !important;
 }
 
 .stRadio [role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p,
@@ -194,9 +180,7 @@ h1, h2, h3, h4 {
 }
 
 h1 {
-    background: linear-gradient(90deg, #FFFFFF, #FDBA21); 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #ffffff;
     margin-bottom: 30px !important;
     font-size: 3.2rem !important; 
     font-weight: 800 !important;
@@ -212,8 +196,8 @@ hr {
    ========================================= */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(253, 186, 33, 0.5); }
+::-webkit-scrollbar-thumb { background: #18181c; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 179, 0, 0.5); }
 
 @keyframes fadeUp {
     from { opacity: 0; transform: translateY(15px); }
