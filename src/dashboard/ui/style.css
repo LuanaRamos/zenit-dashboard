@@ -1,333 +1,59 @@
-/* Zenit Brand Colors & Dashboard Overrides (from code.html) */
 @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --primary: #ffb300; /* Zenit Gold */
-  --bg-dark: #0c0c0e; /* Surface Dark */
+  --bg-dark: #080a11; 
+  --card-bg: #141722;
   --text-primary: #ffffff;
-  --text-muted: #9c9ca3; 
-  --success: #10B981; 
+  --text-muted: #8B949E; 
+  --accent: #b026ff;
 }
 
-/* Remove default Streamlit padding */
+* {
+    font-family: 'Inter', sans-serif;
+}
+
 .block-container {
     padding-top: 2rem !important;
     padding-bottom: 2rem !important;
     max-width: 1200px !important;
 }
 
-/* =========================================
-   1. BACKGROUND
-   ========================================= */
-[data-testid="stAppViewContainer"] {
-    background-color: var(--bg-dark) !important;
-}
+[data-testid="stAppViewContainer"] { background-color: var(--bg-dark) !important; }
+[data-testid="stHeader"] { background: transparent !important; }
 
-[data-testid="stHeader"] {
-    background: transparent !important;
-}
-
-/* =========================================
-   2. GLASS METRIC CARDS & CHARTS
-   ========================================= */
-[data-testid="stMetric"], [data-testid="stPlotlyChart"] {
-    background: rgba(24, 24, 28, 0.7) !important; 
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 0.5rem !important;
+.glass-card, [data-testid="stPlotlyChart"], .glass-table-container {
+    background: var(--card-bg) !important; 
+    border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    border-radius: 14px !important;
     padding: 24px !important;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
-[data-testid="stMetric"]:hover, [data-testid="stPlotlyChart"]:hover {
-    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
-    border-color: rgba(255, 179, 0, 0.25) !important;
-    background: rgba(30, 30, 36, 0.85) !important;
-}
-
-[data-testid="stMetricLabel"] {
-    color: var(--text-muted) !important;
-    font-size: 0.9rem !important;
-    font-weight: 500 !important;
-    margin-bottom: 8px !important;
-}
-
-[data-testid="stMetricValue"] {
-    color: var(--text-primary) !important;
-    font-size: clamp(2rem, 5vw, 3.5rem) !important;
-    font-weight: 800 !important;
-    letter-spacing: -2px !important;
-}
-
-[data-testid="stMetricDelta"] {
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
-}
-
-/* =========================================
-   3. GLASS TABLE
-   ========================================= */
-.glass-table-container {
-    background: rgba(24, 24, 28, 0.7) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 0.5rem !important;
-    padding: 24px !important;
-    margin-top: 24px !important;
-    margin-bottom: 24px !important;
-    overflow-x: auto !important;
-}
-
-.glass-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-primary);
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-}
-
-.glass-table th {
-    text-align: left;
-    padding: 12px 16px;
-    color: var(--text-primary);
-    font-weight: 700;
-    font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
-}
-
-.glass-table td {
-    padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.02); /* Very subtle line */
-    font-weight: 500;
-    color: #E2E8F0;
-}
-
-.glass-table tr:hover td {
-    background: rgba(255, 255, 255, 0.04);
-}
-
-[data-testid="stDataFrame"] {
-    display: none !important;
-}
-
-/* =========================================
-   4. PREMIUM SIDEBAR & RADIO BUTTONS
-   ========================================= */
-[data-testid="stSidebar"] {
-    background-color: var(--bg-dark) !important; 
-    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Advanced Radio Button Override (Targeting modern Streamlit data-testids) */
-[data-testid="stRadio"] > div {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-[data-testid="stRadio"] label {
-    background: rgba(24, 24, 28, 0.7) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 0.5rem !important;
-    padding: 16px 20px !important;
-    margin: 0 !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-}
-
-/* =========================================================
-   NUCLEAR OPTION: Destroy the Streamlit Radio Circle
-   ========================================================= */
-/* 1. Target the first child div (usually the circle container) */
-[data-testid="stRadio"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
-    display: none !important;
-    width: 0px !important;
-    height: 0px !important;
-    opacity: 0 !important;
-    position: absolute !important;
-    visibility: hidden !important;
-}
-
-/* 2. Target the exact internal structure of the radio SVG */
-[data-testid="stRadio"] label div[class*="radio"] {
-    display: none !important;
-}
-
-/* 3. Hide any actual inputs or svgs */
-[data-testid="stRadio"] label input,
-[data-testid="stRadio"] label svg {
-    display: none !important;
-}
-
-/* Make sure the text container takes full width and resets padding */
-[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
-    width: 100% !important;
-}
-/* ========================================================= */
-
-/* Hover state */
-[data-testid="stRadio"] label:hover {
-    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
-    border-color: rgba(255, 179, 0, 0.25) !important;
-    background: rgba(30, 30, 36, 0.85) !important;
-}
-
-/* Text inside radio */
-[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p,
-[data-testid="stRadio"] label p {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: var(--text-muted) !important;
-    margin: 0 !important;
-    transition: color 0.2s ease !important;
-}
-
-/* Selected state using modern CSS :has() */
-[data-testid="stRadio"] label:has(input:checked) {
-    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12) !important;
-    border-color: rgba(255, 179, 0, 0.25) !important;
-    background: rgba(30, 30, 36, 0.85) !important;
-}
-
-[data-testid="stRadio"] label:has(input:checked) p,
-[data-testid="stRadio"] label:has(input:checked) div[data-testid="stMarkdownContainer"] p {
-    color: var(--primary) !important;
-    font-weight: 700 !important;
-}
-
-
-/* Make headers prominent */
-h1, h2, h3, h4 {
-    font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
-}
-
-h1 {
-    color: #ffffff;
-    margin-bottom: 30px !important;
-    font-size: 3.2rem !important; 
-    font-weight: 800 !important;
-    letter-spacing: -2px !important;
-}
-
-hr {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* =========================================
-   5. DELIGHT: Animations & Scrollbars
-   ========================================= */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #18181c; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 179, 0, 0.5); }
-
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.block-container { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-[data-testid="stMetric"], .glass-table-container, [data-testid="stPlotlyChart"] {
-    opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-[data-testid="stMetric"]:nth-child(1) { animation-delay: 0.1s; }
-[data-testid="stMetric"]:nth-child(2) { animation-delay: 0.2s; }
-[data-testid="stMetric"]:nth-child(3) { animation-delay: 0.3s; }
-.glass-table-container { animation-delay: 0.4s; }
-[data-testid="stPlotlyChart"] { animation-delay: 0.5s; }
-
-/* =========================================
-   6. CUSTOM HTML COMPONENTS (Glass Cards)
-   ========================================= */
-.glass-card {
-    background: rgba(24, 24, 28, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 0.5rem;
-    padding: 24px;
-    transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12);
-    border-color: rgba(255, 179, 0, 0.25);
-    background: rgba(30, 30, 36, 0.85);
-}
-
-.metric-card-title {
-    color: #E2E8F0; /* High Contrast Slate */
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.metric-card-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #FFFFFF;
-    margin: 0.3rem 0;
+.glass-card:hover, [data-testid="stPlotlyChart"]:hover {
+    box-shadow: 0px 4px 24px rgba(176, 38, 255, 0.08) !important;
+    border-color: rgba(176, 38, 255, 0.15) !important;
 }
 
 .metric-pill-green {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10B981;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    background: rgba(16, 185, 129, 0.15); color: #10B981; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
 }
-
 .metric-pill-gold {
-    background: rgba(255, 179, 0, 0.15);
-    color: #FFB300;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    background: rgba(255, 179, 0, 0.15); color: #FFB300; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
 }
-
 .metric-pill-red {
-    background: rgba(239, 68, 68, 0.15);
-    color: #EF4444;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
 }
 
-.top-post-icon {
-    background: #1e1e24;
-    border-radius: 8px;
-    padding: 0.8rem;
-    font-size: 1.5rem;
-}
+.glass-table-container { margin-top: 24px !important; margin-bottom: 24px !important; overflow-x: auto !important; }
+.glass-table { width: 100%; border-collapse: collapse; color: var(--text-primary); font-size: 14px; }
+.glass-table th { text-align: left; padding: 12px 16px; color: var(--text-muted); font-weight: 500; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.glass-table td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-weight: 600; color: #E2E8F0; }
+.glass-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
-.top-post-caption {
-    font-weight: 600;
-    font-size: 0.9rem;
-    white-space: normal; /* Removed ellipsis for better accessibility */
-    color: #FFFFFF;
-}
+[data-testid="stDataFrame"] { display: none !important; }
+[data-testid="stSidebar"] { background-color: #0b0d14 !important; border-right: 1px solid rgba(255, 255, 255, 0.02) !important; }
 
-.top-post-stats {
-    color: #E2E8F0;
-    font-size: 0.85rem;
-    margin-top: 0.4rem;
-}
-
-.top-post-link {
-    color: #5AF8FB;
-    font-size: 0.8rem;
-    text-decoration: none;
-    font-weight: 600;
-}
+h1, h2, h3, h4 { font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.02em !important; }
+h1 { margin-bottom: 30px !important; font-size: 2.8rem !important; font-weight: 800 !important; }
