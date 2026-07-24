@@ -1,5 +1,7 @@
 import requests
 import logging
+import json
+import datetime
 from typing import List, Dict, Any
 from core.config import settings
 from schemas.meta import CampaignInsight
@@ -48,7 +50,7 @@ class MetaAdsClient:
             logger.error(f"Erro de rede ao consultar a Meta: {e}")
             raise MetaAPIError("Não foi possível conectar aos servidores da Meta. Verifique sua conexão.")
 
-    def get_campaign_insights(self, date_preset: str = "last_30d") -> List[CampaignInsight]:
+    def get_campaign_insights(self, date_preset: str = "last_30d", time_range: dict = None) -> List[CampaignInsight]:
         """
         Busca os insights a nível de campanha com base no período selecionado.
         Inclui o objetivo da campanha para renderização dinâmica (ODAX).
@@ -57,8 +59,12 @@ class MetaAdsClient:
         params = {
             "level": "campaign",
             "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions",
-            "date_preset": date_preset
         }
+        
+        if time_range:
+            params["time_range"] = json.dumps(time_range)
+        else:
+            params["date_preset"] = date_preset
 
         data = self._make_request(endpoint, params)
         insights_data = data.get("data", [])
@@ -157,3 +163,19 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
                 
         return ig_mapping
+
+    def get_account_created_time(self) -> datetime.date:
+        """
+        Tenta buscar a data de criacao da Conta de Anuncios.
+        Se falhar, retorna 04 de Fev de 2004 (Criacao do Facebook) como fallback.
+        """
+        endpoint = f"{self.ad_account_id}"
+        params = {"fields": "created_time"}
+        try:
+            data = self._make_request(endpoint, params)
+            if "created_time" in data:
+                return datetime.datetime.strptime(data["created_time"][:10], "%Y-%m-%d").date()
+        except Exception as e:
+            logger.warning(f"Erro ao buscar created_time da ad account, usando fallback: {e}")
+            
+        return datetime.date(2004, 2, 4)
