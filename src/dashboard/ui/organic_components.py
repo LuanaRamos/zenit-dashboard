@@ -3,6 +3,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from schemas.meta import InstagramMedia, InstagramStory
 from ui.components import render_metric_card
+from typing import Any
 
 try:
     from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
