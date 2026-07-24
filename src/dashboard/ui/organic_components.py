@@ -17,8 +17,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
     # Calcular percentual de tráfego orgânico vs pago
     pct_organic = (total_organic_reach / total_reach * 100) if total_reach > 0 else 0
     pct_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
-
-    st.markdown("### Visão Geral (Últimos 30 Posts)")
+    st.markdown(f"### Visão Geral ({len(media_list)} Publicações)")
     cols = st.columns(3)
     
     with cols[0]:
