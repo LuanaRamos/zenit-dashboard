@@ -98,10 +98,10 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             x=chart_data["Campanha"],
             y=chart_data["Custo (R$)"],
             mode='lines+markers',
-            line=dict(color='#FDBA21', width=3, shape='spline', smoothing=1.3),
-            marker=dict(size=10, color='#07090E', line=dict(width=2, color='#FDBA21')),
+            line=dict(color='#FDBA21', width=5, shape='spline', smoothing=1.3), # Bolder line
+            marker=dict(size=14, color='#07090E', line=dict(width=3, color='#FDBA21')), # Bolder markers
             fill='tozeroy',
-            fillcolor='rgba(253, 186, 33, 0.15)' # Efeito vidro (glass) da Zenit
+            fillcolor='rgba(253, 186, 33, 0.3)' # Bolder fill (glass)
         ))
         
         fig.update_layout(
