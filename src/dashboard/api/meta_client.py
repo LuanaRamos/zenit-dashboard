@@ -105,10 +105,10 @@ class MetaAdsClient:
                     "clicks": int(item.get("clicks", 0))
                 }
                 
-        # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (effective_instagram_story_id)
+        # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
         ads_params = {
-            "fields": "id,creative{effective_instagram_story_id}",
+            "fields": "id,creative{effective_instagram_story_id,effective_instagram_media_id}",
             "limit": "1000"
         }
         
@@ -123,7 +123,10 @@ class MetaAdsClient:
         for ad in ads_data:
             ad_id = ad.get("id")
             creative = ad.get("creative", {})
-            ig_id = creative.get("effective_instagram_story_id")
+            
+            # effective_instagram_media_id = Feed, Reels, Carousel
+            # effective_instagram_story_id = Stories
+            ig_id = creative.get("effective_instagram_media_id") or creative.get("effective_instagram_story_id")
             
             # Se esse anúncio está atrelado a um post do IG e possui métricas registradas
             if ig_id and ad_id in ad_metrics_map:
