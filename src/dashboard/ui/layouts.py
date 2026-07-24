@@ -28,12 +28,16 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
             menu_icon="cast",
             default_index=0,
             styles={
-                "container": {"padding": "0!important", "background-color": "transparent"},
+                "container": {
+                    "padding": "0!important", 
+                    "background-color": "transparent",
+                },
                 "icon": {"color": "#9c9ca3", "font-size": "20px"},
+                "nav-item": {"margin-bottom": "12px"},
                 "nav-link": {
                     "font-size": "16px",
                     "text-align": "left",
-                    "margin-bottom": "8px",
+                    "margin": "0px",
                     "--hover-color": "rgba(30, 30, 36, 0.85)",
                     "border-radius": "0.5rem",
                     "padding": "16px 20px",
