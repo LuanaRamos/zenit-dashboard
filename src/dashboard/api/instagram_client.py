@@ -22,6 +22,7 @@ class InstagramClient:
         self.token = settings.meta_master_token
         # O ID do Instagram é vinculado à página (obtido anteriormente na auditoria)
         self.instagram_account_id = "17841449425333311"
+        self.session = requests.Session()
 
     def _make_request(self, endpoint: str, params: dict = None) -> dict:
         """
@@ -35,7 +36,7 @@ class InstagramClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
@@ -113,7 +114,7 @@ class InstagramClient:
         for i in range(0, len(batch_requests), 50):
             chunk = batch_requests[i:i+50]
             try:
-                batch_res = requests.post(
+                batch_res = self.session.post(
                     self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20
@@ -198,7 +199,7 @@ class InstagramClient:
         for i in range(0, len(batch_requests), 50):
             chunk = batch_requests[i:i+50]
             try:
-                batch_res = requests.post(
+                batch_res = self.session.post(
                     self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20
