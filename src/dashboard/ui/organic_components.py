@@ -47,7 +47,6 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
 def _ms_to_hhmmss(ms: float) -> str:
     """
     Converte milissegundos em string HH:MM:SS com zero-padding.
-    
     Zero-padding garante que a ordenacao alfabetica coincide com a numerica:
     '00:09:03' < '00:45:01' < '06:29:00' - correto em ambas as ordens.
     """
@@ -63,9 +62,8 @@ def _ms_to_hhmmss(ms: float) -> str:
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
     """
     Renderiza a tabela de publicacoes.
-    - Colunas numericas: valores int/float para ordenacao correta pelo Streamlit.
-    - format=',.0f' usa separador de milhar do locale do browser (pt-BR = ponto).
-    - Colunas de tempo: string HH:MM:SS (zero-padded = ordena corretamente mesmo sendo string).
+    - Colunas numericas: valores int para ordenacao correta (format='%d' = printf valido).
+    - Colunas de tempo: string HH:MM:SS zero-padded (ordena corretamente mesmo sendo string).
     """
     if stories_list is None:
         stories_list = []
@@ -110,12 +108,11 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
             df_stories,
             use_container_width=True,
             column_config={
-                # format=',.0f' = separador de milhar via locale do browser (pt-BR = ponto)
-                "Alcance":   st.column_config.NumberColumn("Alcance",   format=",.0f"),
-                "Avanços":  st.column_config.NumberColumn("Avanços",   format=",.0f"),
-                "Voltas":    st.column_config.NumberColumn("Voltas",    format=",.0f"),
-                "Saídas":   st.column_config.NumberColumn("Saídas",   format=",.0f"),
-                "Respostas": st.column_config.NumberColumn("Respostas", format=",.0f"),
+                "Alcance":   st.column_config.NumberColumn("Alcance",   format="%d"),
+                "Avanços":  st.column_config.NumberColumn("Avanços",   format="%d"),
+                "Voltas":    st.column_config.NumberColumn("Voltas",    format="%d"),
+                "Saídas":   st.column_config.NumberColumn("Saídas",   format="%d"),
+                "Respostas": st.column_config.NumberColumn("Respostas", format="%d"),
                 "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir Story")
             },
             hide_index=True
@@ -165,7 +162,6 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
             "Salvos":  saved,
         }
         
-        # Watch time apenas nos modos que incluem dados organicos
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
                 # HH:MM:SS com zero-padding ordena corretamente mesmo sendo string
@@ -180,19 +176,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         
     df = pd.DataFrame(data).fillna(0)
     
-    # format=',.0f' = notacao d3, usa separador de milhar do locale do browser
-    # Em navegadores pt-BR: 4.400 | Em navegadores en-US: 4,400
+    # format='%d' = printf valido - exibe inteiro sem casas decimais
+    # Streamlit NAO suporta separador de milhar via NumberColumn (sem printf para isso)
     col_config: dict = {
-        "Likes":   st.column_config.NumberColumn("Likes",   format=",.0f"),
-        "Alcance": st.column_config.NumberColumn("Alcance", format=",.0f"),
-        "Shares":  st.column_config.NumberColumn("Shares",  format=",.0f"),
-        "Salvos":  st.column_config.NumberColumn("Salvos",  format=",.0f"),
+        "Likes":   st.column_config.NumberColumn("Likes",   format="%d"),
+        "Alcance": st.column_config.NumberColumn("Alcance", format="%d"),
+        "Shares":  st.column_config.NumberColumn("Shares",  format="%d"),
+        "Salvos":  st.column_config.NumberColumn("Salvos",  format="%d"),
         "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
     }
     
     if data_view != "Apenas Pago (Ads)" and media_type_filter != "Reels":
-        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",       format=",.0f")
-        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format=",.0f")
+        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",       format="%d")
+        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format="%d")
     
     st.dataframe(
         df,
