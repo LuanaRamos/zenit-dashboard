@@ -94,7 +94,9 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             xaxis_title="",
-            yaxis_title="Custo (R$)",
+            yaxis_title="",
+            xaxis=dict(showgrid=False, zeroline=False, showline=False, showticklabels=True),
+            yaxis=dict(showgrid=False, zeroline=False, showline=False, showticklabels=False),
             margin=dict(l=0, r=0, t=30, b=0)
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})

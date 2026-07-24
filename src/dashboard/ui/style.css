@@ -2,12 +2,12 @@
 
 :root {
   --primary: #FDBA21; /* Zenit Gold */
-  --bg-dark: #0A0A0A; /* Deep Black */
-  --bg-card: #141414; /* Dark Surface */
+  --bg-dark: #0B0E14; /* Dashdark Premium Background */
+  --bg-card: #151A23; /* Dashdark Premium Surface */
   --text-primary: #FFFFFF;
-  --text-muted: #A1A1AA;
-  --border-color: #27272A;
-  --success: #25D366;
+  --text-muted: #8E95A3; /* Dashdark Muted Text */
+  --border-color: #222A3B; /* Subtle Blue-Grey Border */
+  --success: #10B981; /* Premium Green */
 }
 
 /* Remove default Streamlit padding */
@@ -21,16 +21,16 @@
 [data-testid="stMetric"] {
     background-color: var(--bg-card) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 16px !important; /* Premium larger radius */
+    padding: 24px !important; /* More breathing room */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 [data-testid="stMetric"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(253, 186, 33, 0.15) !important; /* Gold glow */
-    border-color: #3F3F46 !important;
+    box-shadow: 0 8px 24px rgba(253, 186, 33, 0.12) !important; /* Premium subtle gold glow */
+    border-color: #313D53 !important;
 }
 
 /* Metric Label */
@@ -44,9 +44,9 @@
 /* Metric Value */
 [data-testid="stMetricValue"] {
     color: var(--text-primary) !important;
-    font-size: 2.2rem !important;
+    font-size: 2.5rem !important; /* Larger premium numbers */
     font-weight: 700 !important;
-    letter-spacing: -0.5px !important;
+    letter-spacing: -1px !important;
 }
 
 /* Metric Delta */
@@ -79,10 +79,11 @@ h1, h2, h3 {
 }
 
 h1 {
-    background: linear-gradient(90deg, #FDBA21, #FFD54F);
+    background: linear-gradient(90deg, #FFFFFF, #E2E8F0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 30px !important;
+    font-size: 2.2rem !important;
 }
 
 /* Adjust divider */
