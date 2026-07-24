@@ -169,7 +169,7 @@ def render_posts_table(  # noqa: C901
                 "nav-link": {
                     "font-size": "13px",
                     "text-align": "center",
-                    "margin": "0px",
+                    "margin": "0px 6px 0px 0px",
                     "--hover-color": "rgba(30, 30, 36, 0.85)",
                     "border-radius": "0.5rem",
                     "padding": "8px 12px",

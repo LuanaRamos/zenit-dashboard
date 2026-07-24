@@ -33,7 +33,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                 "nav-link": {
                     "font-size": "16px",
                     "text-align": "left",
-                    "margin": "0px",
+                    "margin-bottom": "8px",
                     "--hover-color": "rgba(30, 30, 36, 0.85)",
                     "border-radius": "0.5rem",
                     "padding": "16px 20px",
