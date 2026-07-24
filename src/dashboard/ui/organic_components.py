@@ -215,15 +215,22 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
     # Sort
     df = df.sort_values(by="Alcance", ascending=False)
     
-    # Import formatter
-    from ui.components import format_br_number
+    # Configure columns
+    column_config = {
+        "Visualizar no IG": st.column_config.LinkColumn(
+            "Link", help="Clique para abrir no Instagram", max_chars=100
+        )
+    }
     
-    format_dict = {col: format_br_number for col in num_cols if col in df.columns}
-    styled_df = df.style.format(format_dict)
-    
+    # Add number columns with d3-format to auto-format with thousands separators based on locale
+    for col in num_cols:
+        if col in df.columns:
+            column_config[col] = st.column_config.NumberColumn(format=",d")
+            
     # Use native st.dataframe for sorting and resizing
     st.dataframe(
-        styled_df,
+        df,
         hide_index=True,
-        use_container_width=True
+        use_container_width=True,
+        column_config=column_config
     )
