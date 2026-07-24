@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 
 from api.exceptions import MetaAPIError, InstagramAPIError
-from ui.data_loader import fetch_campaigns_v8, fetch_organic_v12
+from ui.data_loader import fetch_campaigns_v8, fetch_organic_v12, fetch_active_stories
 from ui.layouts import render_sidebar
 from ui.components import render_metric_cards, render_whatsapp_campaigns, render_profile_campaigns, render_general_campaigns
 from ui.organic_components import render_organic_metrics_cards, render_posts_table
@@ -88,12 +88,13 @@ def main():
         try:
             with st.spinner("Cruzando dados do Instagram e anúncios..."):
                 media_list = fetch_organic_v12(date_preset)
+                stories_list = fetch_active_stories()
                 
             st.markdown("<br>", unsafe_allow_html=True)
             render_organic_metrics_cards(media_list)
             
             st.markdown("<br>", unsafe_allow_html=True)
-            render_posts_table(media_list)
+            render_posts_table(media_list, stories_list)
             
         except InstagramAPIError as e:
             st.error("Não foi possível comunicar com o Instagram.")

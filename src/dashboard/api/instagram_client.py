@@ -1,8 +1,9 @@
 import requests
 import logging
+import json
 from typing import List
 from core.config import settings
-from schemas.instagram import InstagramMedia
+from schemas.instagram import InstagramMedia, InstagramStory
 from api.exceptions import InstagramAPIError
 
 logger = logging.getLogger(__name__)
@@ -17,12 +18,11 @@ class InstagramClient:
     def __init__(self):
         self.token = settings.meta_master_token
         # O ID do Instagram é vinculado à página (obtido anteriormente na auditoria)
-        # Em um app complexo isso viria do banco, mas aqui estamos usando direto o da MS Consultoria.
         self.instagram_account_id = "17841449425333311"
 
     def _make_request(self, endpoint: str, params: dict = None) -> dict:
         """
-        Método base para fazer requisições à Graph API.
+        Método base para fazer requisições GET simples à Graph API.
         Trata erros e early returns.
         """
         if params is None:
@@ -50,19 +50,11 @@ class InstagramClient:
 
     def get_recent_media(self, limit: int = 50, since_timestamp: int = None) -> List[InstagramMedia]:
         """
-        Busca as publicações recentes da conta do Instagram e seus insights agregados.
-        Suporta filtro real de data (since) com paginação automática.
-        
-        Args:
-            limit (int): Número de posts por página (max 100 recomendado).
-            since_timestamp (int, optional): Unix timestamp para puxar posts a partir dessa data.
-            
-        Returns:
-            List[InstagramMedia]: Lista com as publicações parseadas e tipadas rigorosamente.
+        Busca publicações recentes e seus insights via Batch Operations (alta performance).
         """
         endpoint = f"{self.instagram_account_id}/media"
         params = {
-            "fields": "id,caption,media_url,permalink,timestamp,like_count,comments_count,insights.metric(reach)",
+            "fields": "id,caption,media_url,permalink,timestamp,like_count,comments_count,media_type,media_product_type",
             "limit": str(limit)
         }
         
@@ -70,8 +62,6 @@ class InstagramClient:
             params["since"] = str(since_timestamp)
 
         media_items_data = []
-        
-        # Loop de Paginação (com teto de segurança de 5 chamadas = 500 posts max para não travar a UI)
         max_pages = 5
         current_page = 0
         
@@ -84,46 +74,159 @@ class InstagramClient:
                     
                 media_items_data.extend(page_data)
                 
-                # Checar se há próxima página
                 paging = data.get("paging", {})
                 if "cursors" in paging and "after" in paging["cursors"]:
                     params["after"] = paging["cursors"]["after"]
                 else:
-                    break  # Fim da paginação
+                    break
                 
                 current_page += 1
-                
             except Exception as e:
                 logger.warning(f"Erro durante a paginação do Instagram: {e}")
                 break
         
+        # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
+        insights_map = {}
+        batch_requests = []
+        for i, item in enumerate(media_items_data):
+            ig_id = item.get("id")
+            media_product_type = item.get("media_product_type", "")
+            if media_product_type == "REELS":
+                metrics = "reach,saved,shares,plays,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time"
+            else:
+                metrics = "reach,saved,shares,profile_activity,profile_visits,follows"
+            
+            batch_requests.append({
+                "method": "GET",
+                "relative_url": f"{ig_id}/insights?metric={metrics}"
+            })
+            
+        for i in range(0, len(batch_requests), 50):
+            chunk = batch_requests[i:i+50]
+            try:
+                batch_res = requests.post(
+                    self.BASE_URL,
+                    data={"access_token": self.token, "batch": json.dumps(chunk)},
+                    timeout=15
+                )
+                batch_res.raise_for_status()
+                for j, response_item in enumerate(batch_res.json()):
+                    if response_item.get("code") == 200:
+                        body = json.loads(response_item.get("body", "{}"))
+                        req_idx = i + j
+                        ig_id = media_items_data[req_idx]["id"]
+                        insights_map[ig_id] = body.get("data", [])
+            except Exception as e:
+                logger.error(f"Erro no Batch de Insights: {e}")
+
         media_list = []
         for item in media_items_data:
-            # Tratamento de segurança para insights que podem vir vazios (ex: Collabs ou Reels não suportados)
-            reach_value = 0
-            insights_data = item.get("insights", {}).get("data", [])
+            ig_id = item.get("id")
+            insights_data = insights_map.get(ig_id, [])
             
+            metrics_dict = {}
             for insight in insights_data:
-                if insight.get("name") == "reach":
-                    # Os valores vêm dentro do array 'values'
-                    values = insight.get("values", [])
-                    if values:
-                        reach_value = int(values[0].get("value", 0))
-                        
-            # Construir o modelo Pydantic rigoroso
+                name = insight.get("name")
+                values = insight.get("values", [])
+                if values:
+                    metrics_dict[name] = values[0].get("value", 0)
+                    
             try:
                 media = InstagramMedia(
-                    id=item.get("id"),
+                    id=ig_id,
                     caption=item.get("caption", ""),
                     media_url=item.get("media_url"),
+                    media_type=item.get("media_type", ""),
+                    media_product_type=item.get("media_product_type", ""),
                     permalink=item.get("permalink", ""),
                     timestamp=item.get("timestamp", ""),
                     like_count=int(item.get("like_count", 0)),
                     comments_count=int(item.get("comments_count", 0)),
-                    reach=reach_value
+                    reach=int(metrics_dict.get("reach", 0)),
+                    shares=int(metrics_dict.get("shares", 0)),
+                    saved=int(metrics_dict.get("saved", 0)),
+                    ig_reels_video_view_total_time=float(metrics_dict.get("ig_reels_video_view_total_time", 0)),
+                    ig_reels_avg_watch_time=float(metrics_dict.get("ig_reels_avg_watch_time", 0)),
+                    profile_activity=int(metrics_dict.get("profile_activity", 0)),
+                    profile_visits=int(metrics_dict.get("profile_visits", 0)),
+                    follows=int(metrics_dict.get("follows", 0))
                 )
                 media_list.append(media)
             except Exception as e:
-                logger.warning(f"Erro ao parsear a mídia do Instagram {item.get('id')}: {e}")
+                logger.warning(f"Erro ao parsear a mídia do Instagram {ig_id}: {e}")
                 
         return media_list
+
+    def get_active_stories(self) -> List[InstagramStory]:
+        """
+        Busca os stories ativos (últimas 24h) e seus insights de retenção via Batch.
+        """
+        endpoint = f"{self.instagram_account_id}/stories"
+        params = {
+            "fields": "id,caption,media_url,permalink,timestamp"
+        }
+        
+        try:
+            data = self._make_request(endpoint, params)
+            stories_data = data.get("data", [])
+        except Exception as e:
+            logger.error(f"Erro ao buscar stories: {e}")
+            return []
+            
+        if not stories_data:
+            return []
+            
+        batch_requests = []
+        for i, item in enumerate(stories_data):
+            ig_id = item.get("id")
+            metrics = "reach,exits,replies,taps_forward,taps_back"
+            batch_requests.append({
+                "method": "GET",
+                "relative_url": f"{ig_id}/insights?metric={metrics}"
+            })
+            
+        insights_map = {}
+        for i in range(0, len(batch_requests), 50):
+            chunk = batch_requests[i:i+50]
+            try:
+                batch_res = requests.post(
+                    self.BASE_URL,
+                    data={"access_token": self.token, "batch": json.dumps(chunk)},
+                    timeout=15
+                )
+                batch_res.raise_for_status()
+                for j, response_item in enumerate(batch_res.json()):
+                    if response_item.get("code") == 200:
+                        body = json.loads(response_item.get("body", "{}"))
+                        req_idx = i + j
+                        ig_id = stories_data[req_idx]["id"]
+                        insights_map[ig_id] = body.get("data", [])
+            except Exception as e:
+                logger.error(f"Erro no Batch de Insights de Stories: {e}")
+                
+        stories_list = []
+        for item in stories_data:
+            ig_id = item.get("id")
+            insights_data = insights_map.get(ig_id, [])
+            
+            metrics_dict = {}
+            for insight in insights_data:
+                name = insight.get("name")
+                values = insight.get("values", [])
+                if values:
+                    metrics_dict[name] = values[0].get("value", 0)
+                    
+            stories_list.append(InstagramStory(
+                id=ig_id,
+                caption=item.get("caption", ""),
+                media_url=item.get("media_url"),
+                permalink=item.get("permalink", ""),
+                timestamp=item.get("timestamp", ""),
+                reach=int(metrics_dict.get("reach", 0)),
+                exits=int(metrics_dict.get("exits", 0)),
+                replies=int(metrics_dict.get("replies", 0)),
+                taps_forward=int(metrics_dict.get("taps_forward", 0)),
+                taps_back=int(metrics_dict.get("taps_back", 0))
+            ))
+            
+        return stories_list

@@ -57,6 +57,8 @@ def fetch_organic_v12(date_preset: str) -> List[InstagramMedia]:
             media.paid_impressions = metrics["impressions"]
             media.paid_clicks = metrics["clicks"]
             media.paid_likes = metrics["likes"]
+            media.paid_shares = metrics.get("shares", 0)
+            media.paid_saved = metrics.get("saved", 0)
             
             # Cálculos Ponderados para evitar distorção matemática
             if media.paid_impressions > 0:
@@ -72,3 +74,9 @@ def fetch_organic_v12(date_preset: str) -> List[InstagramMedia]:
             media.organic_reach = media.reach
             
     return media_list
+
+@st.cache_resource(ttl=900)
+def fetch_active_stories() -> list:
+    """Busca stories ativos com cache local."""
+    ig_client = get_instagram_client()
+    return ig_client.get_active_stories()
