@@ -29,7 +29,7 @@ def main():
     if "data_loaded" not in st.session_state:
         st.session_state["data_loaded"] = False
         
-    selected_module, date_preset = render_sidebar()
+    selected_module, date_preset, time_range = render_sidebar()
     
     if selected_module == "📈 Visão Geral (Ads)":
         st.title("Resumo de Campanhas")
@@ -38,7 +38,7 @@ def main():
         try:
             # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
             with st.spinner("Buscando dados das campanhas..."):
-                campaigns = fetch_campaigns_v8(date_preset)
+                campaigns = fetch_campaigns_v8(date_preset, time_range)
                 
             if not campaigns:
                 st.warning("Não localizamos campanhas ativas neste período. Acesse o Gerenciador de Anúncios da Meta para ativar suas campanhas e visualizar o retorno aqui.")
@@ -87,7 +87,7 @@ def main():
         
         try:
             with st.spinner("Cruzando dados do Instagram e anúncios..."):
-                media_list = fetch_organic_v12(date_preset)
+                media_list = fetch_organic_v12(date_preset, time_range)
                 stories_list = fetch_active_stories()
                 
             st.markdown("<br>", unsafe_allow_html=True)
