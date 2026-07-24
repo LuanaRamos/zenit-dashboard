@@ -184,9 +184,9 @@ def _render_aggrid_table(
     )
 
 
-def render_posts_table(  # noqa: C901
+def render_posts_table(
     media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
-) -> None:  # noqa: C901  # noqa: C901
+) -> None:
     """
     Renderiza a tabela de publicacoes.
     - Se streamlit-aggrid instalado: Usa AgGrid com formatacao de milhar em pt-BR (ponto) e ordenacao numerica.
