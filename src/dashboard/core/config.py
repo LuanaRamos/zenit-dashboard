@@ -12,18 +12,7 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore", frozen=True
     )
 
-    # Configurações do App na Meta
-    meta_app_id: str | None = Field(
-        None, alias="META_APP_ID", description="ID do Aplicativo na Meta"
-    )
-    meta_app_secret: SecretStr | None = Field(
-        None, alias="META_APP_SECRET", description="Secret do Aplicativo na Meta"
-    )
-    meta_redirect_uri: str | None = Field(
-        None,
-        alias="META_REDIRECT_URI",
-        description="URI de Redirecionamento configurada no App",
-    )
+
 
     # Tokens e IDs Principais
     meta_master_token: SecretStr = Field(
