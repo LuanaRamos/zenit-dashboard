@@ -21,7 +21,7 @@ def get_instagram_client() -> InstagramClient:
     """Inicializa o cliente do Instagram apenas uma vez."""
     return InstagramClient()
 
-@st.cache_resource(ttl=3600)
+@st.cache_data(ttl=3600)
 def fetch_campaigns_v8(date_preset: str, time_range: dict = None) -> List[CampaignInsight]:
     client = get_api_client()
     return client.get_campaign_insights(date_preset=date_preset, time_range=time_range)
@@ -30,7 +30,7 @@ def fetch_campaigns_v8(date_preset: str, time_range: dict = None) -> List[Campai
 def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
-@st.cache_resource(ttl=900)
+@st.cache_data(ttl=900)
 def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
@@ -92,7 +92,7 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
             
     return updated_media_list
 
-@st.cache_resource(ttl=900)
+@st.cache_data(ttl=900)
 def fetch_active_stories() -> list:
     """Busca stories ativos com cache local."""
     ig_client = get_instagram_client()
