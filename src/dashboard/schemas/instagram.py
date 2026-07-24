@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
 class InstagramInsights(BaseModel):
+    model_config = ConfigDict(frozen=True)
     reach: int = Field(default=0, description="Alcance Orgânico + Pago puxado do Insights")
 
 class InstagramStory(BaseModel):
+    model_config = ConfigDict(frozen=True)
     id: str
     media_url: Optional[str] = None
     permalink: str = ""
@@ -17,6 +19,7 @@ class InstagramStory(BaseModel):
     taps_back: int = Field(default=0, description="Toques para voltar")
 
 class InstagramMedia(BaseModel):
+    model_config = ConfigDict(frozen=True)
     id: str
     caption: str = ""
     media_url: Optional[str] = None
