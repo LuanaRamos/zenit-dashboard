@@ -13,7 +13,7 @@ class InstagramClient:
     Cliente para comunicação direta com a Graph API do Instagram.
     Responsável por fazer o fetch de publicações orgânicas e seus insights.
     """
-    BASE_URL = "https://graph.facebook.com/v20.0"
+    BASE_URL = "https://graph.facebook.com/v22.0"
 
     def __init__(self):
         self.token = settings.meta_master_token
