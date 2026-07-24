@@ -18,11 +18,19 @@ function(params) {
 }
 """) if HAS_AGGRID else None
 
-# Renderizador JavaScript de Link para abrir posts diretamente
+# Renderizador JavaScript de Link para abrir posts diretamente (retorna elemento DOM para evitar escape de HTML)
 LINK_RENDERER = JsCode("""
 function(params) {
     if (!params.value) return '';
-    return '<a href="' + params.value + '" target="_blank" style="color: #4da6ff; text-decoration: none; font-weight: 600;">Abrir post 🔗</a>';
+    const a = document.createElement('a');
+    a.href = params.value;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.color = '#4da6ff';
+    a.style.textDecoration = 'none';
+    a.style.fontWeight = '600';
+    a.innerText = 'Abrir post 🔗';
+    return a;
 }
 """) if HAS_AGGRID else None
 
@@ -55,7 +63,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]):
             value=f"{total_organic_reach:,}".replace(",", "."),
             delta=f"{pct_organic:.1f}% do Total",
             delta_color="normal",
-            help="Pessoas alcançadas naturalmente, sem o uso de anúncios."
+            help="Pessoas alcançadas naturally, sem o uso de anúncios."
         )
         
     with cols[2]:
@@ -93,7 +101,7 @@ def _render_aggrid_table(df: pd.DataFrame, numeric_cols: List[str], link_col: st
         if col in df.columns:
             gb.configure_column(col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER)
             
-    # Aplica renderizador de Link
+    # Aplica renderizador de Link (retornando elemento DOM)
     if link_col in df.columns:
         gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
 
