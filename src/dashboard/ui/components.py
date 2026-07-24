@@ -61,11 +61,11 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     fig = go.Figure(data=[go.Pie(
         labels=labels, 
         values=values, 
-        hole=0.85, 
-        textinfo='none',
+        textinfo='percent',
+        textfont=dict(color='#ffffff', size=14, weight='bold'),
         marker=dict(
             colors=["#b026ff", "#00f0ff", "#2b59ff", "#ff2b59", "#10B981"],
-            line=dict(color='#141722', width=4)
+            line=dict(color='#141722', width=2)
         )
     )])
     
@@ -76,8 +76,7 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         margin={"l": 0, "r": 0, "t": 20, "b": 0}, 
         showlegend=True, 
         legend={"orientation": "h", "y": -0.1}, 
-        height=300,
-        annotations=[dict(text=total_str, x=0.5, y=0.5, font_size=24, font_color='#FFFFFF', showarrow=False, font_weight="bold")]
+        height=300
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
