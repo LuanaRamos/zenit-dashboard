@@ -26,7 +26,7 @@ def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
-def fetch_organic_v11(date_preset: str) -> List[InstagramMedia]:
+def fetch_organic_v12(date_preset: str) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
@@ -65,8 +65,8 @@ def fetch_organic_v11(date_preset: str) -> List[InstagramMedia]:
             if media.paid_reach > 0:
                 media.paid_frequency = media.paid_impressions / media.paid_reach
                 
-            # O Alcance puramente orgânico
-            media.organic_reach = max(0, media.reach - media.paid_reach)
+            # O Alcance puramente orgânico (A API do IG não contabiliza Ads aqui para Dark Posts de Reels)
+            media.organic_reach = media.reach
         else:
             # Se não teve anúncio, 100% do alcance é orgânico
             media.organic_reach = media.reach

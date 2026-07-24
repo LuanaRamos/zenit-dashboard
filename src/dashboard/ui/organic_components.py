@@ -4,58 +4,89 @@ from typing import List
 from schemas.instagram import InstagramMedia
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]):
+    """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
-        st.info("Nenhuma publicação encontrada no período selecionado.")
+        st.info("Nenhuma publicação orgânica encontrada recente.")
         return
-        
-    total_posts = len(media_list)
-    total_likes = sum(m.total_likes for m in media_list)
-    total_comments = sum(m.comments_count for m in media_list)
-    total_reach = sum(m.reach for m in media_list)
-    
+
+    # Cálculos para visão geral
     total_organic_reach = sum(m.organic_reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
+    total_reach = total_organic_reach + total_paid_reach
     
-    # Calcular % de tráfego pago
-    perc_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
+    # Calcular percentual de tráfego orgânico vs pago
+    pct_organic = (total_organic_reach / total_reach * 100) if total_reach > 0 else 0
+    pct_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
+    st.markdown(f"### Visão Geral ({len(media_list)} Publicações)")
+    cols = st.columns(3)
     
-    cols = st.columns(5)
-    cols[0].metric("Total de Publicações", total_posts)
-    cols[1].metric("Total de Curtidas", total_likes)
-    cols[2].metric("Total de Comentários", total_comments)
-    cols[3].metric("Alcance Orgânico", f"{total_organic_reach:,}".replace(",", "."))
-    cols[4].metric("Alcance Pago", f"{total_paid_reach:,}".replace(",", ".") + f" ({perc_paid:.1f}%)")
+    with cols[0]:
+        st.metric(
+            label="Alcance Total Global", 
+            value=f"{total_reach:,}".replace(",", "."),
+            help="Soma do alcance de todas as fontes (Orgânico + Tráfego Pago)"
+        )
+        
+    with cols[1]:
+        st.metric(
+            label="Alcance Puramente Orgânico", 
+            value=f"{total_organic_reach:,}".replace(",", "."),
+            delta=f"{pct_organic:.1f}% do Total",
+            delta_color="normal",
+            help="Pessoas alcançadas sem interferência de anúncios."
+        )
+        
+    with cols[2]:
+        st.metric(
+            label="Alcance via Ads (Pago)", 
+            value=f"{total_paid_reach:,}".replace(",", "."),
+            delta=f"{pct_paid:.1f}% do Total",
+            delta_color="off",
+            help="Alcance gerado porque o post foi impulsionado no Ads."
+        )
+
 
 def render_posts_table(media_list: List[InstagramMedia]):
-    st.markdown("### Análise Individual por Publicação")
-    
+    """Renderiza a tabela linha a linha para cada publicação com formatação Lean."""
     if not media_list:
         return
         
-    table_data = []
+    st.markdown("### Análise Individual por Publicação")
+    
+    # Converter para dataframe para tabela nativa bonita
+    data = []
     for m in media_list:
-        # Formatar caption curto
-        short_caption = m.caption[:45] + "..." if len(m.caption) > 45 else m.caption
-        if not short_caption:
-            short_caption = "[Sem legenda]"
-            
-        table_data.append({
+        # Pega as primeiras 40 letras da legenda
+        short_caption = m.caption[:40].replace('\n', ' ') + "..." if len(m.caption) > 40 else m.caption
+        
+        data.append({
             "Publicação": short_caption,
             "Likes": m.total_likes,
             "Alcance Orgânico": m.organic_reach,
             "Alcance Pago": m.paid_reach,
             "CTR Anúncio (%)": round(m.paid_ctr, 2) if m.paid_reach > 0 else "-",
-            "Frequência (Ads)": round(m.paid_frequency, 2) if m.paid_reach > 0 else "-",
-            "Visualizar no IG": m.permalink
+            "Frequência Anúncio": round(m.paid_frequency, 2) if m.paid_reach > 0 else "-",
+            "Link": m.permalink
         })
         
-    df = pd.DataFrame(table_data)
+    df = pd.DataFrame(data)
     
+    # Formatando a exibição no Streamlit
     st.dataframe(
         df,
-        column_config={
-            "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post")
-        },
         use_container_width=True,
+        column_config={
+            "Link": st.column_config.LinkColumn("Visualizar no IG"),
+            "CTR Anúncio (%)": st.column_config.NumberColumn(
+                "CTR Anúncio (%)", 
+                help="Porcentagem PONDERADA de pessoas que clicaram no link do anúncio desse post.",
+                format="%.2f"
+            ),
+            "Frequência Anúncio": st.column_config.NumberColumn(
+                "Frequência (Ads)",
+                help="Quantas vezes cada pessoa viu o anúncio em média.",
+                format="%.2f"
+            )
+        },
         hide_index=True
     )

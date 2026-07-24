@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 
 from api.exceptions import MetaAPIError, InstagramAPIError
-from ui.data_loader import fetch_campaigns_v8, fetch_organic_v11
+from ui.data_loader import fetch_campaigns_v8, fetch_organic_v12
 from ui.layouts import render_sidebar
 from ui.components import render_metric_cards, render_whatsapp_campaigns, render_profile_campaigns, render_general_campaigns
 from ui.organic_components import render_organic_metrics_cards, render_posts_table
@@ -87,7 +87,7 @@ def main():
         
         try:
             with st.spinner("Consultando Instagram Graph API e extraindo dados dos anúncios..."):
-                media_list = fetch_organic_v11(date_preset)
+                media_list = fetch_organic_v12(date_preset)
                 
             st.markdown("<br>", unsafe_allow_html=True)
             render_organic_metrics_cards(media_list)
