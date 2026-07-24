@@ -2,58 +2,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-dark: #080a11; 
-  --card-bg: #141722;
-  --text-primary: #ffffff;
-  --text-muted: #8B949E; 
-  --accent: #b026ff;
+  --bg-base: #060606; 
+  --zenit-gold: #FFB300;
+  --text-main: #FFFFFF;
+  --text-muted: #8B949E;
 }
 
-* {
-    font-family: 'Inter', sans-serif;
+* { 
+    font-family: 'Inter', sans-serif; 
 }
 
-.block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
-    max-width: 1200px !important;
+.block-container { 
+    padding-top: 2rem !important; 
+    max-width: 1200px !important; 
 }
 
-[data-testid="stAppViewContainer"] { background-color: var(--bg-dark) !important; }
-[data-testid="stHeader"] { background: transparent !important; }
+/* Fundo não é chapado: leve gradiente radial escuro para gerar profundidade */
+[data-testid="stAppViewContainer"] { 
+    background: radial-gradient(circle at 50% 0%, #151515 0%, var(--bg-base) 80%) !important; 
+}
 
+[data-testid="stHeader"] { 
+    display: none !important; 
+}
+
+/* Dark Glassmorphism puro do Dashdark X */
 .glass-card, [data-testid="stPlotlyChart"], .glass-table-container {
-    background: var(--card-bg) !important; 
-    border: 1px solid rgba(255, 255, 255, 0.03) !important;
-    border-radius: 14px !important;
+    background: rgba(20, 20, 22, 0.45) !important; 
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 16px !important;
     padding: 24px !important;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Fluidez e Glow no Hover */
 .glass-card:hover, [data-testid="stPlotlyChart"]:hover {
-    box-shadow: 0px 4px 24px rgba(176, 38, 255, 0.08) !important;
-    border-color: rgba(176, 38, 255, 0.15) !important;
+    border-color: rgba(255, 179, 0, 0.35) !important;
+    box-shadow: 0 12px 40px rgba(255, 179, 0, 0.12) !important;
+    transform: translateY(-2px);
 }
 
-.metric-pill-green {
-    background: rgba(16, 185, 129, 0.15); color: #10B981; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
-}
-.metric-pill-gold {
-    background: rgba(255, 179, 0, 0.15); color: #FFB300; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
-}
-.metric-pill-red {
-    background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
-}
+/* Pílulas fluidas com borda translúcida */
+.metric-pill-green { background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.metric-pill-gold { background: rgba(255, 179, 0, 0.12); color: var(--zenit-gold); border: 1px solid rgba(255, 179, 0, 0.2); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.metric-pill-red { background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 
-.glass-table-container { margin-top: 24px !important; margin-bottom: 24px !important; overflow-x: auto !important; }
-.glass-table { width: 100%; border-collapse: collapse; color: var(--text-primary); font-size: 14px; }
-.glass-table th { text-align: left; padding: 12px 16px; color: var(--text-muted); font-weight: 500; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.glass-table { width: 100%; border-collapse: collapse; color: var(--text-main); font-size: 13px; }
+.glass-table th { text-align: left; padding: 12px 16px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 .glass-table td { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-weight: 600; color: #E2E8F0; }
-.glass-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+.glass-table tr:hover td { background: rgba(255, 255, 255, 0.03); }
 
 [data-testid="stDataFrame"] { display: none !important; }
-[data-testid="stSidebar"] { background-color: #0b0d14 !important; border-right: 1px solid rgba(255, 255, 255, 0.02) !important; }
+[data-testid="stSidebar"] { background-color: rgba(6, 6, 6, 0.8) !important; backdrop-filter: blur(20px) !important; border-right: 1px solid rgba(255, 255, 255, 0.04) !important; }
 
 h1, h2, h3, h4 { font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.02em !important; }
 h1 { margin-bottom: 30px !important; font-size: 2.8rem !important; font-weight: 800 !important; }

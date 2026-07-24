@@ -22,7 +22,6 @@ def render_glass_table(df: pd.DataFrame, currency_cols: list[str] = None) -> Non
     html += "</tbody></table></div>"
     st.markdown(html, unsafe_allow_html=True)
 
-
 def render_metric_card(label: str, value: str, delta: str = None, delta_type: str = "green", help_text: str = None) -> None:
     icon_arrow = "bi-arrow-up-right" if delta_type == "green" else "bi-arrow-down-right" if delta_type == "red" else "bi-dash"
     delta_html = f'<span class="metric-pill-{delta_type}" style="margin-left: 12px;"><i class="bi {icon_arrow}"></i> {delta}</span>' if delta else ""
@@ -50,34 +49,12 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         obj = c.objective_friendly
         spend_by_obj[obj] = spend_by_obj.get(obj, 0.0) + c.spend
     labels, values = list(spend_by_obj.keys()), list(spend_by_obj.values())
-    
     if not labels or sum(values) == 0:
-        st.info("Não há dados de investimento.")
+        st.info("Não há dados de investimento suficientes para o gráfico.")
         return
-        
-    total_spend = sum(values)
-    total_str = f"R$ {total_spend:,.0f}".replace(",", ".")
     
-    fig = go.Figure(data=[go.Pie(
-        labels=labels, 
-        values=values, 
-        textinfo='percent',
-        textfont=dict(color='#ffffff', size=14, weight='bold'),
-        marker=dict(
-            colors=["#b026ff", "#00f0ff", "#2b59ff", "#ff2b59", "#10B981"],
-            line=dict(color='#141722', width=2)
-        )
-    )])
-    
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", 
-        plot_bgcolor="rgba(0,0,0,0)", 
-        font={"color": "#8B949E"}, 
-        margin={"l": 0, "r": 0, "t": 20, "b": 0}, 
-        showlegend=True, 
-        legend={"orientation": "h", "y": -0.1}, 
-        height=300
-    )
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, marker={"colors": ["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"]})])
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"color": "#8B949E"}, margin={"l": 0, "r": 0, "t": 20, "b": 0}, showlegend=True, legend={"orientation": "h", "y": -0.1}, height=300)
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
@@ -91,21 +68,22 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
         chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
         
         fig = go.Figure()
+        # Restaura a fluidez: linha spline e sombra translucida abaixo do eixo
         fig.add_trace(go.Scatter(
             x=chart_data["Campanha"], 
             y=chart_data["Custo"], 
-            mode='lines', 
-            line=dict(color='#00f0ff', width=4, shape='spline', smoothing=1.3), 
+            mode='lines+markers', 
+            line=dict(color='#FFB300', width=4, shape='spline', smoothing=1.3), 
+            marker=dict(size=10, color='#FFB300', line=dict(width=2, color='#151515')), 
             fill='tozeroy', 
-            fillcolor='rgba(0, 240, 255, 0.15)',
-            hovertemplate="<b>%{x}</b><br>Custo: R$ %{y:.2f}<extra></extra>"
+            fillcolor='rgba(255, 179, 0, 0.15)'
         ))
         
         fig.update_layout(
             plot_bgcolor="rgba(0,0,0,0)", 
             paper_bgcolor="rgba(0,0,0,0)", 
             xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E"), 
-            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", zeroline=False, color="#8B949E", tickprefix="R$ "), 
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.06)", zeroline=False, color="#8B949E", tickprefix="R$ "), 
             margin=dict(l=0, r=0, t=20, b=0), 
             height=300, 
             hovermode="x unified"
