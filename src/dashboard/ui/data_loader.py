@@ -26,7 +26,7 @@ def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
-def fetch_organic_v9(date_preset: str) -> List[InstagramMedia]:
+def fetch_organic_v10(date_preset: str) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
