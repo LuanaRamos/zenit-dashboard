@@ -61,7 +61,12 @@ def _ms_to_hhmmss(ms: float) -> str:
 
 
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[InstagramStory] = None):
-    """Renderiza a tabela com valores numericos (para ordenacao) e tempo em HH:MM:SS."""
+    """
+    Renderiza a tabela de publicacoes.
+    - Colunas numericas: valores int/float para ordenacao correta pelo Streamlit.
+    - format=',.0f' usa separador de milhar do locale do browser (pt-BR = ponto).
+    - Colunas de tempo: string HH:MM:SS (zero-padded = ordena corretamente mesmo sendo string).
+    """
     if stories_list is None:
         stories_list = []
         
@@ -92,10 +97,10 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         st.markdown("#### Desempenho de Stories (Últimas 24h)")
         data = [{
             "Resumo": "Story Ativo",
-            "Alcance": s.reach,
-            "Avanços": s.taps_forward,
-            "Voltas": s.taps_back,
-            "Saídas": s.exits,
+            "Alcance":   s.reach,
+            "Avanços":  s.taps_forward,
+            "Voltas":    s.taps_back,
+            "Saídas":   s.exits,
             "Respostas": s.replies,
             "Visualizar no IG": s.permalink
         } for s in stories_list]
@@ -105,11 +110,12 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
             df_stories,
             use_container_width=True,
             column_config={
-                "Alcance":   st.column_config.NumberColumn("Alcance",   format="%d"),
-                "Avanços":  st.column_config.NumberColumn("Avanços",   format="%d"),
-                "Voltas":    st.column_config.NumberColumn("Voltas",    format="%d"),
-                "Saídas":   st.column_config.NumberColumn("Saídas",   format="%d"),
-                "Respostas": st.column_config.NumberColumn("Respostas", format="%d"),
+                # format=',.0f' = separador de milhar via locale do browser (pt-BR = ponto)
+                "Alcance":   st.column_config.NumberColumn("Alcance",   format=",.0f"),
+                "Avanços":  st.column_config.NumberColumn("Avanços",   format=",.0f"),
+                "Voltas":    st.column_config.NumberColumn("Voltas",    format=",.0f"),
+                "Saídas":   st.column_config.NumberColumn("Saídas",   format=",.0f"),
+                "Respostas": st.column_config.NumberColumn("Respostas", format=",.0f"),
                 "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir Story")
             },
             hide_index=True
@@ -134,7 +140,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
     for m in filtered_media:
         short_caption = m.caption[:40].replace('\n', ' ') + "..." if len(m.caption) > 40 else m.caption
         
-        # Valores NUMERICOS para que a ordenacao funcione corretamente
+        # Valores NUMERICOS (int) para que a ordenacao do Streamlit funcione corretamente
         if data_view == "Apenas Orgânico":
             likes  = m.like_count
             reach  = m.organic_reach
@@ -159,6 +165,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
             "Salvos":  saved,
         }
         
+        # Watch time apenas nos modos que incluem dados organicos
         if data_view != "Apenas Pago (Ads)":
             if media_type_filter == "Reels":
                 # HH:MM:SS com zero-padding ordena corretamente mesmo sendo string
@@ -173,17 +180,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Inst
         
     df = pd.DataFrame(data).fillna(0)
     
+    # format=',.0f' = notacao d3, usa separador de milhar do locale do browser
+    # Em navegadores pt-BR: 4.400 | Em navegadores en-US: 4,400
     col_config: dict = {
-        "Likes":   st.column_config.NumberColumn("Likes",   format="%d"),
-        "Alcance": st.column_config.NumberColumn("Alcance", format="%d"),
-        "Shares":  st.column_config.NumberColumn("Shares",  format="%d"),
-        "Salvos":  st.column_config.NumberColumn("Salvos",  format="%d"),
+        "Likes":   st.column_config.NumberColumn("Likes",   format=",.0f"),
+        "Alcance": st.column_config.NumberColumn("Alcance", format=",.0f"),
+        "Shares":  st.column_config.NumberColumn("Shares",  format=",.0f"),
+        "Salvos":  st.column_config.NumberColumn("Salvos",  format=",.0f"),
         "Visualizar no IG": st.column_config.LinkColumn("Link Direto", display_text="Abrir post"),
     }
     
     if data_view != "Apenas Pago (Ads)" and media_type_filter != "Reels":
-        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",      format="%d")
-        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format="%d")
+        col_config["Seguidores"]        = st.column_config.NumberColumn("Seguidores",       format=",.0f")
+        col_config["Visitas ao Perfil"] = st.column_config.NumberColumn("Visitas ao Perfil", format=",.0f")
     
     st.dataframe(
         df,
