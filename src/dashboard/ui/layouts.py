@@ -11,9 +11,9 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
     with st.sidebar:
         st.markdown(
             """
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 30px;">
-                <h2 style="margin: 0; color: #ffffff; font-weight: 800; font-size: 1.8rem; letter-spacing: -1px;">
-                    <span style="color: #4B93FF; font-size: 1.2rem;">🌐</span> Zenit<br>Dashboard
+            <div style="padding: 10px 0 20px 0; text-align: left;">
+                <h2 style="margin:0; font-size: 1.8rem; font-weight: 800; line-height: 1.1;">
+                    <span style="color: #4B93FF; font-size: 1.2rem;">⚡</span> Zenit<br>Analytics
                 </h2>
             </div>
             """,
