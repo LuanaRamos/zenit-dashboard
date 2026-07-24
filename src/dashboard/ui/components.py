@@ -50,11 +50,35 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         obj = c.objective_friendly
         spend_by_obj[obj] = spend_by_obj.get(obj, 0.0) + c.spend
     labels, values = list(spend_by_obj.keys()), list(spend_by_obj.values())
+    
     if not labels or sum(values) == 0:
         st.info("Não há dados de investimento.")
         return
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, marker={"colors": ["#b026ff", "#00f0ff", "#2b59ff", "#ff2b59", "#10B981"]})])
-    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"color": "#8B949E"}, margin={"l": 0, "r": 0, "t": 20, "b": 0}, showlegend=True, legend={"orientation": "h", "y": -0.1}, height=300)
+        
+    total_spend = sum(values)
+    total_str = f"R$ {total_spend:,.0f}".replace(",", ".")
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=labels, 
+        values=values, 
+        hole=0.85, 
+        textinfo='none',
+        marker=dict(
+            colors=["#b026ff", "#00f0ff", "#2b59ff", "#ff2b59", "#10B981"],
+            line=dict(color='#141722', width=4)
+        )
+    )])
+    
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        font={"color": "#8B949E"}, 
+        margin={"l": 0, "r": 0, "t": 20, "b": 0}, 
+        showlegend=True, 
+        legend={"orientation": "h", "y": -0.1}, 
+        height=300,
+        annotations=[dict(text=total_str, x=0.5, y=0.5, font_size=24, font_color='#FFFFFF', showarrow=False, font_weight="bold")]
+    )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
@@ -62,12 +86,31 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     if not campaigns: return
     data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Alcance": c.impressions} for c in campaigns]
     render_glass_table(pd.DataFrame(data), currency_cols=["Gastos", "Custo/Conv"])
+    
     if any(c.whatsapp_starts > 0 for c in campaigns):
         st.markdown("<br><h4 style='color: white; font-weight: 600;'>Desempenho de Custo</h4>", unsafe_allow_html=True)
         chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
+        
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=chart_data["Campanha"], y=chart_data["Custo"], mode='lines+markers', line=dict(color='#b026ff', width=3, shape='spline', smoothing=1.3), marker=dict(size=8, color='#b026ff', line=dict(width=2, color='#ffffff')), fill='tozeroy', fillcolor='rgba(176, 38, 255, 0.1)'))
-        fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E"), yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", zeroline=False, color="#8B949E", tickprefix="R$ "), margin=dict(l=0, r=0, t=20, b=0), height=300, hovermode="x unified")
+        fig.add_trace(go.Scatter(
+            x=chart_data["Campanha"], 
+            y=chart_data["Custo"], 
+            mode='lines', 
+            line=dict(color='#00f0ff', width=4, shape='spline', smoothing=1.3), 
+            fill='tozeroy', 
+            fillcolor='rgba(0, 240, 255, 0.15)',
+            hovertemplate="<b>%{x}</b><br>Custo: R$ %{y:.2f}<extra></extra>"
+        ))
+        
+        fig.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)", 
+            xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E"), 
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", zeroline=False, color="#8B949E", tickprefix="R$ "), 
+            margin=dict(l=0, r=0, t=20, b=0), 
+            height=300, 
+            hovermode="x unified"
+        )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:

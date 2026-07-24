@@ -13,7 +13,6 @@ except ImportError:
     HAS_AGGRID = False
 
 # Formatador JavaScript para o AgGrid: Exibe numeros com ponto no padrao pt-BR (ex: 4.400)
-# mas mantem a ordenacao inteiramente numerica
 NUMBER_FORMATTER = (
     JsCode("""
 function(params) {
@@ -36,10 +35,10 @@ LINK_RENDERER = (
             this.eGui.href = params.value;
             this.eGui.target = '_blank';
             this.eGui.rel = 'noopener noreferrer';
-            this.eGui.style.color = '#4da6ff';
+            this.eGui.style.color = '#00f0ff';
             this.eGui.style.textDecoration = 'none';
             this.eGui.style.fontWeight = '600';
-            this.eGui.innerHTML = 'Abrir post 🔗';
+            this.eGui.innerHTML = 'Abrir post ↗';
         }
     };
     UrlRenderer.prototype.getGui = function() {
@@ -121,18 +120,12 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
                     icon = "📱"
                 
                 st.markdown(f"""
-                <div class="glass-card" style="margin-bottom: 1rem; height: 100%;">
-                    <div class="top-post-card">
-                        <div class="top-post-icon">{icon}</div>
-                        <div class="top-post-info">
-                            <div class="top-post-caption" title="{post.caption}">{short_text}</div>
-                            <div class="top-post-stats">
-                                👁️ {reach:,} <span style="margin: 0 4px;">•</span> ❤️ {likes:,}
-                            </div>
-                            <div class="top-post-link-wrapper">
-                                <a href="{post.permalink}" target="_blank" class="top-post-link">Ver no Instagram ↗</a>
-                            </div>
-                        </div>
+                <div class="glass-card" style="margin-bottom: 1rem; height: 100%; display: flex; flex-direction: column;">
+                    <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
+                    <div style="color: #8B949E; font-size: 0.9rem; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">{short_text}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                        <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
+                        <a href="{post.permalink}" target="_blank" style="color: #b026ff; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
                     </div>
                 </div>
                 """.replace(",", "."), unsafe_allow_html=True)
@@ -140,11 +133,6 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
     st.markdown("<br>", unsafe_allow_html=True)
 
 def _ms_to_hhmmss(ms: float) -> str:
-    """
-    Converte milissegundos em string HH:MM:SS com zero-padding.
-    Zero-padding garante que a ordenacao alfabetica coincide com a numerica:
-    '00:09:03' < '00:45:01' < '06:29:00' - correto em ambas as ordens.
-    """
     if not ms or ms <= 0:
         return "00:00:00"
     total_s = int(ms / 1000)
@@ -157,18 +145,15 @@ def _ms_to_hhmmss(ms: float) -> str:
 def _render_aggrid_table(
     df: pd.DataFrame, numeric_cols: list[str], link_col: str = "Visualizar no IG"
 ) -> None:
-    """Funcao auxiliar para configurar e renderizar o AgGrid com estilo e ordenacao."""
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_default_column(resizable=True, sortable=True, filter=True)
 
-    # Aplica formatador pt-BR com ponto para colunas numericas
     for col in numeric_cols:
         if col in df.columns:
             gb.configure_column(
                 col, type=["numericColumn"], valueFormatter=NUMBER_FORMATTER
             )
 
-    # Aplica renderizador de Link
     if link_col in df.columns:
         gb.configure_column(link_col, cellRenderer=LINK_RENDERER, width=130)
 
@@ -181,17 +166,20 @@ def _render_aggrid_table(
         theme="balham-dark",
         fit_columns_on_grid_load=True,
         height=350,
+        custom_css={
+            ".ag-root-wrapper": {"background-color": "#141722", "border": "1px solid rgba(255, 255, 255, 0.05)", "border-radius": "12px"},
+            ".ag-header": {"background-color": "#141722", "border-bottom": "1px solid rgba(255, 255, 255, 0.05)"},
+            ".ag-header-cell-text": {"color": "#8B949E", "font-weight": "500"},
+            ".ag-row": {"border-bottom-color": "rgba(255, 255, 255, 0.02)"},
+            ".ag-row-hover": {"background-color": "rgba(255, 255, 255, 0.02) !important"},
+            ".ag-cell": {"color": "#E2E8F0"},
+        }
     )
 
 
 def render_posts_table(
     media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
 ) -> None:
-    """
-    Renderiza a tabela de publicacoes.
-    - Se streamlit-aggrid instalado: Usa AgGrid com formatacao de milhar em pt-BR (ponto) e ordenacao numerica.
-    - Fallback: st.dataframe nativo.
-    """
     if stories_list is None:
         stories_list = []
 
@@ -200,7 +188,7 @@ def render_posts_table(
     view_col, format_col = st.columns([1, 1])
 
     with view_col:
-        st.markdown("<h4 style='color: #9c9ca3; font-size: 0.9rem; margin-bottom: 10px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
         data_view = option_menu(
             menu_title=None,
             options=["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
@@ -209,34 +197,36 @@ def render_posts_table(
             orientation="horizontal",
             styles={
                 "container": {"padding": "0!important", "background-color": "transparent"},
-                "icon": {"color": "#9c9ca3", "font-size": "14px"},
+                "icon": {"color": "#8B949E", "font-size": "14px"},
                 "nav-link": {
                     "font-size": "13px",
                     "text-align": "center",
                     "margin": "0px 6px 0px 0px",
-                    "--hover-color": "rgba(30, 30, 36, 0.85)",
-                    "border-radius": "0.5rem",
+                    "--hover-color": "rgba(255, 255, 255, 0.03)",
+                    "border-radius": "8px",
                     "padding": "8px 12px",
                     "border": "1px solid transparent",
-                    "color": "#9c9ca3",
+                    "color": "#8B949E",
                     "font-family": "Inter, sans-serif",
-                    "font-weight": "600",
+                    "font-weight": "500",
                     "transition": "all 0.2s ease",
                 },
                 "nav-link-selected": {
-                    "background": "rgba(24, 24, 28, 0.7)",
-                    "border": "1px solid rgba(255, 179, 0, 0.25)",
-                    "box-shadow": "0px 4px 24px rgba(255, 179, 0, 0.12)",
-                    "color": "#ffb300",
-                    "font-weight": "700"
+                    "background": "rgba(0, 240, 255, 0.1)",
+                    "border": "1px solid rgba(0, 240, 255, 0.2)",
+                    "box-shadow": "none",
+                    "color": "#00f0ff",
+                    "font-weight": "600"
                 },
             }
         )
 
     with format_col:
+        st.markdown("<h4 style='color: transparent; font-size: 0.85rem; margin-bottom: -15px;'>.</h4>", unsafe_allow_html=True)
         media_type_filter = st.selectbox(
             "Filtrar por Formato:",
             ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"],
+            label_visibility="collapsed"
         )
 
     # --- Stories ---

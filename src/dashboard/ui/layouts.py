@@ -9,18 +9,20 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
     Retorna o módulo selecionado.
     """
     with st.sidebar:
+        # Dashdark X Logo styling (Cyan and White)
         st.markdown(
             """
-            <div style="padding: 10px 0 20px 0; text-align: left;">
-                <h2 style="margin:0; font-size: 1.8rem; font-weight: 800; line-height: 1.1;">
-                    <span style="color: #4B93FF; font-size: 1.2rem;">⚡</span> Zenit<br>Analytics
+            <div style="padding: 10px 0 20px 0; text-align: left; display: flex; align-items: center; gap: 10px;">
+                <div style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #00f0ff, #b026ff);"></div>
+                <h2 style="margin:0; font-size: 1.5rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
+                    <span style="color: #ffffff;">Dashdark</span> <span style="color: #00f0ff;">X</span>
                 </h2>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("<h4 style='color: #9c9ca3; font-size: 0.9rem; margin-bottom: 10px; font-weight: 500;'>Módulos</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
         selected_module = option_menu(
             menu_title=None,
             options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
@@ -32,39 +34,39 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                     "padding": "0!important", 
                     "background-color": "transparent",
                 },
-                "icon": {"color": "#9c9ca3", "font-size": "20px"},
+                "icon": {"color": "#8B949E", "font-size": "18px"},
                 "nav-link": {
-                    "font-size": "16px",
+                    "font-size": "15px",
                     "text-align": "left",
-                    "margin": "0px 0px 12px 0px",
-                    "--hover-color": "rgba(30, 30, 36, 0.85)",
-                    "border-radius": "0.5rem",
-                    "padding": "16px 20px",
+                    "margin": "0px 0px 8px 0px",
+                    "--hover-color": "rgba(255, 255, 255, 0.03)",
+                    "border-radius": "8px",
+                    "padding": "12px 16px",
                     "border": "1px solid transparent",
-                    "color": "#9c9ca3",
+                    "color": "#8B949E",
                     "font-family": "Inter, sans-serif",
-                    "font-weight": "600",
+                    "font-weight": "500",
                     "transition": "all 0.2s ease",
                 },
                 "nav-link-selected": {
-                    "background": "rgba(24, 24, 28, 0.7)",
-                    "border": "1px solid rgba(255, 179, 0, 0.25)",
-                    "box-shadow": "0px 4px 24px rgba(255, 179, 0, 0.12)",
-                    "color": "#ffb300",
-                    "font-weight": "700"
+                    "background": "rgba(176, 38, 255, 0.1)",
+                    "border": "1px solid rgba(176, 38, 255, 0.2)",
+                    "box-shadow": "none",
+                    "color": "#ffffff",
+                    "font-weight": "600"
                 },
             }
         )
         
-        # Override icon color when selected using a quick CSS hack for the selected icon
+        # Override icon color when selected to Magenta Neon
         st.markdown("""
         <style>
-        .nav-item .active i { color: #ffb300 !important; }
+        .nav-item .active i { color: #b026ff !important; }
         </style>
         """, unsafe_allow_html=True)
 
         # Filtro de Tempo Global
-        st.markdown("---")
+        st.markdown("<br><h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filters</h4>", unsafe_allow_html=True)
         periodo_selecionado = st.selectbox(
             "Período de Análise",
             [
@@ -72,6 +74,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                 "Máximo (Ads: Sempre | Orgânico: 1 Ano)",
                 "Personalizado",
             ],
+            label_visibility="collapsed"
         )
 
         date_preset = "last_30d"
@@ -116,10 +119,10 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                 st.warning("Selecione a data inicial e final.")
                 st.stop()
 
-        st.markdown("---")
-        st.caption("Atualizado em tempo real via Meta Graph API v22.0")
+        st.markdown("<div style='margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;'></div>", unsafe_allow_html=True)
+        st.caption("Atualizado via Meta Graph API v22.0")
 
-        if st.button("🔄 Forçar Atualização"):
+        if st.button("🔄 Forçar Atualização", use_container_width=True):
             st.cache_data.clear()
             st.cache_resource.clear()
             st.rerun()
