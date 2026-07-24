@@ -1,5 +1,5 @@
 /* Zenit Brand Colors & Dashboard Overrides (from code.html) */
-
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css');
 :root {
   --primary: #ffb300; /* Zenit Gold */
   --bg-dark: #0c0c0e; /* Surface Dark */
@@ -203,6 +203,7 @@
     font-weight: 700 !important;
 }
 
+
 /* Make headers prominent */
 h1, h2, h3, h4 {
     font-weight: 700 !important;
@@ -244,3 +245,89 @@ hr {
 [data-testid="stMetric"]:nth-child(3) { animation-delay: 0.3s; }
 .glass-table-container { animation-delay: 0.4s; }
 [data-testid="stPlotlyChart"] { animation-delay: 0.5s; }
+
+/* =========================================
+   6. CUSTOM HTML COMPONENTS (Glass Cards)
+   ========================================= */
+.glass-card {
+    background: rgba(24, 24, 28, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    box-shadow: 0px 4px 24px rgba(255, 179, 0, 0.12);
+    border-color: rgba(255, 179, 0, 0.25);
+    background: rgba(30, 30, 36, 0.85);
+}
+
+.metric-card-title {
+    color: #E2E8F0; /* High Contrast Slate */
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.metric-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin: 0.3rem 0;
+}
+
+.metric-pill-green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.metric-pill-gold {
+    background: rgba(255, 179, 0, 0.15);
+    color: #FFB300;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.metric-pill-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.top-post-icon {
+    background: #1e1e24;
+    border-radius: 8px;
+    padding: 0.8rem;
+    font-size: 1.5rem;
+}
+
+.top-post-caption {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: normal; /* Removed ellipsis for better accessibility */
+    color: #FFFFFF;
+}
+
+.top-post-stats {
+    color: #E2E8F0;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+}
+
+.top-post-link {
+    color: #5AF8FB;
+    font-size: 0.8rem;
+    text-decoration: none;
+    font-weight: 600;
+}
