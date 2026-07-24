@@ -4,6 +4,7 @@ from pathlib import Path
 
 import sentry_sdk
 import streamlit as st
+from streamlit_option_menu import option_menu
 from core.config import settings
 
 if settings.sentry_dsn:
@@ -57,7 +58,7 @@ def main() -> None:  # noqa: C901
 
     selected_module, date_preset, time_range = render_sidebar()
 
-    if selected_module == "📈 Visão Geral (Ads)":
+    if selected_module == "Visão Geral (Ads)":
         st.title("Resumo de Campanhas")
         st.markdown(
             "Acompanhe o retorno sobre investimento (ROI) da conta **CA MS - 01**."
@@ -129,7 +130,7 @@ def main() -> None:  # noqa: C901
             st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
             st.exception(e)
 
-    elif selected_module == "📱 Orgânico (Instagram)":
+    elif selected_module == "Orgânico (Instagram)":
         st.title("📱 Desempenho no Instagram")
         st.markdown(
             "Veja o impacto real das suas publicações, separando o alcance orgânico do pago."

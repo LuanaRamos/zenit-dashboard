@@ -1,6 +1,6 @@
 import datetime
-
 import streamlit as st
+from streamlit_option_menu import option_menu
 
 
 def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
@@ -9,14 +9,56 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
     Retorna o módulo selecionado.
     """
     with st.sidebar:
-        st.markdown("## 🌐 Meta Platforms")
-        st.title("Zenit Dashboard")
-        st.markdown("---")
-
-        # O rádio permite clicar e trocar de tela
-        selected_module = st.radio(
-            "Módulos", ["📈 Visão Geral (Ads)", "📱 Orgânico (Instagram)"]
+        st.markdown(
+            """
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 30px;">
+                <h2 style="margin: 0; color: #ffffff; font-weight: 800; font-size: 1.8rem; letter-spacing: -1px;">
+                    <span style="color: #4B93FF; font-size: 1.2rem;">🌐</span> Zenit<br>Dashboard
+                </h2>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
+        st.markdown("<h4 style='color: #9c9ca3; font-size: 0.9rem; margin-bottom: 10px; font-weight: 500;'>Módulos</h4>", unsafe_allow_html=True)
+        selected_module = option_menu(
+            menu_title=None,
+            options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
+            icons=["bar-chart-line-fill", "instagram"],
+            menu_icon="cast",
+            default_index=0,
+            styles={
+                "container": {"padding": "0!important", "background-color": "transparent"},
+                "icon": {"color": "#9c9ca3", "font-size": "20px"},
+                "nav-link": {
+                    "font-size": "16px",
+                    "text-align": "left",
+                    "margin": "0px",
+                    "--hover-color": "rgba(30, 30, 36, 0.85)",
+                    "border-radius": "0.5rem",
+                    "padding": "16px 20px",
+                    "border": "1px solid transparent",
+                    "color": "#9c9ca3",
+                    "font-family": "Inter, sans-serif",
+                    "font-weight": "600",
+                    "transition": "all 0.2s ease",
+                },
+                "nav-link-selected": {
+                    "background": "rgba(24, 24, 28, 0.7)",
+                    "border": "1px solid rgba(255, 179, 0, 0.25)",
+                    "box-shadow": "0px 4px 24px rgba(255, 179, 0, 0.12)",
+                    "color": "#ffb300",
+                    "font-weight": "700"
+                },
+            }
+        )
+        
+        # Override icon color when selected using a quick CSS hack for the selected icon
+        st.markdown("""
+        <style>
+        .nav-item .active i { color: #ffb300 !important; }
+        </style>
+        """, unsafe_allow_html=True)
 
         # Filtro de Tempo Global
         st.markdown("---")
