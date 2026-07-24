@@ -72,7 +72,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
                 st.stop()
 
         st.markdown("---")
-        st.caption("Atualizado em tempo real via Meta Graph API v20.0")
+        st.caption("Atualizado em tempo real via Meta Graph API v22.0")
 
         if st.button("🔄 Forçar Atualização"):
             st.cache_data.clear()
