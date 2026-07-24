@@ -20,6 +20,7 @@ class InstagramClient:
 
     def __init__(self):
         self.token = settings.meta_master_token
+        # O ID do Instagram é vinculado à página (obtido anteriormente na auditoria)
         self.instagram_account_id = "17841449425333311"
 
     def _make_request(self, endpoint: str, params: dict = None) -> dict:
@@ -50,7 +51,7 @@ class InstagramClient:
             logger.error(f"Erro de rede ao consultar o Instagram: {e}")
             raise InstagramAPIError("Não foi possível conectar aos servidores do Instagram. Verifique sua conexão.")
 
-    def get_recent_media(self, limit: int = 50, since_timestamp: int = None) -> List[InstagramMedia]:
+    def get_recent_media(self, limit: int = 50, since_timestamp: int = None, until_timestamp: int = None) -> List[InstagramMedia]:
         """
         Busca publicações recentes e seus insights via Batch Operations (alta performance).
         """
@@ -62,6 +63,9 @@ class InstagramClient:
         
         if since_timestamp:
             params["since"] = str(since_timestamp)
+            
+        if until_timestamp:
+            params["until"] = str(until_timestamp)
 
         media_items_data = []
         max_pages = 5
@@ -87,30 +91,30 @@ class InstagramClient:
                 logger.warning(f"Erro durante a paginação do Instagram: {e}")
                 break
         
-        # Batch Request para puxar Insights sem N+1 queries
-        # IMPORTANTE: BATCH_URL nao leva versao na URL raiz.
-        # A versao vai dentro de cada relative_url do batch item.
+        # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
         insights_map = {}
         batch_requests = []
         for i, item in enumerate(media_items_data):
             ig_id = item.get("id")
             media_product_type = item.get("media_product_type", "")
             if media_product_type == "REELS":
-                # 'plays' foi depreciado na v22.0
+                # Metricas validas para Reels na v22.0
+                # 'plays' foi depreciado — use ig_reels_video_view_total_time
                 metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time"
             else:
                 metrics = "reach,saved,shares,profile_activity,profile_visits,follows"
             
             batch_requests.append({
                 "method": "GET",
-                "relative_url": f"/v22.0/{ig_id}/insights?metric={metrics}"
+                # Barra inicial obrigatória na relative_url do Batch API
+                "relative_url": f"/{ig_id}/insights?metric={metrics}"
             })
             
         for i in range(0, len(batch_requests), 50):
             chunk = batch_requests[i:i+50]
             try:
                 batch_res = requests.post(
-                    self.BATCH_URL,
+                    self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20
                 )
@@ -121,8 +125,6 @@ class InstagramClient:
                         req_idx = i + j
                         ig_id = media_items_data[req_idx]["id"]
                         insights_map[ig_id] = body.get("data", [])
-                    else:
-                        logger.warning(f"Batch item {i+j} retornou code={response_item.get('code')}")
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights: {e}")
 
@@ -189,7 +191,7 @@ class InstagramClient:
             metrics = "reach,exits,replies,taps_forward,taps_back"
             batch_requests.append({
                 "method": "GET",
-                "relative_url": f"/v22.0/{ig_id}/insights?metric={metrics}"
+                "relative_url": f"/{ig_id}/insights?metric={metrics}"
             })
             
         insights_map = {}
@@ -197,7 +199,7 @@ class InstagramClient:
             chunk = batch_requests[i:i+50]
             try:
                 batch_res = requests.post(
-                    self.BATCH_URL,
+                    self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20
                 )
