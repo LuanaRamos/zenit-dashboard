@@ -1,6 +1,5 @@
 import streamlit as st
 import datetime
-from ui.data_loader import get_account_creation_date_cached
 
 def render_sidebar():
     """
@@ -33,7 +32,7 @@ def render_sidebar():
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
             
-            min_date = get_account_creation_date_cached()
+            min_date = datetime.date(2004, 2, 4)
             max_date = datetime.date.today()
             
             custom_dates = st.date_input(
