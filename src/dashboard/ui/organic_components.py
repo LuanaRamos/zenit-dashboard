@@ -59,184 +59,145 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
         b1, b2, b3 = st.columns(3)
         cols = [b1, b2, b3]
         
-        for idx, post in enumerate(top_posts):
-            with cols[idx]:
-                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
-                likes = post.like_count
+        for i, post in enumerate(top_posts):
+            with cols[i]:
                 reach = post.organic_reach + post.paid_reach
+                likes = post.like_count
                 
-                # Choose icon based on type
-                if post.media_product_type == "REELS":
+                # Truncate text for grid
+                short_text = post.caption[:75] + "..." if post.caption and len(post.caption) > 75 else (post.caption or "Sem legenda")
+                
+                icon = "🖼️"
+                if post.media_type == "VIDEO":
                     icon = "🎬"
                 elif post.media_type == "CAROUSEL_ALBUM":
-                    icon = "📸"
-                else:
                     icon = "📱"
                 
                 st.markdown(f"""
-                <div class="glass-card" style="margin-bottom: 1rem; height: 100%; display: flex; flex-direction: column;">
+                <div class="glass-card" style="margin-bottom: 1rem; display: flex; flex-direction: column;">
                     <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
-                    <div style="color: #8B949E; font-size: 0.9rem; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">{short_text}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                    <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto;">
                         <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
-                        <a href="{post.permalink}" target="_blank" style="color: #b026ff; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
+                        <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
                     </div>
                 </div>
                 """.replace(",", "."), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-def _ms_to_hhmmss(ms: float) -> str:
-    if not ms or ms <= 0:
-        return "00:00:00"
-    total_s = int(ms / 1000)
-    hours = total_s // 3600
-    minutes = (total_s % 3600) // 60
-    seconds = total_s % 60
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-def render_posts_table(
-    media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
-) -> None:
-    if stories_list is None:
-        stories_list = []
-
-    st.markdown("### Análise Individual por Publicação")
-
-    view_col, format_col = st.columns([1, 1])
-
-    with view_col:
-        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
-        data_view = option_menu(
+def render_posts_table(media_list: list[InstagramMedia], stories_list: list[InstagramStory]) -> None:
+    """Renderiza tabela detalhada de publicações combinando Feed e Stories."""
+    if not media_list and not stories_list:
+        return
+        
+    st.markdown("#### Análise Individual por Publicação")
+    
+    # Toggle Filters inside layout
+    f1, f2, f3, f4 = st.columns([1.5, 1, 1, 2])
+    with f1:
+        view_mode = option_menu(
             menu_title=None,
             options=["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
-            icons=["pie-chart-fill", "hash", "cash-coin"],
+            icons=["pie-chart", "hash", "megaphone"],
+            menu_icon="cast",
             default_index=0,
             orientation="horizontal",
             styles={
-                "container": {"padding": "0!important", "background-color": "transparent"},
-                "icon": {"color": "#8B949E", "font-size": "14px"},
-                "nav-link": {
-                    "font-size": "13px",
-                    "text-align": "center",
-                    "margin": "0px 6px 0px 0px",
-                    "--hover-color": "rgba(255, 255, 255, 0.03)",
-                    "border-radius": "8px",
-                    "padding": "8px 12px",
-                    "border": "1px solid transparent",
-                    "color": "#8B949E",
-                    "font-family": "Inter, sans-serif",
-                    "font-weight": "500",
-                    "transition": "all 0.2s ease",
-                },
-                "nav-link-selected": {
-                    "background": "rgba(255, 179, 0, 0.1)",
-                    "border": "1px solid rgba(255, 179, 0, 0.2)",
-                    "box-shadow": "none",
-                    "color": "#FFB300",
-                    "font-weight": "600"
-                },
+                "container": {"padding": "0!important", "background-color": "#151515", "border-radius": "8px", "border": "1px solid rgba(255,255,255,0.05)"},
+                "icon": {"color": "#8B949E", "font-size": "12px"},
+                "nav-link": {"font-size": "11px", "text-align": "center", "margin": "0px", "--hover-color": "rgba(255, 255, 255, 0.05)", "color": "#8B949E"},
+                "nav-link-selected": {"background-color": "rgba(255, 179, 0, 0.1)", "color": "#FFB300", "font-weight": "600", "border-radius": "8px"},
             }
         )
-
-    with format_col:
-        st.markdown("<h4 style='color: transparent; font-size: 0.85rem; margin-bottom: -15px;'>.</h4>", unsafe_allow_html=True)
-        media_type_filter = st.selectbox(
-            "Filtrar por Formato:",
-            ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"],
+    with f4:
+        content_type_filter = st.selectbox(
+            "Tipo de Conteúdo",
+            ["Todos os Formatos", "Reels", "Carrossel", "Imagem Única", "Stories (24h)"],
             label_visibility="collapsed"
         )
-
-    # --- Stories ---
-    if media_type_filter == "Stories (Ativos 24h)":
-        if not stories_list:
-            st.info(
-                "Você não tem Stories ativos no momento. Publique algo para acompanhar o desempenho aqui."
-            )
-            return
-
-        st.markdown("#### Desempenho de Stories (Últimas 24h)")
-        data = [
-            {
-                "Resumo": "Story Ativo",
-                "Alcance": int(s.reach),
-                "Avanços": int(s.taps_forward),
-                "Voltas": int(s.taps_back),
-                "Saídas": int(s.exits),
-                "Respostas": int(s.replies),
-                "Visualizar no IG": f'<a href="{s.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if s.permalink else "",
-            }
-            for s in stories_list
-        ]
-
-        df_stories = pd.DataFrame(data)
-        render_glass_table(df_stories)
-        return
-
-    # --- Feed / Reels ---
-    filtered_media = []
-    for m in media_list:
-        if (
-            media_type_filter == "Reels"
-            and m.media_product_type == "REELS"
-            or media_type_filter == "Carrossel"
-            and m.media_type == "CAROUSEL_ALBUM"
-            or (
-                media_type_filter == "Post Estático"
-                and m.media_type in ["IMAGE", "VIDEO"]
-                and m.media_product_type != "REELS"
-            )
-        ):
-            filtered_media.append(m)
-
-    if not filtered_media:
-        st.info(f"Nenhum {media_type_filter} encontrado neste período.")
-        return
+        
+    st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
     data = []
-    for m in filtered_media:
-        short_caption = (
-            m.caption[:40].replace("\n", " ") + "..."
-            if len(m.caption) > 40
-            else m.caption
-        )
+    
+    # 1. Process Feed Media
+    for m in media_list:
+        if content_type_filter == "Reels" and m.media_type != "VIDEO": continue
+        if content_type_filter == "Carrossel" and m.media_type != "CAROUSEL_ALBUM": continue
+        if content_type_filter == "Imagem Única" and m.media_type != "IMAGE": continue
+        if content_type_filter == "Stories (24h)": continue # Skip feed when filtering for stories
 
-        if data_view == "Apenas Orgânico":
-            likes = int(m.like_count)
-            reach = int(m.organic_reach)
-            shares = int(m.shares)
-            saved = int(m.saved)
-        elif data_view == "Apenas Pago (Ads)":
-            likes = int(m.paid_likes)
-            reach = int(m.paid_reach)
-            shares = int(m.paid_shares)
-            saved = int(m.paid_saved)
-        else:  # Total Mix
-            likes = int(m.total_likes)
-            reach = int(m.reach)
-            shares = int(m.total_shares)
-            saved = int(m.total_saved)
+        # View Mode Logic
+        if "Apenas Orgânico" in view_mode:
+            reach = m.organic_reach
+            if reach == 0 and m.paid_reach > 0: continue # Purely paid post
+        elif "Apenas Pago" in view_mode:
+            reach = m.paid_reach
+            if reach == 0: continue # Purely organic post
+        else:
+            reach = m.organic_reach + m.paid_reach
 
-        row: dict[str, Any] = {
-            "Publicação": short_caption,
-            "Likes": likes,
+        row = {
+            "Tipo": "🎬 Reels" if m.media_type == "VIDEO" else "📱 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
+            "Publicação": m.caption[:45] + "..." if m.caption else "Sem legenda",
+            "Data": m.timestamp.strftime("%d/%m/%Y") if m.timestamp else "-",
             "Alcance": reach,
-            "Shares": shares,
-            "Salvos": saved,
+            "Likes": m.like_count,
+            "Comentários": m.comments_count,
+            "Shares": m.shares_count,
+            "Salvos": m.saves_count,
+            "Seguidores": m.follows_count,
+            "Visitas Perfil": m.profile_visits_count,
         }
-
-        if data_view != "Apenas Pago (Ads)":
-            if media_type_filter == "Reels":
-                row["Watch Time Total"] = _ms_to_hhmmss(
-                    m.ig_reels_video_view_total_time
-                )
-                row["Retenção Média"] = _ms_to_hhmmss(m.ig_reels_avg_watch_time)
-            else:
-                row["Seguidores"] = int(m.follows)
-                row["Visitas ao Perfil"] = int(m.profile_visits)
-
+        
+        # Link in raw HTML
         row["Visualizar no IG"] = f'<a href="{m.permalink}" target="_blank" style="color: #FFB300; text-decoration: none; font-weight: 600;">Abrir post ↗</a>' if m.permalink else ""
         data.append(row)
 
+    # 2. Process Stories
+    if content_type_filter in ["Todos os Formatos", "Stories (24h)"]:
+        for s in stories_list:
+            if "Apenas Pago" in view_mode:
+                continue # Stories API generally only returns organic data unless promoted
+                
+            row = {
+                "Tipo": "⏱️ Story",
+                "Publicação": s.caption[:45] + "..." if s.caption else "Story 24h",
+                "Data": s.timestamp.strftime("%d/%m/%Y") if s.timestamp else "-",
+                "Alcance": s.reach,
+                "Likes": s.replies, # Stories don't have public likes in the same way, using replies or 0
+                "Comentários": s.replies,
+                "Shares": s.shares_count,
+                "Salvos": "-",
+                "Seguidores": "-",
+                "Visitas Perfil": s.profile_visits_count,
+                "Visualizar no IG": "-"
+            }
+            data.append(row)
+
+    if not data:
+        st.info("Nenhuma publicação encontrada para os filtros selecionados.")
+        return
+
     df = pd.DataFrame(data).fillna(0)
+    num_cols = [
+        "Likes",
+        "Alcance",
+        "Shares",
+        "Salvos",
+        "Seguidores",
+        "Visitas Perfil",
+        "Comentários"
+    ]
+    
+    for c in num_cols:
+        if c in df.columns:
+            # Convert to numeric first, coercing errors
+            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+
+    # Sort
+    df = df.sort_values(by="Alcance", ascending=False)
+    
+    # Render with glass table layout
     render_glass_table(df)
