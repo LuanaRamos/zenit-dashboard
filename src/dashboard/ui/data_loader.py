@@ -2,7 +2,7 @@ import streamlit as st
 from typing import List
 from api.meta_client import MetaAdsClient
 from api.instagram_client import InstagramClient
-from schemas.meta import CampaignInsight, PageInsight
+from schemas.meta import CampaignInsight
 from schemas.instagram import InstagramMedia
 import datetime
 
@@ -10,11 +10,6 @@ import datetime
 def get_api_client() -> MetaAdsClient:
     """Inicializa o cliente de Ads apenas uma vez."""
     return MetaAdsClient()
-
-@st.cache_data(ttl=86400)
-def get_account_creation_date_cached() -> datetime.date:
-    client = get_api_client()
-    return client.get_account_created_time()
 
 @st.cache_resource
 def get_instagram_client() -> InstagramClient:
@@ -25,10 +20,6 @@ def get_instagram_client() -> InstagramClient:
 def fetch_campaigns_v8(date_preset: str, time_range: dict = None) -> List[CampaignInsight]:
     client = get_api_client()
     return client.get_campaign_insights(date_preset=date_preset, time_range=time_range)
-
-@st.cache_resource(ttl=3600)
-def load_page_data() -> PageInsight:
-    return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
 def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[InstagramMedia]:

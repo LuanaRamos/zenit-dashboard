@@ -111,12 +111,3 @@ class CampaignInsight(BaseModel):
             parsed_data["cost_per_profile_visit"] = spend / profile_visits
             
         return cls(**parsed_data)
-
-class PageInsight(BaseModel):
-    """
-    Métricas da página/Instagram orgânico.
-    """
-    model_config = ConfigDict(frozen=True)
-    followers: int = Field(default=0)
-    reach: int = Field(default=0)
-    engagement: int = Field(default=0)
