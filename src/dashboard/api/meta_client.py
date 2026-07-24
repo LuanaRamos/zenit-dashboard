@@ -82,7 +82,7 @@ class MetaAdsClient:
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "ad",
-            "fields": "ad_id,reach,impressions,clicks",
+            "fields": "ad_id,reach,impressions,clicks,actions",
             "date_preset": "maximum",
             "limit": "1000"
         }
@@ -102,8 +102,14 @@ class MetaAdsClient:
                 ad_metrics_map[ad_id] = {
                     "reach": int(item.get("reach", 0)),
                     "impressions": int(item.get("impressions", 0)),
-                    "clicks": int(item.get("clicks", 0))
+                    "clicks": int(item.get("clicks", 0)),
+                    "likes": 0
                 }
+                
+                # Procura interações pagas (curtidas feitas no dark post)
+                for action in item.get("actions", []):
+                    if action.get("action_type") in ["post_reaction", "onsite_conversion.post_net_like"]:
+                        ad_metrics_map[ad_id]["likes"] = max(ad_metrics_map[ad_id]["likes"], int(action.get("value", 0)))
                 
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
@@ -134,10 +140,11 @@ class MetaAdsClient:
                 metrics = ad_metrics_map[ad_id]
                 
                 if ig_id not in ig_mapping:
-                    ig_mapping[ig_id] = {"reach": 0, "impressions": 0, "clicks": 0}
+                    ig_mapping[ig_id] = {"reach": 0, "impressions": 0, "clicks": 0, "likes": 0}
                     
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]
                 ig_mapping[ig_id]["clicks"] += metrics["clicks"]
+                ig_mapping[ig_id]["likes"] += metrics["likes"]
                 
         return ig_mapping

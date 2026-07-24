@@ -26,7 +26,7 @@ def load_page_data() -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_resource(ttl=900)
-def fetch_organic_v10(date_preset: str) -> List[InstagramMedia]:
+def fetch_organic_v11(date_preset: str) -> List[InstagramMedia]:
     """
     Busca as publicações orgânicas e cruza com os anúncios ativos.
     Tempo de cache (TTL): 900s (15 minutos) para evitar Rate Limit.
@@ -56,6 +56,7 @@ def fetch_organic_v10(date_preset: str) -> List[InstagramMedia]:
             media.paid_reach = metrics["reach"]
             media.paid_impressions = metrics["impressions"]
             media.paid_clicks = metrics["clicks"]
+            media.paid_likes = metrics["likes"]
             
             # Cálculos Ponderados para evitar distorção matemática
             if media.paid_impressions > 0:
