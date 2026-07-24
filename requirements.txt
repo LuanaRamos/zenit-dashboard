@@ -8,3 +8,10 @@ python-dotenv
 pytest
 ruff
 streamlit-aggrid
+sentry-sdk
+mypy
+basedpyright
+flake8
+flake8-bandit
+flake8-bugbear
+Flake8-pyproject
