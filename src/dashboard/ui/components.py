@@ -83,12 +83,14 @@ def render_glass_table(
     <html>
     <head>
     <style>
-        html, body {{ margin: 0; padding: 0; background: transparent !important; font-family: 'Inter', sans-serif; }}
+        html, body {{ margin: 0; padding: 0; background: transparent !important; font-family: 'Inter', sans-serif; overflow: hidden; }}
         .glass-table-container {{
             height: fit-content;
             max-height: 400px;
             overflow-y: auto;
+            overflow-x: auto;
             border-radius: 12px;
+            width: 100%;
         }}
         .glass-table {{ width: 100%; border-collapse: collapse; color: #E2E8F0; font-size: 12px; }}
         .glass-table th {{
