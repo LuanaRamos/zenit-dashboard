@@ -1,5 +1,6 @@
 import json
 import logging
+import sentry_sdk
 
 from typing import Any
 import requests
@@ -25,14 +26,14 @@ class InstagramClient:
         self.token = settings.meta_master_token.get_secret_value()
         self.page_id = settings.page_id
         self.session = requests.Session()
+        self.session.headers.update({"Authorization": f"Bearer {self.token}"})
         self.instagram_account_id = self._fetch_instagram_account_id()
 
     def _fetch_instagram_account_id(self) -> str:
         """Busca o ID do Instagram vinculado à página dinamicamente."""
         url = f"{self.BASE_URL}/{self.page_id}"
         params = {
-            "fields": "instagram_business_account",
-            "access_token": self.token
+            "fields": "instagram_business_account"
         }
         try:
             response = self.session.get(url, params=params, timeout=10)
@@ -42,11 +43,13 @@ class InstagramClient:
                 return str(data["instagram_business_account"]["id"])
             else:
                 logger.error(f"Nenhum Instagram vinculado à Página {self.page_id}.")
-                # Retorna o ID antigo como fallback para não quebrar completamente
-                return "17841449425333311"
+                raise InstagramAPIError("Nenhum Instagram Comercial vinculado à Página do Facebook. Verifique as configurações na Meta.")
         except Exception as e:
+            if isinstance(e, InstagramAPIError):
+                raise
             logger.error(f"Erro ao buscar instagram_business_account: {e}")
-            return "17841449425333311"
+            sentry_sdk.capture_exception(e)
+            raise InstagramAPIError("Falha de conexão ao tentar validar o Instagram vinculado à conta.")
 
     def _make_request(
         self, endpoint: str, params: dict[str, Any] | None = None
@@ -58,7 +61,6 @@ class InstagramClient:
         if params is None:
             params = {}
 
-        params["access_token"] = self.token
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
@@ -128,6 +130,7 @@ class InstagramClient:
                 current_page += 1
             except Exception as e:
                 logger.warning(f"Erro durante a paginação do Instagram: {e}")
+                sentry_sdk.capture_exception(e)
                 break
 
         # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
@@ -168,6 +171,7 @@ class InstagramClient:
                         insights_map[ig_id] = body.get("data", [])
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights: {e}")
+                sentry_sdk.capture_exception(e)
 
         media_list = []
         for item in media_items_data:
@@ -254,6 +258,7 @@ class InstagramClient:
                         insights_map[ig_id] = body.get("data", [])
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights de Stories: {e}")
+                sentry_sdk.capture_exception(e)
 
         stories_list = []
         for item in stories_data:
@@ -283,3 +288,107 @@ class InstagramClient:
             )
 
         return stories_list
+
+    def get_account_insights(self) -> dict[str, int]:
+        """
+        Busca insights a nível de conta (Últimos 28 dias).
+        Métricas de cliques (website_clicks, email_contacts) foram depreciadas na API oficial,
+        mas mantemos a estrutura para puxar as visualizações de perfil reais.
+        """
+        import datetime
+        until = datetime.datetime.now()
+        since = until - datetime.timedelta(days=28)
+        
+        # profile_views foi restaurada na v19.0 para nível de conta (period=day)
+        endpoint = f"{self.instagram_account_id}/insights"
+        params = {
+            "metric": "profile_views",
+            "period": "day",
+            "since": str(int(since.timestamp())),
+            "until": str(int(until.timestamp()))
+        }
+        
+        results = {"profile_views": 0, "website_clicks": 0, "email_contacts": 0}
+        
+        try:
+            data = self._make_request(endpoint, params)
+            insights = data.get("data", [])
+            for insight in insights:
+                name = insight.get("name")
+                # Soma os dias
+                total = sum(v.get("value", 0) for v in insight.get("values", []))
+                results[name] = total
+        except Exception as e:
+            logger.warning(f"Erro ao buscar account insights: {e}")
+            
+        return results
+
+    def get_total_media_count(self) -> int:
+        """Busca o número total de posts publicados pela conta"""
+        try:
+            params = {"fields": "media_count"}
+            data = self._make_request(f"{self.instagram_account_id}", params)
+            return int(data.get("media_count", 0))
+        except Exception as e:
+            logger.warning(f"Erro ao contar media: {e}")
+            return 0
+
+    def get_all_media_ids_since_beginning(self) -> list[str]:
+        """Busca TODOS os IDs de mídia desde o início da conta, lidando com paginação ilimitada."""
+        endpoint = f"{self.instagram_account_id}/media"
+        params = {
+            "fields": "id",
+            "limit": "100",
+        }
+        media_ids = []
+        try:
+            while True:
+                data = self._make_request(endpoint, params)
+                page_data = data.get("data", [])
+                if not page_data:
+                    break
+                media_ids.extend([item["id"] for item in page_data])
+                paging = data.get("paging", {})
+                if "cursors" in paging and "after" in paging["cursors"]:
+                    params["after"] = paging["cursors"]["after"]
+                else:
+                    break
+        except Exception as e:
+            logger.warning(f"Erro ao buscar all_media_ids: {e}")
+        return media_ids
+
+    def get_top_comment_for_account(self, media_ids: list[str]) -> dict[str, Any] | None:
+        """Busca o comentário mais curtido dado uma lista de media_ids (Sem limite, usa chunks de 50 no Batch)"""
+        if not media_ids: return None
+        best_comment = None
+        max_likes = -1
+        
+        batch_requests = []
+        for ig_id in media_ids:
+            batch_requests.append(
+                {"method": "GET", "relative_url": f"/{ig_id}/comments?fields=id,text,like_count,username,timestamp&limit=50"}
+            )
+        
+        try:
+            for i in range(0, len(batch_requests), 50):
+                chunk = batch_requests[i:i + 50]
+                batch_res = self.session.post(
+                    self.BATCH_URL,
+                    data={"access_token": self.token, "batch": json.dumps(chunk)},
+                    timeout=20,
+                )
+                batch_res.raise_for_status()
+                for response_item in batch_res.json():
+                    if response_item.get("code") == 200:
+                        body = json.loads(response_item.get("body", "{}"))
+                        comments = body.get("data", [])
+                        for c in comments:
+                            likes = int(c.get("like_count", 0))
+                            if likes > max_likes:
+                                max_likes = likes
+                                best_comment = c
+        except Exception as e:
+            logger.error(f"Erro ao buscar top comment: {e}")
+            sentry_sdk.capture_exception(e)
+            
+        return best_comment

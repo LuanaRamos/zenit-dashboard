@@ -45,95 +45,110 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
             help_text="Impulsionado"
         )
 
-
-def render_content_formats(media_list: list[InstagramMedia], stories_list: list[InstagramStory]) -> None:
-    """Renderiza a distribuição de visualizações por formato (Reels vs Carrossel vs Imagem vs Stories)."""
-    st.markdown("#### Formatos vs Alcance")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    format_reach = {"Reels": 0, "Carrossel": 0, "Post Estático": 0, "Stories (Ativos 24h)": 0}
-    for m in media_list:
-        if m.media_type == "VIDEO": format_reach["Reels"] += (m.organic_reach + m.paid_reach)
-        elif m.media_type == "CAROUSEL_ALBUM": format_reach["Carrossel"] += (m.organic_reach + m.paid_reach)
-        else: format_reach["Post Estático"] += (m.organic_reach + m.paid_reach)
-        
-    for s in stories_list:
-        format_reach["Stories (Ativos 24h)"] += s.reach
-        
-    # Remove formatos zerados
-    format_reach = {k: v for k, v in format_reach.items() if v > 0}
+    # --- Account Level Insights ---
+    st.markdown("#### 👁️ Movimentação no Perfil (Últimos 28 dias)")
     
-    if not format_reach:
-        return
+    from api.instagram_client import InstagramClient
+    try:
+        client = InstagramClient()
+        account_insights = client.get_account_insights()
         
-    menu_col, format_col = st.columns([1, 1.2])
-    with menu_col:
-        # Usamos option_menu apenas visualmente como "abas" para ver alcance por formato
-        selected_format = option_menu(
-            menu_title=None,
-            options=list(format_reach.keys()),
-            icons=["camera-reels", "images", "image", "play-circle"],
-            menu_icon="cast",
-            default_index=0,
-            orientation="horizontal",
-            styles={
-                "container": {"padding": "0!important", "background-color": "transparent"},
-                "icon": {"color": "#8B949E", "font-size": "14px"},
-                "nav-link": {
-                    "font-size": "13px",
-                    "text-align": "center",
-                    "margin": "0px 6px 0px 0px",
-                    "--hover-color": "rgba(255, 255, 255, 0.03)",
-                    "border-radius": "8px",
-                    "padding": "8px 12px",
-                    "border": "1px solid transparent",
-                    "color": "#8B949E",
-                    "font-family": "Inter, sans-serif",
-                    "font-weight": "500",
-                    "transition": "all 0.2s ease",
-                },
-                "nav-link-selected": {
-                    "background": "rgba(255, 179, 0, 0.1)",
-                    "border": "1px solid rgba(255, 179, 0, 0.2)",
-                    "box-shadow": "none",
-                    "color": "#FFB300",
-                    "font-weight": "600"
-                },
-            }
-        )
-
-    with format_col:
-        st.markdown("<h4 style='color: transparent; font-size: 0.85rem; margin-bottom: -15px;'>.</h4>", unsafe_allow_html=True)
-        media_type_filter = st.selectbox(
-            "Filtrar por Formato:",
-            ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"],
-            label_visibility="collapsed"
-        )
-
-    # --- Stories ---
-    if media_type_filter == "Stories (Ativos 24h)":
-        if not stories_list:
-            st.info(
-                "Você não tem Stories ativos no momento. Publique algo para acompanhar o desempenho aqui."
+        a1, a2, a3 = st.columns(3)
+        with a1:
+            render_metric_card(
+                label='VISITAS AO PERFIL',
+                value=f"{account_insights.get('profile_views', 0):,}".replace(",", "."),
+                subtext="Total na conta",
+                help_text="Pessoas que acessaram seu perfil no Instagram nos últimos 28 dias."
             )
-            return
+        with a2:
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom: 1rem; border-left: 4px solid #FF3366;">
+                <div style="color: #8B949E; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">CLIQUES NO LINK DA BIO</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">--</div>
+                <div style="color: #FF3366; font-size: 0.85rem;"><i class="bi bi-info-circle"></i> Métrica depreciada pela Meta</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with a3:
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom: 1rem; border-left: 4px solid #FF3366;">
+                <div style="color: #8B949E; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">CLIQUES PARA CONTATO</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">--</div>
+                <div style="color: #FF3366; font-size: 0.85rem;"><i class="bi bi-info-circle"></i> Métrica depreciada pela Meta</div>
+            </div>
+            """, unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Não foi possível carregar as visitas do perfil.")
 
-        st.markdown("#### Desempenho de Stories (Últimas 24h)")
-        data = [
-            {
-                "Resumo": "Story Ativo",
-                "Alcance": int(s.reach),
-                "Avanços": int(s.taps_forward),
-                "Voltas": int(s.taps_back),
-                "Saídas": int(s.exits),
-                "Respostas": int(s.replies),
-                "Visualizar no IG": s.permalink if s.permalink else "",
-            }
-            for s in stories_list
-        ]
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- Top Posts Bento Grid ---
+    if media_list:
+        st.markdown("#### 🔥 Top Posts de Maior Alcance")
+        # Sort by total reach
+        top_posts = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)[:3]
+        
+        b1, b2, b3 = st.columns(3)
+        cols = [b1, b2, b3]
+        
+        for idx, post in enumerate(top_posts):
+            with cols[idx]:
+                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
+                likes = post.like_count
+                reach = post.organic_reach + post.paid_reach
+                
+                # Choose icon based on type
+                if post.media_product_type == "REELS":
+                    icon = "🎬"
+                elif post.media_type == "CAROUSEL_ALBUM":
+                    icon = "📸"
+                else:
+                    icon = "📱"
+                
+                st.markdown(f"""
+                <div class="glass-card" style="margin-bottom: 1rem; display: flex; flex-direction: column;">
+                    <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
+                    <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto;">
+                        <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
+                        <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
+                    </div>
+                </div>
+                """.replace(",", "."), unsafe_allow_html=True)
 
-        df_stories = pd.DataFrame(data)
-        render_glass_table(df_stories)
-        return
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("#### 💬 Comentário Mais Curtido")
+    st.markdown("Busque o comentário com maior engajamento entre as publicações recentes.")
+    
+    from api.instagram_client import InstagramClient
+    
+    try:
+        client = InstagramClient()
+        total_posts = client.get_total_media_count()
+        
+        st.info(f"A conta tem **{total_posts} publicações** no total.")
+        if total_posts > 50:
+            st.warning("⚠️ Conta com muitas publicações. A busca será limitada aos últimos 50 posts carregados para evitar bloqueios na API (limite de Batch). É seguro prosseguir!")
+        else:
+            st.success("Conta pequena, busca totalmente segura e rápida!")
+            
+        if st.button("🔍 Buscar Top Comentário em Toda a Conta"):
+            with st.spinner("Varrendo todos os posts desde o início da conta (isso pode levar alguns segundos)..."):
+                all_ids = client.get_all_media_ids_since_beginning()
+                best = client.get_top_comment_for_account(all_ids)
+                if best:
+                    st.success(f"**@{best.get('username', 'Usuário')}**: {best.get('text')}")
+                    st.markdown(f"❤️ **{best.get('like_count')} curtidas**")
+                else:
+                    st.info("Nenhum comentário de destaque encontrado.")
+    except Exception as e:
+        st.error("Não foi possível carregar a ferramenta de comentários.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
 
 def render_posts_table(media_list: list[InstagramMedia], stories_list: list[InstagramStory]) -> None:
     """Renderiza tabela detalhada de publicações combinando Feed e Stories."""
@@ -204,7 +219,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
 
         # Fix attribute names matching InstagramMedia schema
         row = {
-            "Tipo": "🎥 Reels" if m.media_type == "VIDEO" else "📑 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
+            "Tipo": "🎬 Reels" if m.media_type == "VIDEO" else "📱 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
             "Publicação": m.caption[:45] + "..." if m.caption else "Sem legenda",
             "Data": m.timestamp.split("T")[0] if m.timestamp else "-",
             "Alcance": reach,
