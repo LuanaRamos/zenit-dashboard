@@ -93,7 +93,7 @@ def render_glass_table(
     <head>
     <style>
         html, body {{ margin: 0; padding: 0; background: transparent !important; font-family: 'Inter', sans-serif; overflow: hidden; }}
-        {get_global_css().replace('{', '{{').replace('}', '}}')}
+        {get_global_css()}
     </style>
     </head>
     <body>
@@ -198,7 +198,7 @@ def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> 
     <head>
     <style>
         html, body {{ margin: 0; padding: 0; overflow: hidden; background: transparent !important; font-family: 'Inter', sans-serif; }}
-        {get_global_css().replace('{', '{{').replace('}', '}}')}
+        {get_global_css()}
         /* Card isolation specifics for chart wrapper to ensure exact height fitting */
         .glass-card {{ height: 100%; box-sizing: border-box; }}
     </style>
