@@ -261,8 +261,8 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
                 width=0.15, # Barra ultra fina, visual premium
                 marker=dict(
                     color='#FFB300', # Ouro Zenit
-                    # Adicionando um leve degradê na barra (simulado com line color mais clara e sem bordas duras)
                     line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
+                    cornerradius="50%" # Pontas arredondadas (Pill shape perfeito)
                 ),
                 text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")),
                 textposition='outside', # Como a barra é fina, o texto vai para cima dela
