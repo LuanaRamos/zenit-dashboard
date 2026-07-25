@@ -59,18 +59,18 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
         b1, b2, b3 = st.columns(3)
         cols = [b1, b2, b3]
         
-        for i, post in enumerate(top_posts):
-            with cols[i]:
-                reach = post.organic_reach + post.paid_reach
+        for idx, post in enumerate(top_posts):
+            with cols[idx]:
+                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
                 likes = post.like_count
+                reach = post.organic_reach + post.paid_reach
                 
-                # Truncate text for grid
-                short_text = post.caption[:75] + "..." if post.caption and len(post.caption) > 75 else (post.caption or "Sem legenda")
-                
-                icon = "🖼️"
-                if post.media_type == "VIDEO":
+                # Choose icon based on type
+                if post.media_product_type == "REELS":
                     icon = "🎬"
                 elif post.media_type == "CAROUSEL_ALBUM":
+                    icon = "📸"
+                else:
                     icon = "📱"
                 
                 st.markdown(f"""
@@ -85,6 +85,93 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
                 """.replace(",", "."), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
+
+def _ms_to_hhmmss(ms: float) -> str:
+    if not ms or ms <= 0:
+        return "00:00:00"
+    total_s = int(ms / 1000)
+    hours = total_s // 3600
+    minutes = (total_s % 3600) // 60
+    seconds = total_s % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def render_posts_table(
+    media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
+) -> None:
+    if stories_list is None:
+        stories_list = []
+
+    st.markdown("### Análise Individual por Publicação")
+
+    view_col, format_col = st.columns([1, 1])
+
+    with view_col:
+        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
+        data_view = option_menu(
+            menu_title=None,
+            options=["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
+            icons=["pie-chart-fill", "hash", "cash-coin"],
+            default_index=0,
+            orientation="horizontal",
+            styles={
+                "container": {"padding": "0!important", "background-color": "transparent"},
+                "icon": {"color": "#8B949E", "font-size": "14px"},
+                "nav-link": {
+                    "font-size": "13px",
+                    "text-align": "center",
+                    "margin": "0px 6px 0px 0px",
+                    "--hover-color": "rgba(255, 255, 255, 0.03)",
+                    "border-radius": "8px",
+                    "padding": "8px 12px",
+                    "border": "1px solid transparent",
+                    "color": "#8B949E",
+                    "font-family": "Inter, sans-serif",
+                    "font-weight": "500",
+                    "transition": "all 0.2s ease",
+                },
+                "nav-link-selected": {
+                    "background": "rgba(255, 179, 0, 0.1)",
+                    "border": "1px solid rgba(255, 179, 0, 0.2)",
+                    "box-shadow": "none",
+                    "color": "#FFB300",
+                    "font-weight": "600"
+                },
+            }
+        )
+
+    with format_col:
+        st.markdown("<h4 style='color: transparent; font-size: 0.85rem; margin-bottom: -15px;'>.</h4>", unsafe_allow_html=True)
+        media_type_filter = st.selectbox(
+            "Filtrar por Formato:",
+            ["Reels", "Carrossel", "Post Estático", "Stories (Ativos 24h)"],
+            label_visibility="collapsed"
+        )
+
+    # --- Stories ---
+    if media_type_filter == "Stories (Ativos 24h)":
+        if not stories_list:
+            st.info(
+                "Você não tem Stories ativos no momento. Publique algo para acompanhar o desempenho aqui."
+            )
+            return
+
+        st.markdown("#### Desempenho de Stories (Últimas 24h)")
+        data = [
+            {
+                "Resumo": "Story Ativo",
+                "Alcance": int(s.reach),
+                "Avanços": int(s.taps_forward),
+                "Voltas": int(s.taps_back),
+                "Saídas": int(s.exits),
+                "Respostas": int(s.replies),
+                "Visualizar no IG": s.permalink if s.permalink else "",
+            }
+            for s in stories_list
+        ]
+
+        df_stories = pd.DataFrame(data)
+        render_glass_table(df_stories)
+        return
 
 def render_posts_table(media_list: list[InstagramMedia], stories_list: list[InstagramStory]) -> None:
     """Renderiza tabela detalhada de publicações combinando Feed e Stories."""
@@ -168,7 +255,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         }
         
         # Link in raw HTML for st.markdown, but we are switching to st.dataframe which supports clickable URLs if configured, but let's just use the URL
-        row["Visualizar no IG"] = m.permalink if m.permalink else None
+        row["Visualizar no IG"] = m.permalink
         data.append(row)
 
     # 2. Process Stories
@@ -188,7 +275,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
                 "Salvos": 0,
                 "Seguidores": 0,
                 "Visitas Perfil": 0,
-                "Visualizar no IG": s.permalink if s.permalink else None
+                "Visualizar no IG": s.permalink
             }
             data.append(row)
 
@@ -196,7 +283,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         st.info("Nenhuma publicação encontrada para os filtros selecionados.")
         return
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(data).fillna(0)
     num_cols = [
         "Likes",
         "Alcance",
@@ -206,21 +293,21 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         "Visitas Perfil",
         "Comentários"
     ]
-
+    
     for c in num_cols:
         if c in df.columns:
-            # Convert to numeric first, coercing errors (não mexe em "Visualizar no IG", que fica string/None)
+            # Convert to numeric first, coercing errors
             df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
 
     # Sort
     df = df.sort_values(by="Alcance", ascending=False)
-
-    # Tabela custom do design system (não usa st.dataframe nativo)
-    filter_slug = f"{view_mode}_{content_type_filter}".lower().replace(" ", "_").replace("(", "").replace(")", "")
+    
+    # Use a tabela de vidro estilizada
     render_glass_table(
         df,
+        currency_cols=[],
         link_col="Visualizar no IG",
-        link_label="Ver no IG",
-        key=f"tbl_posts_{filter_slug}",
-        csv_filename=f"publicacoes_{filter_slug}.csv",
+        link_label="Abrir ↗",
+        key="organic_posts_table",
+        csv_filename="publicacoes_organicas.csv"
     )
