@@ -204,6 +204,54 @@ def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: f
             delta_type=cpa_color
         )
 
+def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> None:
+    """Isola completamente o gráfico Plotly em um iframe HTML para evitar barras de rolagem
+    e bugs de padding do Streamlit. Renderiza o glassmorphism nativamente no HTML."""
+    plotly_html = fig.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False})
+    title_html = f"<div class='title'>{title}</div>" if title else ""
+    
+    html_content = f"""
+    <html>
+    <head>
+    <style>
+        html, body {{ margin: 0; padding: 0; overflow: hidden; background: transparent !important; font-family: 'Inter', sans-serif; }}
+        .glass-card {{
+            background: rgba(20, 20, 20, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+        }}
+        .title {{
+            color: #8B949E;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-family: 'Inter', sans-serif;
+        }}
+        .plotly-graph-div {{
+            margin: 0 auto;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="glass-card">
+            {title_html}
+            <div style="width: 100%; height: calc(100% - {'28px' if title else '0px'}); display: flex; justify-content: center; align-items: center;">
+                {plotly_html}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    components.html(html_content, height=height, scrolling=False)
+
 def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     st.markdown("<h4 style='color: #ffffff; font-weight: 600; margin-top: 1rem; margin-bottom: 1rem;'>Distribuição de Investimento</h4>", unsafe_allow_html=True)
     spend_by_obj = {}
@@ -220,9 +268,9 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         values=values, 
         marker=dict(
             colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
-            line=dict(color='rgba(0,0,0,0)', width=0) # Efeito Gamma: limpo, sem bordas pesadas
+            line=dict(color='rgba(0,0,0,0)', width=0)
         ),
-        textinfo='none', # Cleaner look, only on hover
+        textinfo='none',
         hoverinfo='label+percent+value',
         hovertemplate='<b>%{label}</b><br>Gastos: %{value:$.2f}<br>Proporção: %{percent}<extra></extra>'
     )])
@@ -230,19 +278,19 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
-        margin={"l": 0, "r": 0, "t": 10, "b": 0}, 
+        margin={"l": 0, "r": 0, "t": 20, "b": 60},  # Margem bottom bem maior para a legenda caber
         showlegend=True, 
-        legend={"orientation": "h", "y": -0.15, "font": {"size": 11}}, 
-        height=360,
+        legend={"orientation": "h", "y": -0.25, "font": {"size": 11}}, 
+        height=420,  # Aumenta a altura interna do Plotly
         hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#FFB300", font=dict(family="Montserrat", size=13))
     )
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    # 420px do grafico + 32px de padding (top+bottom) + folga = 480
+    render_glass_chart(fig, height=480)
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
     if not campaigns: return
     
-    # Bento Grid Layout
     col1, col2 = st.columns([1.1, 1])
     
     with col1:
@@ -259,19 +307,17 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
             
             fig = go.Figure()
-            # Mudando para Barras Finas (Sleek/Dashdark style) para não ficar grosseiro.
-            # E mantendo o eixo Y no Zero para não distorcer.
             fig.add_trace(go.Bar(
                 x=chart_data["Campanha"], 
                 y=chart_data["Custo"],
-                width=0.15, # Barra ultra fina, visual premium
+                width=0.15,
                 marker=dict(
-                    color='#FFB300', # Ouro Zenit
+                    color='#FFB300',
                     line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
-                    cornerradius="50%" # Pontas arredondadas (Pill shape perfeito)
+                    cornerradius="50%"
                 ),
                 text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")),
-                textposition='outside', # Como a barra é fina, o texto vai para cima dela
+                textposition='outside',
                 textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
                 hoverinfo='y+x'
             ))
@@ -281,15 +327,13 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
                 paper_bgcolor="rgba(0,0,0,0)", 
                 xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
                 yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
-                margin=dict(l=0, r=0, t=15, b=0), # Margem top um pouco maior pro texto 'outside' caber
-                height=300, 
+                margin=dict(l=0, r=0, t=15, b=40), # Espaço embaixo para a label X
+                height=340, 
                 hovermode="x unified",
                 hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
             )
-            st.markdown("<div class='glass-card' style='padding: 16px !important;'>", unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-top: 0; margin-bottom: 12px; font-weight: 500;'>Desempenho de Custo</h4>", unsafe_allow_html=True)
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-            st.markdown("</div>", unsafe_allow_html=True)
+            # 340px do grafico + 28px do titulo + 32px padding + folga = 420
+            render_glass_chart(fig, title="Desempenho de Custo", height=420)
 
 def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
     st.markdown("### Campanhas de Seguidores e Visitas")
