@@ -36,7 +36,19 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     box-sizing: border-box !important;
+}
+
+/* Gráficos não podem ter rolagem para não bugar o iframe */
+.glass-card, [data-testid="stPlotlyChart"] {
     overflow: hidden !important;
+}
+
+/* Tabelas devem rolar se o conteúdo for maior que o max-height */
+.glass-table-container { 
+    height: fit-content; 
+    max-height: 400px; 
+    overflow: auto !important; 
+    width: 100%; 
 }
 
 /* Kpi cards get a special subtle gradient to match the screenshot */
@@ -85,7 +97,6 @@
     margin-top: 0; margin-bottom: 12px; font-family: 'Inter', sans-serif;
 }
 .plotly-graph-div { margin: 0 auto; }
-.glass-table-container { height: fit-content; max-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 12px; width: 100%; }
 [data-testid="stSidebar"] { background-color: rgba(6, 6, 6, 0.95) !important; backdrop-filter: blur(24px) !important; border-right: 1px solid rgba(255, 255, 255, 0.03) !important; }
 
 h1, h2, h3, h4 { font-family: 'Montserrat', sans-serif !important; font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.01em !important; margin-bottom: 0.5rem !important; }
