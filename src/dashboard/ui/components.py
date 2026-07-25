@@ -210,8 +210,26 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         st.info("Não há dados de investimento suficientes para o gráfico.")
         return
     
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.75, marker={"colors": ["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"]})])
-    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"color": "#8B949E"}, margin={"l": 0, "r": 0, "t": 20, "b": 0}, showlegend=True, legend={"orientation": "h", "y": -0.1}, height=300)
+    fig = go.Figure(data=[go.Pie(
+        labels=labels, 
+        values=values, 
+        hole=0.82, # More premium thin donut
+        marker=dict(
+            colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
+            line=dict(color='#151515', width=3) # Absolute black borders for seamless dark UI
+        ),
+        textinfo='none', # Cleaner look, only on hover
+        hoverinfo='label+percent+value'
+    )])
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
+        margin={"l": 0, "r": 0, "t": 10, "b": 0}, 
+        showlegend=True, 
+        legend={"orientation": "h", "y": -0.15, "font": {"size": 11}}, 
+        height=320
+    )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
@@ -235,25 +253,27 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
             
             fig = go.Figure()
-            # Alta fluidez: linha fina e sombra suave
+            # Alta fluidez baseada no Figma Dashdark (adaptado para Ouro Zenit)
             fig.add_trace(go.Scatter(
                 x=chart_data["Campanha"], 
                 y=chart_data["Custo"], 
                 mode='lines+markers', 
-                line=dict(color='#FFB300', width=2, shape='spline', smoothing=1.3), 
-                marker=dict(size=6, color='#FFB300', line=dict(width=1, color='#151515')), 
+                line=dict(color='#FFB300', width=3, shape='spline', smoothing=1.3), # Thicker, ultra-smooth curve
+                marker=dict(size=8, color='#FFB300', line=dict(width=2, color='#151515'), symbol='circle'), # High-contrast nodes
                 fill='tozeroy', 
-                fillcolor='rgba(255, 179, 0, 0.08)'
+                fillcolor='rgba(255, 179, 0, 0.12)', # Soft glow effect below the line
+                hoverinfo='y+x'
             ))
             
             fig.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)", 
                 paper_bgcolor="rgba(0,0,0,0)", 
-                xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10)), 
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", zeroline=False, color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10)), 
+                xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=False, color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
                 margin=dict(l=0, r=0, t=10, b=0), 
-                height=250, 
-                hovermode="x unified"
+                height=260, 
+                hovermode="x unified",
+                hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
             )
             st.markdown("<div class='glass-card' style='padding: 16px !important;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-top: 0; margin-bottom: 12px; font-weight: 500;'>Desempenho de Custo</h4>", unsafe_allow_html=True)
