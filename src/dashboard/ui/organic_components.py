@@ -9,108 +9,70 @@ from typing import Any
 def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
     """Renderiza os cartões de métricas consolidadas (Visão Geral)."""
     if not media_list:
-        st.info(
-            "Você não publicou conteúdo orgânico recentemente. Poste um Reels ou Carrossel no Instagram para acompanhar seu alcance gratuito aqui."
-        )
+        st.info("Nenhuma publicação encontrada para exibir métricas.")
         return
 
+    total_reach = sum(m.organic_reach + m.paid_reach for m in media_list)
     total_organic_reach = sum(m.organic_reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
-    total_reach = total_organic_reach + total_paid_reach
-
+    
     pct_organic = (total_organic_reach / total_reach * 100) if total_reach > 0 else 0
     pct_paid = (total_paid_reach / total_reach * 100) if total_reach > 0 else 0
-    
-    st.markdown(f"### Visão Geral ({len(media_list)} Publicações)")
+
     cols = st.columns(3)
 
     with cols[0]:
         render_metric_card(
-            label='<i class="bi bi-people"></i> Alcance Total Global',
+            label='ALCANCE TOTAL GLOBAL',
             value=f"{total_reach:,}".replace(",", "."),
+            subtext="contas alcançadas",
             help_text="Orgânico + Pago"
         )
 
     with cols[1]:
         render_metric_card(
-            label='<i class="bi bi-phone"></i> Alcance Puramente Orgânico',
+            label='ALCANCE PURAMENTE ORGÂNICO',
             value=f"{total_organic_reach:,}".replace(",", "."),
-            delta=f"{pct_organic:.1f}% do Total",
-            delta_type="green"
+            subtext=f"{pct_organic:.1f}% do Total",
+            help_text="Sem investimento"
         )
 
     with cols[2]:
         render_metric_card(
-            label='<i class="bi bi-megaphone"></i> Alcance via Ads (Pago)',
+            label='ALCANCE VIA ADS (PAGO)',
             value=f"{total_paid_reach:,}".replace(",", "."),
-            delta=f"{pct_paid:.1f}% do Total",
-            delta_type="gold"
+            subtext=f"{pct_paid:.1f}% do Total",
+            help_text="Impulsionado"
         )
 
 
-    st.markdown("<br>", unsafe_allow_html=True)
+def render_content_formats(media_list: list[InstagramMedia], stories_list: list[InstagramStory]) -> None:
+    """Renderiza a distribuição de visualizações por formato (Reels vs Carrossel vs Imagem vs Stories)."""
+    st.markdown("#### Formatos vs Alcance")
     
-    # --- Top Posts Bento Grid ---
-    if media_list:
-        st.markdown("#### 🔥 Top Posts de Maior Alcance")
-        # Sort by total reach
-        top_posts = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)[:3]
+    format_reach = {"Reels": 0, "Carrossel": 0, "Post Estático": 0, "Stories (Ativos 24h)": 0}
+    for m in media_list:
+        if m.media_type == "VIDEO": format_reach["Reels"] += (m.organic_reach + m.paid_reach)
+        elif m.media_type == "CAROUSEL_ALBUM": format_reach["Carrossel"] += (m.organic_reach + m.paid_reach)
+        else: format_reach["Post Estático"] += (m.organic_reach + m.paid_reach)
         
-        b1, b2, b3 = st.columns(3)
-        cols = [b1, b2, b3]
+    for s in stories_list:
+        format_reach["Stories (Ativos 24h)"] += s.reach
         
-        for idx, post in enumerate(top_posts):
-            with cols[idx]:
-                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
-                likes = post.like_count
-                reach = post.organic_reach + post.paid_reach
-                
-                # Choose icon based on type
-                if post.media_product_type == "REELS":
-                    icon = "🎬"
-                elif post.media_type == "CAROUSEL_ALBUM":
-                    icon = "📸"
-                else:
-                    icon = "📱"
-                
-                st.markdown(f"""
-                <div class="glass-card" style="margin-bottom: 1rem; display: flex; flex-direction: column;">
-                    <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
-                    <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto;">
-                        <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
-                        <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
-                    </div>
-                </div>
-                """.replace(",", "."), unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-def _ms_to_hhmmss(ms: float) -> str:
-    if not ms or ms <= 0:
-        return "00:00:00"
-    total_s = int(ms / 1000)
-    hours = total_s // 3600
-    minutes = (total_s % 3600) // 60
-    seconds = total_s % 60
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-def render_posts_table(
-    media_list: list[InstagramMedia], stories_list: list[InstagramStory] | None = None
-) -> None:
-    if stories_list is None:
-        stories_list = []
-
-    st.markdown("### Análise Individual por Publicação")
-
-    view_col, format_col = st.columns([1, 1])
-
-    with view_col:
-        st.markdown("<h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'>Visão de Dados:</h4>", unsafe_allow_html=True)
-        data_view = option_menu(
+    # Remove formatos zerados
+    format_reach = {k: v for k, v in format_reach.items() if v > 0}
+    
+    if not format_reach:
+        return
+        
+    menu_col, format_col = st.columns([1, 1.2])
+    with menu_col:
+        # Usamos option_menu apenas visualmente como "abas" para ver alcance por formato
+        selected_format = option_menu(
             menu_title=None,
-            options=["Total (Mix)", "Apenas Orgânico", "Apenas Pago (Ads)"],
-            icons=["pie-chart-fill", "hash", "cash-coin"],
+            options=list(format_reach.keys()),
+            icons=["camera-reels", "images", "image", "play-circle"],
+            menu_icon="cast",
             default_index=0,
             orientation="horizontal",
             styles={
@@ -242,7 +204,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
 
         # Fix attribute names matching InstagramMedia schema
         row = {
-            "Tipo": "🎬 Reels" if m.media_type == "VIDEO" else "📱 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
+            "Tipo": "🎥 Reels" if m.media_type == "VIDEO" else "📑 Carrossel" if m.media_type == "CAROUSEL_ALBUM" else "🖼️ Imagem",
             "Publicação": m.caption[:45] + "..." if m.caption else "Sem legenda",
             "Data": m.timestamp.split("T")[0] if m.timestamp else "-",
             "Alcance": reach,
