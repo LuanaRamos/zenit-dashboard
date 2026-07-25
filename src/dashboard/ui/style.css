@@ -36,7 +36,9 @@
 .glass-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.015); font-weight: 500; color: #E2E8F0; }
 .glass-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
+/* Guarda-corpo: nenhuma tela deve usar a tabela nativa do Streamlit (anti-pattern, ver DESIGN.md) */
 [data-testid="stDataFrame"] { display: none !important; }
+
 [data-testid="stSidebar"] { background-color: rgba(6, 6, 6, 0.95) !important; backdrop-filter: blur(24px) !important; border-right: 1px solid rgba(255, 255, 255, 0.03) !important; }
 
 h1, h2, h3, h4 { font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.01em !important; margin-bottom: 0.5rem !important; }
