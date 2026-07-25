@@ -99,8 +99,9 @@ def render_top_posts_and_comments(media_list: list[InstagramMedia]) -> None:
     for idx, post in enumerate(top_posts):
         with cols[idx]:
             short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
-            likes = post.like_count
-            reach = post.organic_reach + post.paid_reach
+            total_likes = post.total_likes
+            comments = post.comments_count
+            shares = post.total_shares
             
             # Choose icon based on type
             if post.media_product_type == "REELS":
@@ -115,11 +116,13 @@ def render_top_posts_and_comments(media_list: list[InstagramMedia]) -> None:
                 <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
                 <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto; padding-bottom: 4px;">
-                    <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
+                    <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">
+                        💬 {comments:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {total_likes:,}</span> &nbsp; <span style="color:#8B949E; font-weight:400;">📤 {shares:,}</span>
+                    </div>
                     <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
                 <div style="font-size: 0.75rem; color: #8B949E; border-top: 1px solid rgba(255,255,255,0.02); padding-top: 4px;">
-                    Orgânico: <span style="color:#ffffff;">{post.organic_reach:,}</span> &nbsp;|&nbsp; Pago: <span style="color:#ffffff;">{post.paid_reach:,}</span>
+                    Alcance Orgânico: <span style="color:#ffffff;">{post.organic_reach:,}</span> &nbsp;|&nbsp; Pago: <span style="color:#ffffff;">{post.paid_reach:,}</span>
                 </div>
             </div>
             """.replace(",", "."), unsafe_allow_html=True)
