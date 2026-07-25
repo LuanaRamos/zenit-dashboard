@@ -253,7 +253,6 @@ def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> 
     components.html(html_content, height=height, scrolling=False)
 
 def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
-    st.markdown("<h4 style='color: #ffffff; font-weight: 600; margin-top: 1rem; margin-bottom: 1rem;'>Distribuição de Investimento</h4>", unsafe_allow_html=True)
     spend_by_obj = {}
     for c in campaigns:
         obj = c.objective_friendly
@@ -278,14 +277,14 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
-        margin={"l": 0, "r": 0, "t": 20, "b": 60},  # Margem bottom bem maior para a legenda caber
+        margin={"l": 0, "r": 0, "t": 10, "b": 60},  # Margem bottom bem maior para a legenda caber
         showlegend=True, 
         legend={"orientation": "h", "y": -0.25, "font": {"size": 11}}, 
-        height=420,  # Aumenta a altura interna do Plotly
+        height=400,  # Aumenta a altura interna do Plotly
         hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#FFB300", font=dict(family="Montserrat", size=13))
     )
-    # 420px do grafico + 32px de padding (top+bottom) + folga = 480
-    render_glass_chart(fig, height=480)
+    # Mesma altura para os dois gráficos
+    render_glass_chart(fig, title="Distribuição de Investimento", height=460)
 
 def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
     if not campaigns: return
@@ -314,13 +313,13 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             paper_bgcolor="rgba(0,0,0,0)", 
             xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
             yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
-            margin=dict(l=0, r=0, t=15, b=40), # Espaço embaixo para a label X
-            height=340, 
+            margin=dict(l=0, r=0, t=10, b=40), # Espaço embaixo para a label X
+            height=400, 
             hovermode="x unified",
             hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
         )
-        # 340px do grafico + 28px do titulo + 32px padding + folga = 420
-        render_glass_chart(fig, title="Desempenho de Custo", height=420)
+        # Mesma altura para os dois gráficos
+        render_glass_chart(fig, title="Desempenho de Custo", height=460)
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
