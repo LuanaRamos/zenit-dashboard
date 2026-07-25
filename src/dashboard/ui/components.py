@@ -139,25 +139,15 @@ def render_glass_table(
     """
     components.html(table_html, height=iframe_height, scrolling=False)
 
-def render_metric_card(label: str, value: str, delta: str = None, delta_type: str = "normal", help_text: str = None) -> None:
-    help_html = f"<div style='font-size: 0.75rem; color: #8B949E; margin-top: 4px;'>{help_text}</div>" if help_text else ""
+def render_metric_card(label: str, value: str, subtext: str = None, help_text: str = None) -> None:
+    sub_html = f"<div style='color: #E2E8F0; font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;'>{subtext}</div>" if subtext else ""
+    help_html = f"<div style='font-size: 0.75rem; color: #8B949E; font-weight: 400;'>{help_text}</div>" if help_text else ""
     
-    delta_html = ""
-    if delta:
-        if delta_type == "green":
-            delta_html = f"<div class='metric-pill-green'>↑ {delta}</div>"
-        elif delta_type == "gold":
-            delta_html = f"<div class='metric-pill-gold'>↑ {delta}</div>"
-        elif delta_type == "red":
-            delta_html = f"<div class='metric-pill-red'>↓ {delta}</div>"
-        else:
-            delta_html = f"<div style='color: #8B949E; font-size: 0.8rem; margin-top: 4px;'>{delta}</div>"
-            
     html = (
-        '<div class="glass-card">'
-        f'<div style="color: #8B949E; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px;">{label}</div>'
-        f'<div style="color: #ffffff; font-size: 1.8rem; font-weight: 700; margin-bottom: 8px;">{value}</div>'
-        f'{delta_html}'
+        '<div class="glass-card kpi-card">'
+        f'<div style="color: #FFB300; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">{label}</div>'
+        f'<div style="color: #FFB300; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 12px; font-family: \'Montserrat\', sans-serif;">{value}</div>'
+        f'{sub_html}'
         f'{help_html}'
         '</div>'
     )
@@ -166,25 +156,29 @@ def render_metric_card(label: str, value: str, delta: str = None, delta_type: st
 def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: float) -> None:
     cols = st.columns(3)
     with cols[0]:
+        # Formata sem casas decimais para impacto visual, assim como R$ 284 investidos do exemplo
+        spend_fmt = f"R$ {int(total_spend):,}".replace(",", ".")
         render_metric_card(
-            label='<i class="bi bi-wallet2"></i> Investimento Total',
-            value=f"R$ {total_spend:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            delta="Orçamento em dia",
-            delta_type="green"
+            label='INVESTIMENTO TOTAL',
+            value=spend_fmt,
+            subtext="em anúncios no período",
+            help_text="Orçamento distribuído"
         )
     with cols[1]:
+        conv_fmt = f"+{int(total_conversions):,}".replace(",", ".")
         render_metric_card(
-            label='<i class="bi bi-bullseye"></i> Total de Conversões',
-            value=f"{int(total_conversions):,}".replace(",", "."),
-            help_text="Mensagens WhatsApp + Cadastros"
+            label='TOTAL DE CONVERSÕES',
+            value=conv_fmt,
+            subtext="novos leads e contatos",
+            help_text="Tráfego Pago + Orgânico"
         )
     with cols[2]:
-        cpa_color = "green" if avg_cpa < 10 else "gold" if avg_cpa < 20 else "red"
+        cpa_fmt = f"R$ {avg_cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         render_metric_card(
-            label='<i class="bi bi-graph-down-arrow"></i> Custo por Conversão (CPA)',
-            value=f"R$ {avg_cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            delta="Custo atual",
-            delta_type=cpa_color
+            label='CUSTO POR CONVERSÃO',
+            value=cpa_fmt,
+            subtext="média de CPA geral",
+            help_text="Performance do período"
         )
 
 def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> None:
