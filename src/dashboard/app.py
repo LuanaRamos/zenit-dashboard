@@ -37,7 +37,7 @@ logging.basicConfig(level=logging.INFO)  # noqa: E402
 # Configuração da página DEVE ser a primeira chamada
 st.set_page_config(
     page_title="Zenit Analytics",
-    page_icon="📈",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -171,4 +171,4 @@ def main() -> None:  # noqa: C901
 
 if __name__ == "__main__":
     main()
-# Force hot reload
+# Force hot reload v2
