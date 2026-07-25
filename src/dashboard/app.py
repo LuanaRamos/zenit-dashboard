@@ -165,8 +165,10 @@ def main() -> None:  # noqa: C901
                 )
                 # Tratado pela UI amigável e logs via Sentry
             except Exception as e:
+                import traceback
                 sentry_sdk.capture_exception(e)
                 st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
+                st.error(traceback.format_exc())
                 # Tratado pela UI amigável e logs via Sentry
 
         elif selected_module == "Orgânico (Instagram)":
