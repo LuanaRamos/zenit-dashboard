@@ -70,9 +70,11 @@ def render_glass_table(
         rows_html.append(f"<tr>{''.join(cells)}</tr>")
 
     n_rows = len(df)
-    body_height = min(38 * (n_rows + 1) + 20, 480)
-    toolbar_height = 40
-    iframe_height = body_height + toolbar_height + 16
+    # Dá bastante respiro para cada linha (50px) + cabeçalho + padding
+    body_height = min(50 * (n_rows + 1) + 40, 500)
+    toolbar_height = 50
+    # Adiciona 40px extras de folga para o iframe nunca criar barra de rolagem nativa
+    iframe_height = body_height + toolbar_height + 40
 
     csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
     csv_b64 = base64.b64encode(csv_bytes).decode("ascii")
@@ -278,7 +280,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
                 xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
                 yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
                 margin=dict(l=0, r=0, t=15, b=0), # Margem top um pouco maior pro texto 'outside' caber
-                height=260, 
+                height=300, 
                 hovermode="x unified",
                 hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
             )
