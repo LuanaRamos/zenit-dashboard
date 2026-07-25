@@ -5,6 +5,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 from schemas.meta import CampaignInsight
 import plotly.graph_objects as go
+from pathlib import Path
+
+def get_global_css() -> str:
+    """Carrega o CSS global para injetar nos iframes, garantindo estilo único."""
+    css_path = Path(__file__).parent / "style.css"
+    if css_path.exists():
+        with open(css_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return ""
 
 def _format_brl(value: float) -> str:
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -84,33 +93,7 @@ def render_glass_table(
     <head>
     <style>
         html, body {{ margin: 0; padding: 0; background: transparent !important; font-family: 'Inter', sans-serif; overflow: hidden; }}
-        .glass-table-container {{
-            height: fit-content;
-            max-height: 400px;
-            overflow-y: auto;
-            overflow-x: auto;
-            border-radius: 12px;
-            width: 100%;
-        }}
-        .glass-table {{ width: 100%; border-collapse: collapse; color: #E2E8F0; font-size: 12px; }}
-        .glass-table th {{
-            text-align: left; padding: 10px 14px; color: #8B949E; font-weight: 500;
-            font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            position: sticky; top: 0; background: #151515; cursor: pointer; user-select: none;
-        }}
-        .glass-table th:hover {{ color: #FFB300; }}
-        .glass-table td {{ padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-weight: 500; color: #E2E8F0; transition: background 0.2s ease; }}
-        .glass-table tr:hover td {{ background: rgba(255, 179, 0, 0.15); }}
-        .sort-arrow {{ font-size: 0.7rem; margin-left: 4px; color: #FFB300; }}
-        .glass-link {{ color: #FFB300; text-decoration: none; }}
-        .glass-download {{
-            display: inline-flex; align-items: center; gap: 6px;
-            margin-top: 10px; padding: 5px 14px; font-size: 0.8rem;
-            color: #FFB300; background: rgba(255, 179, 0, 0.08);
-            border: 1px solid rgba(255, 179, 0, 0.25); border-radius: 8px;
-            text-decoration: none; cursor: pointer; transition: all 0.15s ease;
-        }}
-        .glass-download:hover {{ background: rgba(255, 179, 0, 0.16); border-color: rgba(255, 179, 0, 0.4); color: #FFC107; }}
+        {get_global_css().replace('{', '{{').replace('}', '}}')}
     </style>
     </head>
     <body>
@@ -215,29 +198,9 @@ def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> 
     <head>
     <style>
         html, body {{ margin: 0; padding: 0; overflow: hidden; background: transparent !important; font-family: 'Inter', sans-serif; }}
-        .glass-card {{
-            background: rgba(20, 20, 20, 0.45);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-            box-sizing: border-box;
-            width: 100%;
-            height: 100%;
-        }}
-        .title {{
-            color: #8B949E;
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-family: 'Inter', sans-serif;
-        }}
-        .plotly-graph-div {{
-            margin: 0 auto;
-        }}
+        {get_global_css().replace('{', '{{').replace('}', '}}')}
+        /* Card isolation specifics for chart wrapper to ensure exact height fitting */
+        .glass-card {{ height: 100%; box-sizing: border-box; }}
     </style>
     </head>
     <body>
