@@ -196,7 +196,7 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         st.info("Nenhuma publicação encontrada para os filtros selecionados.")
         return
 
-    df = pd.DataFrame(data).fillna(0)
+    df = pd.DataFrame(data)
     num_cols = [
         "Likes",
         "Alcance",
@@ -206,31 +206,21 @@ def render_posts_table(media_list: list[InstagramMedia], stories_list: list[Inst
         "Visitas Perfil",
         "Comentários"
     ]
-    
+
     for c in num_cols:
         if c in df.columns:
-            # Convert to numeric first, coercing errors
+            # Convert to numeric first, coercing errors (não mexe em "Visualizar no IG", que fica string/None)
             df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
 
     # Sort
     df = df.sort_values(by="Alcance", ascending=False)
-    
-    # Configure columns
-    column_config = {
-        "Visualizar no IG": st.column_config.LinkColumn(
-            "Link", help="Clique para abrir no Instagram", max_chars=100
-        )
-    }
-    
-    # Add number columns with d3-format to auto-format with thousands separators based on locale
-    for col in num_cols:
-        if col in df.columns:
-            column_config[col] = st.column_config.NumberColumn(format=",d")
-            
-    # Use native st.dataframe for sorting and resizing
-    st.dataframe(
+
+    # Tabela custom do design system (não usa st.dataframe nativo)
+    filter_slug = f"{view_mode}_{content_type_filter}".lower().replace(" ", "_").replace("(", "").replace(")", "")
+    render_glass_table(
         df,
-        hide_index=True,
-        use_container_width=True,
-        column_config=column_config
+        link_col="Visualizar no IG",
+        link_label="Ver no IG",
+        key=f"tbl_posts_{filter_slug}",
+        csv_filename=f"publicacoes_{filter_slug}.csv",
     )
