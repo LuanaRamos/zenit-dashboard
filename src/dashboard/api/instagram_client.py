@@ -302,14 +302,14 @@ class InstagramClient:
         # profile_views foi restaurada na v19.0 para nível de conta (period=day)
         endpoint = f"{self.instagram_account_id}/insights"
         params = {
-            "metric": "profile_views",
+            "metric": "profile_views,website_clicks,profile_links_taps",
             "metric_type": "total_value",
             "period": "day",
             "since": str(int(since.timestamp())),
             "until": str(int(until.timestamp()))
         }
         
-        results = {"profile_views": 0, "website_clicks": 0, "email_contacts": 0}
+        results = {"profile_views": 0, "website_clicks": 0, "profile_links_taps": 0}
         
         try:
             data = self._make_request(endpoint, params)

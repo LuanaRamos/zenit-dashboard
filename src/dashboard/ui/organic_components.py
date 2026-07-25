@@ -64,21 +64,19 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
                 help_text="Pessoas que acessaram seu perfil no Instagram nos últimos 28 dias."
             )
         with a2:
-            st.markdown(f"""
-            <div class="glass-card" style="margin-bottom: 1rem; border-left: 4px solid #FF3366;">
-                <div style="color: #8B949E; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">CLIQUES NO LINK DA BIO</div>
-                <div style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">--</div>
-                <div style="color: #FF3366; font-size: 0.85rem;"><i class="bi bi-info-circle"></i> Métrica depreciada pela Meta</div>
-            </div>
-            """, unsafe_allow_html=True)
+            render_metric_card(
+                label='CLIQUES NO LINK DA BIO',
+                value=f"{account_insights.get('website_clicks', 0):,}".replace(",", "."),
+                subtext="Total na conta",
+                help_text="Toques no link do seu site na Bio."
+            )
         with a3:
-            st.markdown(f"""
-            <div class="glass-card" style="margin-bottom: 1rem; border-left: 4px solid #FF3366;">
-                <div style="color: #8B949E; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; margin-bottom: 8px;">CLIQUES PARA CONTATO</div>
-                <div style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">--</div>
-                <div style="color: #FF3366; font-size: 0.85rem;"><i class="bi bi-info-circle"></i> Métrica depreciada pela Meta</div>
-            </div>
-            """, unsafe_allow_html=True)
+            render_metric_card(
+                label='TOQUES EM LINKS DO PERFIL',
+                value=f"{account_insights.get('profile_links_taps', 0):,}".replace(",", "."),
+                subtext="Total na conta",
+                help_text="Toques no endereço comercial, botão Ligar, botão Enviar email e botão de texto."
+            )
     except Exception as e:
         st.warning(f"Não foi possível carregar as visitas do perfil.")
 
