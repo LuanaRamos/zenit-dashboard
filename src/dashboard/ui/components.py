@@ -83,7 +83,8 @@ def render_glass_table(
     <style>
         html, body {{ margin: 0; padding: 0; background: transparent !important; font-family: 'Inter', sans-serif; }}
         .glass-table-container {{
-            max-height: {body_height}px;
+            height: fit-content;
+            max-height: 400px;
             overflow-y: auto;
             border-radius: 12px;
         }}
@@ -94,8 +95,8 @@ def render_glass_table(
             position: sticky; top: 0; background: #151515; cursor: pointer; user-select: none;
         }}
         .glass-table th:hover {{ color: #FFB300; }}
-        .glass-table td {{ padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-weight: 500; color: #E2E8F0; }}
-        .glass-table tr:hover td {{ background: rgba(255, 255, 255, 0.02); }}
+        .glass-table td {{ padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-weight: 500; color: #E2E8F0; transition: background 0.2s ease; }}
+        .glass-table tr:hover td {{ background: rgba(255, 179, 0, 0.15); }}
         .sort-arrow {{ font-size: 0.7rem; margin-left: 4px; color: #FFB300; }}
         .glass-link {{ color: #FFB300; text-decoration: none; }}
         .glass-download {{
@@ -213,13 +214,13 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     fig = go.Figure(data=[go.Pie(
         labels=labels, 
         values=values, 
-        hole=0.82, # More premium thin donut
         marker=dict(
             colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
-            line=dict(color='#151515', width=3) # Absolute black borders for seamless dark UI
+            line=dict(color='rgba(0,0,0,0)', width=0) # Efeito Gamma: limpo, sem bordas pesadas
         ),
         textinfo='none', # Cleaner look, only on hover
-        hoverinfo='label+percent+value'
+        hoverinfo='label+percent+value',
+        hovertemplate='<b>%{label}</b><br>Gastos: %{value:$.2f}<br>Proporção: %{percent}<extra></extra>'
     )])
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", 
@@ -228,7 +229,8 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         margin={"l": 0, "r": 0, "t": 10, "b": 0}, 
         showlegend=True, 
         legend={"orientation": "h", "y": -0.15, "font": {"size": 11}}, 
-        height=320
+        height=360,
+        hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#FFB300", font=dict(family="Montserrat", size=13))
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
