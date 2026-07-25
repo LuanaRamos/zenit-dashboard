@@ -303,6 +303,7 @@ class InstagramClient:
         endpoint = f"{self.instagram_account_id}/insights"
         params = {
             "metric": "profile_views",
+            "metric_type": "total_value",
             "period": "day",
             "since": str(int(since.timestamp())),
             "until": str(int(until.timestamp()))
@@ -315,8 +316,7 @@ class InstagramClient:
             insights = data.get("data", [])
             for insight in insights:
                 name = insight.get("name")
-                # Soma os dias
-                total = sum(v.get("value", 0) for v in insight.get("values", []))
+                total = insight.get("total_value", {}).get("value", 0)
                 results[name] = total
         except Exception as e:
             logger.warning(f"Erro ao buscar account insights: {e}")
