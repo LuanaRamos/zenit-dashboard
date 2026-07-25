@@ -253,16 +253,20 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
             
             fig = go.Figure()
-            # Voltando para a Linha Fluida com Sombra (Estilo Dashdark) que é mais bonito,
-            # mas mantendo o eixo Y ancorado no Zero para resolver a distorção!
-            fig.add_trace(go.Scatter(
+            # Mudando para Barras Finas (Sleek/Dashdark style) para não ficar grosseiro.
+            # E mantendo o eixo Y no Zero para não distorcer.
+            fig.add_trace(go.Bar(
                 x=chart_data["Campanha"], 
-                y=chart_data["Custo"], 
-                mode='lines+markers', 
-                line=dict(color='#FFB300', width=3, shape='spline', smoothing=1.3), # Curva suave e grossa
-                marker=dict(size=8, color='#FFB300', line=dict(width=2, color='#151515'), symbol='circle'), # Pontos de alto contraste
-                fill='tozeroy', 
-                fillcolor='rgba(255, 179, 0, 0.12)', # Brilho dourado embaixo
+                y=chart_data["Custo"],
+                width=0.15, # Barra ultra fina, visual premium
+                marker=dict(
+                    color='#FFB300', # Ouro Zenit
+                    # Adicionando um leve degradê na barra (simulado com line color mais clara e sem bordas duras)
+                    line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
+                ),
+                text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")),
+                textposition='outside', # Como a barra é fina, o texto vai para cima dela
+                textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
                 hoverinfo='y+x'
             ))
             
@@ -271,7 +275,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
                 paper_bgcolor="rgba(0,0,0,0)", 
                 xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
                 yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
-                margin=dict(l=0, r=0, t=10, b=0), 
+                margin=dict(l=0, r=0, t=15, b=0), # Margem top um pouco maior pro texto 'outside' caber
                 height=260, 
                 hovermode="x unified",
                 hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
