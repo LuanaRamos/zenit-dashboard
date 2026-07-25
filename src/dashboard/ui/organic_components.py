@@ -81,40 +81,48 @@ def render_organic_metrics_cards(media_list: list[InstagramMedia]) -> None:
         st.warning(f"Não foi possível carregar as visitas do perfil.")
 
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
+
+def render_top_posts_and_comments(media_list: list[InstagramMedia]) -> None:
+    """Renderiza a seção de Top Posts e busca de comentários (para o fim da página)."""
+    if not media_list:
+        return
+
     # --- Top Posts Bento Grid ---
-    if media_list:
-        st.markdown("#### 🔥 Top Posts de Maior Alcance")
-        # Sort by total reach
-        top_posts = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)[:3]
-        
-        b1, b2, b3 = st.columns(3)
-        cols = [b1, b2, b3]
-        
-        for idx, post in enumerate(top_posts):
-            with cols[idx]:
-                short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
-                likes = post.like_count
-                reach = post.organic_reach + post.paid_reach
-                
-                # Choose icon based on type
-                if post.media_product_type == "REELS":
-                    icon = "🎬"
-                elif post.media_type == "CAROUSEL_ALBUM":
-                    icon = "📸"
-                else:
-                    icon = "📱"
-                
-                st.markdown(f"""
-                <div class="glass-card" style="margin-bottom: 1rem; display: flex; flex-direction: column;">
-                    <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
-                    <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto;">
-                        <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
-                        <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
-                    </div>
+    st.markdown("#### 🔥 Top Posts de Maior Alcance (Orgânico + Pago)")
+    # Sort by total reach
+    top_posts = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)[:3]
+    
+    b1, b2, b3 = st.columns(3)
+    cols = [b1, b2, b3]
+    
+    for idx, post in enumerate(top_posts):
+        with cols[idx]:
+            short_text = (post.caption[:50].replace("\n", " ") + "...") if len(post.caption) > 50 else post.caption
+            likes = post.like_count
+            reach = post.organic_reach + post.paid_reach
+            
+            # Choose icon based on type
+            if post.media_product_type == "REELS":
+                icon = "🎬"
+            elif post.media_type == "CAROUSEL_ALBUM":
+                icon = "📸"
+            else:
+                icon = "📱"
+            
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom: 1rem; display: flex; flex-direction: column;">
+                <div style="font-size: 1.5rem; margin-bottom: 12px;">{icon}</div>
+                <div style="color: #8B949E; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">{short_text}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: auto; padding-bottom: 4px;">
+                    <div style="color: #ffffff; font-weight: 600; font-size: 0.95rem;">👁️ {reach:,} &nbsp; <span style="color:#8B949E; font-weight:400;">❤️ {likes:,}</span></div>
+                    <a href="{post.permalink}" target="_blank" style="color: #FFB300; font-size: 1.1rem; text-decoration: none;"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
-                """.replace(",", "."), unsafe_allow_html=True)
+                <div style="font-size: 0.75rem; color: #8B949E; border-top: 1px solid rgba(255,255,255,0.02); padding-top: 4px;">
+                    Orgânico: <span style="color:#ffffff;">{post.organic_reach:,}</span> &nbsp;|&nbsp; Pago: <span style="color:#ffffff;">{post.paid_reach:,}</span>
+                </div>
+            </div>
+            """.replace(",", "."), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
