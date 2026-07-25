@@ -253,15 +253,18 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
             
             fig = go.Figure()
-            # Alta fluidez baseada no Figma Dashdark (adaptado para Ouro Zenit)
-            fig.add_trace(go.Scatter(
+            # Mudando para Gráfico de Barras para comparar itens independentes (Regra de Dataviz)
+            # E garantindo que o eixo Y comece no zero (rangemode='tozero') para evitar a distorção que o usuário notou.
+            fig.add_trace(go.Bar(
                 x=chart_data["Campanha"], 
                 y=chart_data["Custo"], 
-                mode='lines+markers', 
-                line=dict(color='#FFB300', width=3, shape='spline', smoothing=1.3), # Thicker, ultra-smooth curve
-                marker=dict(size=8, color='#FFB300', line=dict(width=2, color='#151515'), symbol='circle'), # High-contrast nodes
-                fill='tozeroy', 
-                fillcolor='rgba(255, 179, 0, 0.12)', # Soft glow effect below the line
+                marker=dict(
+                    color='#FFB300', # Ouro Zenit
+                    line=dict(color='rgba(255, 179, 0, 0.4)', width=1),
+                ),
+                text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")), # Label nas barras
+                textposition='auto',
+                textfont=dict(color="#151515", family="Inter", size=11, weight="bold"), # Texto escuro dentro da barra dourada para alto contraste
                 hoverinfo='y+x'
             ))
             
@@ -269,7 +272,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
                 plot_bgcolor="rgba(0,0,0,0)", 
                 paper_bgcolor="rgba(0,0,0,0)", 
                 xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=False, color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
                 margin=dict(l=0, r=0, t=10, b=0), 
                 height=260, 
                 hovermode="x unified",
