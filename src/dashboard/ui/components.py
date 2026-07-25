@@ -287,53 +287,52 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     # 420px do grafico + 32px de padding (top+bottom) + folga = 480
     render_glass_chart(fig, height=480)
 
+def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
+    if not campaigns: return
+    
+    if any(c.whatsapp_starts > 0 for c in campaigns):
+        chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=chart_data["Campanha"], 
+            y=chart_data["Custo"],
+            width=0.15,
+            marker=dict(
+                color='#FFB300',
+                line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
+                cornerradius="50%"
+            ),
+            text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")),
+            textposition='outside',
+            textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
+            hoverinfo='y+x'
+        ))
+        
+        fig.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)", 
+            xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
+            margin=dict(l=0, r=0, t=15, b=40), # Espaço embaixo para a label X
+            height=340, 
+            hovermode="x unified",
+            hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
+        )
+        # 340px do grafico + 28px do titulo + 32px padding + folga = 420
+        render_glass_chart(fig, title="Desempenho de Custo", height=420)
+
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
     if not campaigns: return
     
-    col1, col2 = st.columns([1.1, 1])
-    
-    with col1:
-        data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Alcance": c.impressions} for c in campaigns]
-        render_glass_table(
-            pd.DataFrame(data),
-            currency_cols=["Gastos", "Custo/Conv"],
-            key="tbl_whatsapp",
-            csv_filename="campanhas_whatsapp.csv",
-        )
-    
-    with col2:
-        if any(c.whatsapp_starts > 0 for c in campaigns):
-            chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
-            
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=chart_data["Campanha"], 
-                y=chart_data["Custo"],
-                width=0.15,
-                marker=dict(
-                    color='#FFB300',
-                    line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
-                    cornerradius="50%"
-                ),
-                text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")),
-                textposition='outside',
-                textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
-                hoverinfo='y+x'
-            ))
-            
-            fig.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)", 
-                paper_bgcolor="rgba(0,0,0,0)", 
-                xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
-                margin=dict(l=0, r=0, t=15, b=40), # Espaço embaixo para a label X
-                height=340, 
-                hovermode="x unified",
-                hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
-            )
-            # 340px do grafico + 28px do titulo + 32px padding + folga = 420
-            render_glass_chart(fig, title="Desempenho de Custo", height=420)
+    data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Alcance": c.impressions} for c in campaigns]
+    render_glass_table(
+        pd.DataFrame(data),
+        currency_cols=["Gastos", "Custo/Conv"],
+        key="tbl_whatsapp",
+        csv_filename="campanhas_whatsapp.csv",
+    )
 
 def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
     st.markdown("### Campanhas de Seguidores e Visitas")

@@ -37,7 +37,7 @@ logging.basicConfig(level=logging.INFO)  # noqa: E402
 # Configuração da página DEVE ser a primeira chamada
 st.set_page_config(
     page_title="Zenit Analytics",
-    page_icon="⚡",
+    page_icon="🔥",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -81,14 +81,9 @@ def main() -> None:  # noqa: C901
             avg_cpa = total_spend / total_conversions if total_conversions > 0 else 0.0
 
             # Renderiza a UI
-            # --- BENTO GRID: Topo ---
+            # --- BENTO GRID: Topo (Métricas) ---
             st.write("")
-            top_c1, top_c2 = st.columns([1.5, 1])
-            with top_c1:
-                render_metric_cards(total_spend, total_conversions, avg_cpa)
-            with top_c2:
-                render_objective_pie_chart(campaigns)
-
+            render_metric_cards(total_spend, total_conversions, avg_cpa)
             st.write("")
 
             # Filtragem inteligente por Objetivo ODAX, Legacy ou presença de métricas fortes
@@ -113,16 +108,25 @@ def main() -> None:  # noqa: C901
                 if c not in whatsapp_campaigns and c not in profile_campaigns
             ]
 
-            # --- BENTO GRID: Meio (WhatsApp) ---
-            render_whatsapp_campaigns(whatsapp_campaigns)
+            # --- BENTO GRID: Gráficos ---
+            from ui.components import render_whatsapp_cost_chart
+            
+            charts_c1, charts_c2 = st.columns([1, 1])
+            with charts_c1:
+                render_objective_pie_chart(campaigns)
+            with charts_c2:
+                render_whatsapp_cost_chart(whatsapp_campaigns)
+            
             st.write("")
 
-            # --- BENTO GRID: Base (Demais Campanhas Lado a Lado) ---
-            b_c1, b_c2 = st.columns([1, 1])
-            with b_c1:
-                render_profile_campaigns(profile_campaigns)
-            with b_c2:
-                render_general_campaigns(general_campaigns)
+            # --- BENTO GRID: Tabelas (Uma abaixo da outra) ---
+            render_whatsapp_campaigns(whatsapp_campaigns)
+            st.write("")
+            
+            render_profile_campaigns(profile_campaigns)
+            st.write("")
+            
+            render_general_campaigns(general_campaigns)
 
             st.session_state["data_loaded"] = True
 
@@ -139,7 +143,7 @@ def main() -> None:  # noqa: C901
             # Tratado pela UI amigável e logs via Sentry
 
     elif selected_module == "Orgânico (Instagram)":
-        st.title("📱 Desempenho no Instagram")
+        st.title("🔥 Desempenho no Instagram")
         st.markdown(
             "Veja o impacto real das suas publicações, separando o alcance orgânico do pago."
         )
