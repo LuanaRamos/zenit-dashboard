@@ -140,13 +140,13 @@ def render_glass_table(
     components.html(table_html, height=iframe_height, scrolling=False)
 
 def render_metric_card(label: str, value: str, subtext: str = None, help_text: str = None) -> None:
-    sub_html = f"<div style='color: #E2E8F0; font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;'>{subtext}</div>" if subtext else ""
+    sub_html = f"<div style='color: #FFFFFF; font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;'>{subtext}</div>" if subtext else ""
     help_html = f"<div style='font-size: 0.75rem; color: #8B949E; font-weight: 400;'>{help_text}</div>" if help_text else ""
     
     html = (
         '<div class="glass-card kpi-card">'
-        f'<div style="color: #FFB300; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">{label}</div>'
-        f'<div style="color: #FFB300; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 12px; font-family: \'Montserrat\', sans-serif;">{value}</div>'
+        f'<div style="color: #FFFFFF; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">{label}</div>'
+        f'<div style="background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 12px; font-family: \'Montserrat\', sans-serif; display: inline-block;">{value}</div>'
         f'{sub_html}'
         f'{help_html}'
         '</div>'
