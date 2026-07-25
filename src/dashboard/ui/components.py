@@ -253,18 +253,16 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
             chart_data = pd.DataFrame({"Campanha": [c.campaign_name for c in campaigns if c.whatsapp_starts > 0], "Custo": [c.cost_per_whatsapp for c in campaigns if c.whatsapp_starts > 0]})
             
             fig = go.Figure()
-            # Mudando para Gráfico de Barras para comparar itens independentes (Regra de Dataviz)
-            # E garantindo que o eixo Y comece no zero (rangemode='tozero') para evitar a distorção que o usuário notou.
-            fig.add_trace(go.Bar(
+            # Voltando para a Linha Fluida com Sombra (Estilo Dashdark) que é mais bonito,
+            # mas mantendo o eixo Y ancorado no Zero para resolver a distorção!
+            fig.add_trace(go.Scatter(
                 x=chart_data["Campanha"], 
                 y=chart_data["Custo"], 
-                marker=dict(
-                    color='#FFB300', # Ouro Zenit
-                    line=dict(color='rgba(255, 179, 0, 0.4)', width=1),
-                ),
-                text=chart_data["Custo"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",")), # Label nas barras
-                textposition='auto',
-                textfont=dict(color="#151515", family="Inter", size=11, weight="bold"), # Texto escuro dentro da barra dourada para alto contraste
+                mode='lines+markers', 
+                line=dict(color='#FFB300', width=3, shape='spline', smoothing=1.3), # Curva suave e grossa
+                marker=dict(size=8, color='#FFB300', line=dict(width=2, color='#151515'), symbol='circle'), # Pontos de alto contraste
+                fill='tozeroy', 
+                fillcolor='rgba(255, 179, 0, 0.12)', # Brilho dourado embaixo
                 hoverinfo='y+x'
             ))
             
