@@ -279,8 +279,8 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
         render_glass_chart(fig, title="Desempenho de Custo", height=460)
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
-    st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
     if not campaigns: return
+    st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
     
     data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Alcance": c.impressions} for c in campaigns]
     render_glass_table(
@@ -291,8 +291,8 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     )
 
 def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
-    st.markdown("### Campanhas de Seguidores e Visitas")
     if not campaigns: return
+    st.markdown("### Campanhas de Seguidores e Visitas")
     data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Cliques": c.clicks, "CPC": round(c.cpc, 2), "Visitas": c.profile_visits, "Seguidores": c.instagram_follows, "Custo/Seg": round(c.cost_per_follower, 2)} for c in campaigns]
     render_glass_table(
         pd.DataFrame(data),
@@ -302,8 +302,8 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
     )
 
 def render_general_campaigns(campaigns: list[CampaignInsight], title: str = "Outras Campanhas") -> None:
-    st.markdown(f"### {title}")
     if not campaigns: return
+    st.markdown(f"### {title}")
     data = [{"Campanha": c.campaign_name, "Objetivo": c.objective_friendly, "Gastos": round(c.spend, 2), "Impr": c.impressions, "Cliques": c.clicks, "CPL": round(c.cpl, 2), "CPM": round(c.cpm, 2)} for c in campaigns]
     slug = title.lower().replace(" ", "_")
     render_glass_table(
