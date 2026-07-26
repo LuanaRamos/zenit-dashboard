@@ -49,7 +49,7 @@ class MetaAdsClient:
             logger.error(f"Erro na API da Meta: {error_msg}")
 
             if (
-                "Session has expired"
+                "Session has expired" in error_msg
                 or "Error validating access token" in error_msg
             ):
                 raise MetaAPIError(
@@ -103,6 +103,7 @@ class MetaAdsClient:
         except Exception as e:
             logger.error(f"Erro durante paginação de campanhas: {e}")
             sentry_sdk.capture_exception(e)
+            raise e
 
         return insights
 
