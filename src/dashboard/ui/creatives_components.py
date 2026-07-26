@@ -128,18 +128,17 @@ def _render_real_audience(ad: dict) -> None:
                 yaxis=dict(
                     showgrid=False,
                     tickfont=dict(color="#F1F5F9", size=11),
-                    title_text="",          # Remove o label "Faixa" rotacionado
+                    title_text="",
                 ),
-                # Margem top generosa: título (16px) + espaço (12px) + legenda (22px)
                 margin=dict(l=0, r=0, t=70, b=0),
                 legend=dict(
                     orientation="h",
-                    y=1.18,                 # Posiciona legenda acima do gráfico
+                    y=1.18,
                     x=0,
                     xanchor="left",
-                    title_text="",          # Remove "Gênero" sobre os itens da legenda
+                    title_text="",
                     font=dict(size=11, color="#F1F5F9"),
-                    itemgap=12,             # Espaço entre itens da legenda
+                    itemgap=12,
                 ),
                 hoverlabel=dict(
                     bgcolor="rgba(15, 23, 42, 0.95)",
@@ -149,7 +148,20 @@ def _render_real_audience(ad: dict) -> None:
                 height=300,
                 title_font=dict(size=12, color="#94A3B8"),
             )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            # iframe obrigatorio aqui: chart esta dentro de st.columns aninhadas
+            import streamlit.components.v1 as st_components
+            plotly_html = fig.to_html(
+                full_html=False,
+                include_plotlyjs="cdn",
+                config={"displayModeBar": False},
+            )
+            iframe_html = (
+                "<html><head>"
+                "<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent;}</style>"
+                "</head>"
+                f"<body>{plotly_html}</body></html>"
+            )
+            st_components.html(iframe_html, height=314, scrolling=False)
 
 
     # ── Regiões + Países ─────────────────────────────────────────────────────
@@ -258,7 +270,11 @@ def render_creatives_tab(date_preset: str, time_range: dict | None = None) -> No
                 if i + j >= len(top_ads):
                     break
                 with col:
-                    _render_creative_card(top_ads[i + j])
+                    try:
+                        _render_creative_card(top_ads[i + j])
+                    except Exception as card_err:
+                        sentry_sdk.capture_exception(card_err)
+                        st.warning("Erro ao carregar este criativo.")
 
     except Exception as e:
         sentry_sdk.capture_exception(e)
