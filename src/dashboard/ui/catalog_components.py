@@ -1,37 +1,29 @@
 import streamlit as st
-import pandas as pd
-from typing import Any
-from schemas.meta import CatalogData
+from api.meta_client import MetaAdsClient
+import sentry_sdk
 
-def render_catalog_tab(catalogs: list[CatalogData]) -> None:
-    """Renderiza a aba de Catálogo & E-commerce"""
-    st.markdown("### 🛍️ Catálogos de Produtos")
-    
-    if not catalogs:
-        st.info("Nenhum catálogo vinculado a esta conta de anúncios.")
-        return
+@st.cache_data(ttl=3600)
+def fetch_catalogs():
+    client = MetaAdsClient()
+    return client.check_catalog_assets()
 
-    # Cards superiores
-    total_products = sum(c.product_count for c in catalogs)
-    cols = st.columns(3)
-    cols[0].metric("Total de Catálogos", len(catalogs))
-    cols[1].metric("Total de Produtos", f"{total_products:,}".replace(",", "."))
+def render_catalog_tab():
+    st.subheader("🛍️ Catálogo & E-commerce")
+    st.markdown("Confira se o catálogo de produtos está saudável e vinculado corretamente.")
     
-    # Tabela de Catálogos
-    st.markdown("#### Detalhamento")
-    
-    data = []
-    for c in catalogs:
-        data.append({
-            "ID do Catálogo": c.catalog_id,
-            "Nome": c.name,
-            "Qtd. Produtos": c.product_count
-        })
-        
-    df = pd.DataFrame(data)
-    from ui.components import render_glass_table
-    render_glass_table(
-        df,
-        key="tbl_catalog",
-        csv_filename="catalogos.csv"
-    )
+    try:
+        with st.spinner("Buscando catálogos..."):
+            data = fetch_catalogs()
+            
+        if not data:
+            st.info("Nenhum catálogo de produtos foi encontrado vinculado diretamente a esta conta de anúncios. Se houver um e-commerce, verifique se o catálogo está compartilhado com a conta de anúncios no Business Manager.")
+            return
+            
+        for cat in data:
+            st.markdown(f"### 📦 Catálogo: {cat.name}")
+            st.markdown(f"**ID:** `{cat.catalog_id}`")
+            st.metric("Total de Produtos", cat.product_count)
+            st.markdown("---")
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        st.error("Ocorreu um erro ao carregar os dados do catálogo. Nossa equipe já foi notificada e está trabalhando nisso.")

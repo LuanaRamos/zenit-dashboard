@@ -1,69 +1,50 @@
 import streamlit as st
 import pandas as pd
-from typing import Any
 import plotly.express as px
-from ui.components import render_glass_chart
+from api.meta_client import MetaAdsClient
+import sentry_sdk
 
-def render_demographics_tab(demographics_data: list[Any]) -> None:
-    """Renderiza a aba de Público (Demografia)"""
-    st.markdown("### 👥 Análise de Público (Idade e Gênero)")
+@st.cache_data(ttl=3600)
+def fetch_demographics(date_preset: str, time_range: dict = None):
+    client = MetaAdsClient()
+    return client.get_demographics_insights(date_preset, time_range)
+
+def render_demographics_tab(date_preset: str, time_range: dict = None):
+    st.subheader("👥 Análise de Público (Demografia)")
+    st.markdown("Veja o perfil das pessoas que estão sendo alcançadas e clicando nos seus anúncios.")
     
-    if not demographics_data:
-        st.info("Não há dados demográficos suficientes para o período selecionado.")
-        return
-
-    # Converter para DataFrame
-    data = []
-    for d in demographics_data:
-        data.append({
-            "Idade": d.age,
-            "Gênero": d.gender,
-            "Impressões": d.impressions,
-            "Cliques": d.clicks,
-            "Gasto": d.spend
-        })
-    df = pd.DataFrame(data)
-
-    # Limpar dados "unknown" ou irrelevantes
-    df = df[df["Idade"] != "unknown"]
-    
-    # Agrupar por Gênero
-    gender_df = df.groupby("Gênero")["Gasto"].sum().reset_index()
-    # Agrupar por Idade
-    age_df = df.groupby("Idade")["Gasto"].sum().reset_index()
-
-    cols = st.columns(2)
-    
-    with cols[0]:
-        fig_gender = px.pie(
-            gender_df, 
-            values='Gasto', 
-            names='Gênero', 
-            hole=0.6,
-            color_discrete_sequence=['#FFB300', '#FF8C00', '#4A4A4A']
-        )
-        fig_gender.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#E2E8F0"),
-            showlegend=True,
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
-        render_glass_chart(fig_gender, title="Gasto por Gênero", height=400)
-
-    with cols[1]:
-        fig_age = px.bar(
-            age_df, 
-            x='Idade', 
-            y='Gasto',
-            color_discrete_sequence=['#FFB300']
-        )
-        fig_age.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#E2E8F0"),
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.1)"),
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
-        render_glass_chart(fig_age, title="Gasto por Faixa Etária", height=400)
+    try:
+        with st.spinner("Buscando dados demográficos..."):
+            data = fetch_demographics(date_preset, time_range)
+            
+        if not data:
+            st.warning("Sem dados demográficos no período.")
+            return
+            
+        # Convert to pandas
+        df = pd.DataFrame([d.model_dump() for d in data])
+        
+        # Ignore Unknown/unclassified if too small, or keep them.
+        # Group by Gender
+        df_gender = df.groupby("gender")["impressions"].sum().reset_index()
+        # Group by Age
+        df_age = df.groupby("age")["impressions"].sum().reset_index()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Impressões por Gênero**")
+            fig_gender = px.pie(df_gender, values='impressions', names='gender', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+            st.plotly_chart(fig_gender, use_container_width=True)
+            
+        with col2:
+            st.markdown("**Impressões por Idade**")
+            fig_age = px.bar(df_age, x='age', y='impressions', color_discrete_sequence=["#4a90e2"])
+            st.plotly_chart(fig_age, use_container_width=True)
+            
+        st.markdown("---")
+        st.markdown("**Tabela Completa (Investimento por Público)**")
+        st.dataframe(df.sort_values(by="spend", ascending=False), use_container_width=True, hide_index=True)
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        st.error("Ocorreu um erro ao carregar os dados demográficos. Nossa equipe já foi notificada e está trabalhando nisso.")

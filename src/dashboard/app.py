@@ -160,10 +160,11 @@ try:
 
                 except MetaAPIError as e:
                     sentry_sdk.capture_exception(e)
-                    st.error("Não foi possível conectar à Meta. Verifique sua conexão ou se o token de acesso expirou.")
+                    st.error(f"Não foi possível conectar à Meta: {str(e)}")
                 except Exception as e:
                     sentry_sdk.capture_exception(e)
-                    st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
+                    st.error("Ocorreu um erro ao carregar o painel. Detalhes técnicos abaixo:")
+                    st.exception(e)
 
             elif selected_module == "Orgânico (Instagram)":
                 st.title("📱 Desempenho no Instagram")
@@ -191,10 +192,11 @@ try:
                 except MetaAPIError as e:
                     sentry_sdk.capture_exception(e)
                     st.error("Falha ao tentar cruzar dados com os anúncios do Facebook.")
-                    st.error(str(e))
+                    st.exception(e)
                 except Exception as e:
                     sentry_sdk.capture_exception(e)
-                    st.error("Ocorreu um erro inesperado. Tente novamente.")
+                    st.error("Ocorreu um erro inesperado. Detalhes técnicos abaixo:")
+                    st.exception(e)
 
         except Exception as e:
             sentry_sdk.capture_exception(e)

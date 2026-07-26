@@ -1,69 +1,46 @@
 import streamlit as st
 import pandas as pd
-from typing import Any
-from schemas.meta import CreativePerformance
+from api.meta_client import MetaAdsClient
+import sentry_sdk
 
-def render_creatives_tab(creatives: list[CreativePerformance]) -> None:
-    """Renderiza a aba de Laboratório de Criativos"""
-    st.markdown("### 🎨 Laboratório de Criativos (Ranking por CPA)")
+@st.cache_data(ttl=3600)
+def fetch_creatives(date_preset: str, time_range: dict = None):
+    client = MetaAdsClient()
+    return client.get_creative_performance(date_preset, time_range)
+
+def render_creatives_tab(date_preset: str, time_range: dict = None):
+    st.subheader("🎨 Laboratório de Criativos")
+    st.markdown("Descubra quais imagens/vídeos estão gerando os melhores resultados e o menor custo (CPA/CPC).")
     
-    if not creatives:
-        st.info("Não há dados suficientes de criativos no período selecionado.")
-        return
-
-    # Separar os top 3 para destaque
-    top_3 = creatives[:3]
-    others = creatives[3:]
-
-    # --- TOP 3 DESTAQUES ---
-    st.markdown("#### 🏆 Top 3 Criativos (Menor Custo por Conversão)")
-    cols = st.columns(3)
-    
-    for i, creative in enumerate(top_3):
-        with cols[i]:
-            img_url = creative.thumbnail_url or creative.image_url or "https://via.placeholder.com/300x300?text=Sem+Imagem"
+    try:
+        with st.spinner("Analisando criativos..."):
+            data = fetch_creatives(date_preset, time_range)
             
-            html = f"""
-            <div class="glass-card" style="padding: 15px; margin-bottom: 20px; text-align: center;">
-                <h2 style="color: #FFD700; margin-top: 0;">#{i+1}</h2>
-                <img src="{img_url}" style="width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;">
-                <div style="font-size: 0.9rem; color: #E2E8F0; margin-bottom: 5px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="{creative.ad_name}">
-                    {creative.ad_name}
-                </div>
-                <div style="color: #FFB300; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px;">
-                    R$ {creative.cpa:,.2f} <span style="font-size: 0.8rem; color: #8B949E; font-weight: normal;">/ conv</span>
-                </div>
-                <div style="display: flex; justify-content: space-around; font-size: 0.8rem; color: #8B949E; margin-top: 10px;">
-                    <div><b>{creative.leads + creative.whatsapp_starts}</b> Conv.</div>
-                    <div><b>R$ {creative.spend:,.2f}</b> Gasto</div>
-                </div>
-            </div>
-            """
-            st.markdown(html, unsafe_allow_html=True)
-
-    # --- TODOS OS OUTROS CRIATIVOS ---
-    if others:
-        st.markdown("#### Todos os Criativos")
+        if not data:
+            st.warning("Sem dados de criativos no período.")
+            return
+            
+        # Exibir top 10
+        top_ads = data[:10]
         
-        data = []
-        for c in creatives:
-            data.append({
-                "Anúncio": c.ad_name,
-                "Gasto": round(c.spend, 2),
-                "Conversões": c.leads + c.whatsapp_starts,
-                "CPA": round(c.cpa, 2),
-                "Cliques": c.clicks,
-                "CPC": round(c.cpc, 2),
-                "Imagem": c.image_url or c.thumbnail_url
-            })
-            
-        df = pd.DataFrame(data)
-        from ui.components import render_glass_table
-        render_glass_table(
-            df,
-            currency_cols=["Gasto", "CPA", "CPC"],
-            link_col="Imagem",
-            link_label="Ver Arte",
-            key="tbl_creatives",
-            csv_filename="criativos.csv"
-        )
+        for i in range(0, len(top_ads), 2):
+            cols = st.columns(2)
+            for j, col in enumerate(cols):
+                if i + j < len(top_ads):
+                    ad = top_ads[i + j]
+                    with col:
+                        st.markdown(f"### {ad.ad_name}")
+                        if ad.image_url:
+                            st.image(ad.image_url, use_container_width=True)
+                        elif ad.thumbnail_url:
+                            st.image(ad.thumbnail_url, use_container_width=True)
+                        else:
+                            st.info("Imagem indisponível")
+                        
+                        st.markdown(f"**Gasto:** R$ {ad.spend:.2f} | **CPA:** R$ {ad.cpa:.2f}")
+                        st.markdown(f"**Leads:** {ad.leads} | **WhatsApp:** {ad.whatsapp_starts}")
+                        st.markdown(f"**Impressões:** {ad.impressions} | **Cliques:** {ad.clicks}")
+                        st.markdown("---")
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        st.error("Ocorreu um erro ao carregar os criativos. Nossa equipe já foi notificada e está trabalhando nisso.")
