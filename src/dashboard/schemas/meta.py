@@ -179,6 +179,7 @@ class CreativePerformance(BaseModel):
     model_config = ConfigDict(frozen=True)
     ad_id: str = Field(default="")
     ad_name: str = Field(default="Unknown")
+    objective: str = Field(default="UNKNOWN")
     image_url: str | None = Field(default=None)
     thumbnail_url: str | None = Field(default=None)
     body: str | None = Field(default=None)
@@ -190,6 +191,17 @@ class CreativePerformance(BaseModel):
     cpa: float = Field(default=0.0)
     cpc: float = Field(default=0.0)
 
+    @property
+    def objective_friendly(self) -> str:
+        if self.whatsapp_starts > 0 or self.objective == "MESSAGES":
+            return "Mensagens (WhatsApp/Direct)"
+        if self.objective == "OUTCOME_ENGAGEMENT":
+            return "Mensagens / Engajamento"
+        if self.objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS"]:
+            return "Tráfego"
+        from schemas.meta import CampaignInsight
+        return CampaignInsight.OBJECTIVE_MAPPING.get(self.objective, self.objective)
+
 class CatalogData(BaseModel):
     """Dados sobre Catálogo e E-commerce"""
     model_config = ConfigDict(frozen=True)
@@ -199,3 +211,4 @@ class CatalogData(BaseModel):
     roas: float = Field(default=0.0)
     spend: float = Field(default=0.0)
     purchases: int = Field(default=0)
+
