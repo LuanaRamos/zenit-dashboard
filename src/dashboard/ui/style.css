@@ -76,7 +76,7 @@
 .metric-pill-red { background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 
 .glass-table { width: 100%; border-collapse: collapse; color: var(--text-main); font-size: 12px; }
-.glass-table th { text-align: left; padding: 10px 14px; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); position: sticky; top: 0; background: #151515; cursor: pointer; user-select: none; }
+.glass-table th { text-align: left; padding: 10px 14px; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); position: sticky; top: -16px; background: #151515; z-index: 10; cursor: pointer; user-select: none; }
 .glass-table th:hover { color: var(--zenit-gold); }
 .glass-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.015); font-weight: 500; color: #E2E8F0; transition: background 0.2s ease; }
 .glass-table tr:hover td { background: rgba(255, 179, 0, 0.15); }

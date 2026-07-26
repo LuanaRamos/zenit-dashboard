@@ -68,11 +68,13 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#8B949E", family="Inter, sans-serif"),
-                margin=dict(l=0, r=0, t=10, b=40),
+                margin=dict(l=0, r=0, t=10, b=60),
                 showlegend=True,
-                legend=dict(orientation="h", y=-0.2),
+                legend=dict(orientation="h", y=-0.25, font=dict(size=11)),
+                height=400,
+                hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#4a90e2", font=dict(family="Montserrat", size=13))
             )
-            render_glass_chart(fig_gender, title="Impressões por Gênero", height=380)
+            render_glass_chart(fig_gender, title="Impressões por Gênero", height=460)
             
         with col2:
             fig_age = px.bar(
@@ -85,11 +87,13 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#8B949E", family="Inter, sans-serif"),
-                xaxis=dict(showgrid=False, color="#8B949E"),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", color="#8B949E"),
+                xaxis=dict(showgrid=False, color="#8B949E", title=None),
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", color="#8B949E", title=None),
                 margin=dict(l=0, r=0, t=10, b=40),
+                height=400,
+                hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#4a90e2", font=dict(family="Montserrat", size=13))
             )
-            render_glass_chart(fig_age, title="Impressões por Idade", height=380)
+            render_glass_chart(fig_age, title="Impressões por Idade", height=460)
             
         st.markdown("---")
         st.markdown("### Investimento por Público")
