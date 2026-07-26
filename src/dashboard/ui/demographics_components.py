@@ -109,7 +109,8 @@ def render_top_locations(data: dict[str, int], title: str, is_country: bool = Fa
 def render_demographics_dashboard(demo: AccountDemographics):
     """Renderiza a aba completa de Dados Demográficos"""
     st.markdown("### Perfil da Audiência (Insight Demográfico)")
-    st.markdown("<p style='color: #94A3B8; margin-bottom: 24px;'>Descubra quem são as pessoas que te seguem e interagem com seu conteúdo organicamente.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #94A3B8; margin-bottom: 8px;'>Descubra quem são as pessoas que te seguem e interagem com seu conteúdo organicamente.</p>", unsafe_allow_html=True)
+    st.markdown("<div style='background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px; margin-bottom: 24px; font-size: 0.85rem; color: #8B949E;'>⚠️ <b>Nota sobre o filtro de data:</b> A API do Instagram fornece a demografia apenas como um retrato atual da conta (Lifetime ou do mês atual). Esses gráficos não são afetados pelo filtro de data da barra lateral.</div>", unsafe_allow_html=True)
     
     tab_type = st.pills(
         "Selecione o Público",
