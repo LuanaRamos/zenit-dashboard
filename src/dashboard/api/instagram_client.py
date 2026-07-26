@@ -22,9 +22,9 @@ class InstagramClient:
     # URL para Batch Requests (SEM versão — exigência da Graph API)
     BATCH_URL = "https://graph.facebook.com"
 
-    def __init__(self) -> None:
-        self.token = settings.meta_master_token.get_secret_value()
-        self.page_id = settings.page_id
+    def __init__(self, client_config) -> None:
+        self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
+        self.page_id = client_config.page_id
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
         self.instagram_account_id = self._fetch_instagram_account_id()

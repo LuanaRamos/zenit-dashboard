@@ -8,15 +8,15 @@ import pandas as pd
 
 
 @st.cache_data(ttl=3600)
-def fetch_creatives(date_preset: str, time_range: dict | None = None) -> list[dict]:
+def fetch_creatives(date_preset: str, time_range: dict | None, client_name: str) -> list[dict]:
     """
     Busca performance + público REAL entregue por anúncio.
     Usa 2 chamadas paralelas à API:
     1. get_creative_performance → métricas + criativo + datas
     2. get_creative_real_audience → quem de fato viu o anúncio (age/gender/region/country)
     """
-    from api.meta_client import MetaAdsClient
-    client = MetaAdsClient()
+    from ui.data_loader import get_api_client
+    client = get_api_client(client_name)
 
     creatives = client.get_creative_performance(date_preset, time_range)
     real_audience = client.get_creative_real_audience(date_preset, time_range)
@@ -234,7 +234,7 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
 
 
 
-def render_creatives_tab(date_preset: str, time_range: dict | None = None) -> None:
+def render_creatives_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
     """Renderiza o Laboratório de Criativos com público real atraído e datas de veiculação."""
     st.subheader("🎨 Laboratório de Criativos")
     st.markdown(
@@ -255,7 +255,7 @@ def render_creatives_tab(date_preset: str, time_range: dict | None = None) -> No
 
     try:
         with st.spinner("Analisando criativos e audiência real..."):
-            data = fetch_creatives(date_preset, time_range)
+            data = fetch_creatives(date_preset, time_range, client_name)
 
         if not data:
             st.warning("Sem dados de criativos no período selecionado.")

@@ -3,10 +3,10 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 
 
-def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
+def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     """
     Configura e renderiza a barra lateral de navegação e filtros.
-    Retorna o módulo selecionado.
+    Retorna (modulo_selecionado, date_preset, time_range, client_config).
     """
     with st.sidebar:
         # Zenit Logo styling (Gold and Dark)
@@ -21,8 +21,42 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
             """,
             unsafe_allow_html=True,
         )
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown("<h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
+        from core.config import settings
+        clients = settings.get_clients()
+        if not clients:
+            st.error("⚠️ Nenhum cliente configurado no sistema (CLIENTS_JSON).")
+            st.stop()
+
+        client_names = [c.name for c in clients]
+        if "selected_client_name" not in st.session_state:
+            st.session_state["selected_client_name"] = client_names[0]
+        
+        # Garante que o cliente salvo na sessao ainda existe na config
+        if st.session_state["selected_client_name"] not in client_names:
+            st.session_state["selected_client_name"] = client_names[0]
+
+        st.markdown("<h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>", unsafe_allow_html=True)
+        
+        def on_client_change():
+            # Limpa o cache ao trocar de cliente
+            st.cache_data.clear()
+
+        selected_client_name = st.selectbox(
+            "Selecione o Cliente",
+            options=client_names,
+            index=client_names.index(st.session_state["selected_client_name"]),
+            key="selected_client_name",
+            label_visibility="collapsed",
+            on_change=on_client_change,
+        )
+        
+        selected_client = next(c for c in clients if c.name == selected_client_name)
+
+        st.markdown("<br><h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
         selected_module = option_menu(
             menu_title=None,
             options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
@@ -133,4 +167,4 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
             st.cache_resource.clear()
             st.rerun()
 
-    return selected_module, date_preset, time_range
+    return selected_module, date_preset, time_range, selected_client

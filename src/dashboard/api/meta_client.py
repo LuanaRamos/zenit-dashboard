@@ -19,10 +19,10 @@ class MetaAdsClient:
 
     BASE_URL = "https://graph.facebook.com/v22.0"
 
-    def __init__(self) -> None:
-        self.token = settings.meta_master_token.get_secret_value()
-        self.ad_account_id = settings.ad_account_id
-        self.page_id = settings.page_id
+    def __init__(self, client_config) -> None:
+        self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
+        self.ad_account_id = client_config.ad_account_id
+        self.page_id = client_config.page_id
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
 

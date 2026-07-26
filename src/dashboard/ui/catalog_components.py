@@ -1,19 +1,21 @@
 import streamlit as st
-from api.meta_client import MetaAdsClient
+from ui.data_loader import get_api_client
 import sentry_sdk
 
 @st.cache_data(ttl=3600)
-def fetch_catalogs():
-    client = MetaAdsClient()
+def fetch_catalogs(client_name: str):
+    client = get_api_client(client_name)
     return client.check_catalog_assets()
 
-def render_catalog_tab():
-    st.subheader("🛍️ Catálogo & E-commerce")
-    st.markdown("Confira se o catálogo de produtos está saudável e vinculado corretamente.")
+def render_catalog_tab(client_name: str) -> None:
+    st.markdown("### 🛍️ Catálogo de Produtos e E-commerce")
+    st.markdown("Acompanhe a performance dos produtos anunciados no Meta Ads e Shopping.")
+    
+    st.info("🚧 Em construção: A integração com os IDs do Catálogo da Meta será liberada na próxima fase.")
     
     try:
         with st.spinner("Buscando catálogos..."):
-            data = fetch_catalogs()
+            data = fetch_catalogs(client_name)
             
         if not data:
             st.info("Nenhum catálogo de produtos foi encontrado vinculado diretamente a esta conta de anúncios. Se houver um e-commerce, verifique se o catálogo está compartilhado com a conta de anúncios no Business Manager.")

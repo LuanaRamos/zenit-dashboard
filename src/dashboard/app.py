@@ -59,19 +59,19 @@ try:
             if "data_loaded" not in st.session_state:
                 st.session_state["data_loaded"] = False
 
-            selected_module, date_preset, time_range = render_sidebar()
+            selected_module, date_preset, time_range, selected_client = render_sidebar()
 
             if selected_module == "Visão Geral (Ads)":
                 st.title("Resumo de Campanhas")
                 st.markdown(
-                    "Acompanhe o retorno sobre investimento (ROI) da conta **CA MS - 01**."
+                    f"Acompanhe o retorno sobre investimento (ROI) da conta **{selected_client.name}**."
                 )
                 st.info("ℹ️ Métricas calibradas: removemos duplicidades da Meta para garantir 100% de precisão real.")
 
                 try:
                     # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
-                    with st.spinner("Buscando dados das campanhas..."):
-                        campaigns = fetch_campaigns_v8(date_preset, time_range)
+                    with st.spinner(f"Buscando dados das campanhas de {selected_client.name}..."):
+                        campaigns = fetch_campaigns_v8(date_preset, time_range, selected_client.name)
 
                     if not campaigns:
                         st.warning(
@@ -88,7 +88,7 @@ try:
 
                     with tab_overview:
                         from ui.data_loader import fetch_organic_leads_cached
-                        organic_leads = fetch_organic_leads_cached(date_preset, time_range)
+                        organic_leads = fetch_organic_leads_cached(date_preset, time_range, selected_client.name)
                         
                         total_spend = sum(c.spend for c in campaigns)
                         paid_conversions = sum((c.leads + c.whatsapp_starts) for c in campaigns)
@@ -146,15 +146,15 @@ try:
 
                     with tab_demographics:
                         from ui.demographics_components import render_demographics_tab
-                        render_demographics_tab(date_preset, time_range)
+                        render_demographics_tab(date_preset, time_range, selected_client.name)
 
                     with tab_creatives:
                         from ui.creatives_components import render_creatives_tab
-                        render_creatives_tab(date_preset, time_range)
+                        render_creatives_tab(date_preset, time_range, selected_client.name)
 
                     with tab_catalog:
                         from ui.catalog_components import render_catalog_tab
-                        render_catalog_tab()
+                        render_catalog_tab(selected_client.name)
 
                     st.session_state["data_loaded"] = True
 
@@ -173,10 +173,10 @@ try:
                 )
 
                 try:
-                    with st.spinner("Cruzando dados do Instagram e anúncios..."):
-                        media_list = fetch_organic_v12(date_preset, time_range)
-                        stories_list = fetch_active_stories()
-                        account_demographics = fetch_account_demographics()
+                    with st.spinner(f"Cruzando dados do Instagram e anúncios para {selected_client.name}..."):
+                        media_list = fetch_organic_v12(date_preset, time_range, selected_client.name)
+                        stories_list = fetch_active_stories(selected_client.name)
+                        account_demographics = fetch_account_demographics(selected_client.name)
 
                     tab_geral, tab_demografico = st.tabs(["📊 Desempenho", "👥 Demografia (Público)"])
 

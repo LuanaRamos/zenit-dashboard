@@ -5,38 +5,43 @@ from api.instagram_client import InstagramClient
 from schemas.meta import CampaignInsight, PageInsight
 from schemas.instagram import InstagramMedia
 import datetime
+from core.config import settings
 
 @st.cache_resource
-def get_api_client() -> MetaAdsClient:
-    return MetaAdsClient()
+def get_api_client(client_name: str) -> MetaAdsClient:
+    clients = settings.get_clients()
+    client_config = next(c for c in clients if c.name == client_name)
+    return MetaAdsClient(client_config)
 
 @st.cache_data(ttl=86400)
-def get_account_creation_date_cached() -> datetime.date:
-    client = get_api_client()
+def get_account_creation_date_cached(client_name: str) -> datetime.date:
+    client = get_api_client(client_name)
     return client.get_account_created_time()
 
 @st.cache_resource
-def get_instagram_client() -> InstagramClient:
-    return InstagramClient()
+def get_instagram_client(client_name: str) -> InstagramClient:
+    clients = settings.get_clients()
+    client_config = next(c for c in clients if c.name == client_name)
+    return InstagramClient(client_config)
 
 @st.cache_data(ttl=3600)
-def fetch_campaigns_v8(date_preset: str, time_range: dict = None) -> List[CampaignInsight]:
-    client = get_api_client()
+def fetch_campaigns_v8(date_preset: str, time_range: dict | None, client_name: str) -> List[CampaignInsight]:
+    client = get_api_client(client_name)
     return client.get_campaign_insights(date_preset=date_preset, time_range=time_range)
 
 @st.cache_data(ttl=3600)
-def load_page_data() -> PageInsight:
+def load_page_data(client_name: str) -> PageInsight:
     return PageInsight(followers=1250, reach=8450, engagement=340)
 
 @st.cache_data(ttl=3600)
-def fetch_organic_leads_cached(date_preset: str, time_range: dict = None) -> int:
-    client = get_api_client()
+def fetch_organic_leads_cached(date_preset: str, time_range: dict | None, client_name: str) -> int:
+    client = get_api_client(client_name)
     return client.get_total_organic_leads(date_preset, time_range)
 
 @st.cache_data(ttl=900)
-def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[InstagramMedia]:
-    ig_client = get_instagram_client()
-    meta_client = get_api_client()
+def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: str) -> List[InstagramMedia]:
+    ig_client = get_instagram_client(client_name)
+    meta_client = get_api_client(client_name)
     
     if time_range:
         since_dt = datetime.datetime.strptime(time_range['since'], '%Y-%m-%d')
@@ -72,8 +77,6 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
             if update_data['paid_reach'] > 0:
                 update_data['paid_frequency'] = update_data['paid_impressions'] / update_data['paid_reach']
                 
-            # O Graph API do Instagram retorna dados ESTRITAMENTE orgânicos.
-            # Não é necessário subtrair do tráfego pago.
             update_data['organic_reach'] = media.reach
         else:
             update_data['organic_reach'] = media.reach
@@ -83,18 +86,18 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
     return updated_media_list
 
 @st.cache_data(ttl=900)
-def fetch_active_stories() -> list:
-    ig_client = get_instagram_client()
+def fetch_active_stories(client_name: str) -> list:
+    ig_client = get_instagram_client(client_name)
     return ig_client.get_active_stories()
 
 @st.cache_data(ttl=86400)
-def fetch_best_historic_comment() -> dict:
-    ig_client = get_instagram_client()
+def fetch_best_historic_comment(client_name: str) -> dict:
+    ig_client = get_instagram_client(client_name)
     all_media_ids = ig_client.get_all_media_ids_since_beginning()
     best_comment = ig_client.get_top_comment_for_account(all_media_ids)
     return best_comment or {}
 
 @st.cache_data(ttl=3600)
-def fetch_account_demographics():
-    ig_client = get_instagram_client()
+def fetch_account_demographics(client_name: str):
+    ig_client = get_instagram_client(client_name)
     return ig_client.get_account_demographics()

@@ -238,10 +238,10 @@ def render_demographics_dashboard(demo: AccountDemographics) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600)
-def _fetch_ads_real_audience(date_preset: str, time_range: dict | None) -> dict:
+def _fetch_ads_real_audience(date_preset: str, time_range: dict | None, client_name: str) -> dict:
     """Agrega o público REAL entregue (impressões) por todas as campanhas no período."""
-    from api.meta_client import MetaAdsClient
-    raw = MetaAdsClient().get_creative_real_audience(date_preset, time_range)
+    from ui.data_loader import get_api_client
+    raw = get_api_client(client_name).get_creative_real_audience(date_preset, time_range)
 
     age_gender: dict[str, int] = {}
     regions: dict[str, int] = {}
@@ -291,7 +291,7 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-def render_demographics_tab(date_preset: str, time_range: dict | None = None) -> None:
+def render_demographics_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
     """Renderiza a aba Demográfica de Anúncios (Ads) — público real entregue pelo algoritmo."""
     st.markdown("### 👥 Perfil de Audiência (Anúncios Pagos — Meta Ads)")
     st.markdown(
@@ -312,7 +312,7 @@ def render_demographics_tab(date_preset: str, time_range: dict | None = None) ->
 
     try:
         with st.spinner("Carregando audiência real entregue..."):
-            real = _fetch_ads_real_audience(date_preset, time_range)
+            real = _fetch_ads_real_audience(date_preset, time_range, client_name)
 
         if not any([real["age_gender"], real["regions"], real["countries"]]):
             st.info("Não há dados demográficos disponíveis para o período selecionado.")
