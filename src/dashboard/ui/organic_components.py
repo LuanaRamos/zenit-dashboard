@@ -44,7 +44,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     render_glass_table(df, key="tbl_posts", csv_filename="posts.csv", link_col="Link", link_label="Ver no Instagram")
 
 def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
-    """Renderiza destaques."""
+    """Renderiza destaques e os melhores comentários de cada post."""
     st.markdown("### 🏆 Top Posts (Maior Alcance Total)")
     
     if not media_list:
@@ -55,14 +55,40 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     top_3 = sorted_media[:3]
     
     cols = st.columns(3)
+    
+    try:
+        from api.instagram_client import InstagramClient
+        ig_client = InstagramClient()
+        top_ids = [m.id for m in top_3]
+        best_comments = []
+        for m_id in top_ids:
+            comment = ig_client.get_top_comment_for_account([m_id])
+            best_comments.append(comment)
+    except Exception as e:
+        import sentry_sdk
+        sentry_sdk.capture_exception(e)
+        best_comments = [None, None, None]
+    
     for i, m in enumerate(top_3):
         with cols[i]:
-            img = m.thumbnail_url or m.media_url or "https://via.placeholder.com/150"
+            img = getattr(m, "thumbnail_url", None) or m.media_url or "https://via.placeholder.com/150"
             html = f"""
-            <div class="glass-card" style="padding: 15px; text-align: center;">
+            <div class="glass-card" style="padding: 15px; text-align: center; height: 100%;">
                 <img src="{img}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
                 <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance: {f"{int(m.organic_reach + m.paid_reach):,}".replace(",", ".")}</div>
-                <div style="font-size: 0.8rem; color: #8B949E;">Orgânico: {f"{int(m.organic_reach):,}".replace(",", ".")} | Pago: {f"{int(m.paid_reach):,}".replace(",", ".")}</div>
-            </div>
+                <div style="font-size: 0.8rem; color: #8B949E; margin-bottom: 10px;">Orgânico: {f"{int(m.organic_reach):,}".replace(",", ".")} | Pago: {f"{int(m.paid_reach):,}".replace(",", ".")}</div>
             """
+            
+            c = best_comments[i] if i < len(best_comments) else None
+            if c:
+                text = c.get("text", "")
+                username = c.get("username", "Usuário")
+                likes = c.get("like_count", 0)
+                html += f"""
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #FFB300;">
+                    <div style="color: #E2E8F0; margin-bottom: 4px;">"{text}"</div>
+                    <div style="color: #8B949E; font-size: 0.75rem;"><strong>@{username}</strong> • {likes} curtidas</div>
+                </div>
+                """
+            html += "</div>"
             st.markdown(html, unsafe_allow_html=True)

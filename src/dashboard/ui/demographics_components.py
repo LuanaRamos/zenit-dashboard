@@ -7,7 +7,8 @@ import sentry_sdk
 @st.cache_data(ttl=3600)
 def fetch_demographics(date_preset: str, time_range: dict = None):
     client = MetaAdsClient()
-    return client.get_demographics_insights(date_preset, time_range)
+    data = client.get_demographics_insights(date_preset, time_range)
+    return [d.model_dump() for d in data]
 
 def render_demographics_tab(date_preset: str, time_range: dict = None):
     st.subheader("👥 Análise de Público (Demografia)")
@@ -22,7 +23,7 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
             return
             
         # Convert to pandas
-        df = pd.DataFrame([d.model_dump() for d in data])
+        df = pd.DataFrame(data)
 
         # Translate columns
         df = df.rename(columns={

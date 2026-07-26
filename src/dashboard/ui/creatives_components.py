@@ -6,7 +6,8 @@ import sentry_sdk
 @st.cache_data(ttl=3600)
 def fetch_creatives(date_preset: str, time_range: dict = None):
     client = MetaAdsClient()
-    return client.get_creative_performance(date_preset, time_range)
+    data = client.get_creative_performance(date_preset, time_range)
+    return [d.model_dump() for d in data]
 
 def render_creatives_tab(date_preset: str, time_range: dict = None):
     st.subheader("🎨 Laboratório de Criativos")
@@ -29,17 +30,28 @@ def render_creatives_tab(date_preset: str, time_range: dict = None):
                 if i + j < len(top_ads):
                     ad = top_ads[i + j]
                     with col:
-                        st.markdown(f"### {ad.ad_name}")
-                        if ad.image_url:
-                            st.image(ad.image_url, use_container_width=True)
-                        elif ad.thumbnail_url:
-                            st.image(ad.thumbnail_url, use_container_width=True)
+                        st.markdown(f"### {ad.get('ad_name', '')}")
+                        if ad.get('image_url'):
+                            st.image(ad['image_url'], use_container_width=True)
+                        elif ad.get('thumbnail_url'):
+                            st.image(ad['thumbnail_url'], use_container_width=True)
                         else:
                             st.info("Imagem indisponível")
                         
-                        st.markdown(f"**Gasto:** R\\$ {ad.spend:.2f} | **CPA:** R\\$ {ad.cpa:.2f}")
-                        st.markdown(f"**Leads:** {ad.leads} | **WhatsApp:** {ad.whatsapp_starts}")
-                        st.markdown(f"**Impressões:** {ad.impressions} | **Cliques:** {ad.clicks}")
+                        gasto = ad.get('spend', 0.0)
+                        cpa = ad.get('cpa', 0.0)
+                        gasto_fmt = f"R\\$ {gasto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        cpa_fmt = f"R\\$ {cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        
+                        leads_fmt = f"{int(ad.get('leads', 0)):,}".replace(",", ".")
+                        wpp_fmt = f"{int(ad.get('whatsapp_starts', 0)):,}".replace(",", ".")
+                        
+                        imp_fmt = f"{int(ad.get('impressions', 0)):,}".replace(",", ".")
+                        clicks_fmt = f"{int(ad.get('clicks', 0)):,}".replace(",", ".")
+
+                        st.markdown(f"**Gasto:** {gasto_fmt} | **CPA:** {cpa_fmt}")
+                        st.markdown(f"**Leads:** {leads_fmt} | **WhatsApp:** {wpp_fmt}")
+                        st.markdown(f"**Impressões:** {imp_fmt} | **Cliques:** {clicks_fmt}")
                         st.markdown("---")
     except Exception as e:
         sentry_sdk.capture_exception(e)
