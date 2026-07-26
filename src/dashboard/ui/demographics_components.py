@@ -85,7 +85,6 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             xanchor="left",
             title_text="",
             font=dict(color="#F1F5F9", size=12),
-            itemgap=14,
         ),
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",

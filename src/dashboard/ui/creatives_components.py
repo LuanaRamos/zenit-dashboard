@@ -138,7 +138,6 @@ def _render_real_audience(ad: dict) -> None:
                     xanchor="left",
                     title_text="",
                     font=dict(size=11, color="#F1F5F9"),
-                    itemgap=12,
                 ),
                 hoverlabel=dict(
                     bgcolor="rgba(15, 23, 42, 0.95)",
