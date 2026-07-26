@@ -21,9 +21,6 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             """,
             unsafe_allow_html=True,
         )
-            """,
-            unsafe_allow_html=True,
-        )
 
         from core.config import settings
         clients = settings.get_clients()
@@ -167,4 +164,5 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             st.cache_resource.clear()
             st.rerun()
 
+    # Trigger reload
     return selected_module, date_preset, time_range, selected_client
