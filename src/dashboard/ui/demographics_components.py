@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from schemas.instagram import AccountDemographics, InstagramDemographics
-from ui.components import render_glass_container, render_glass_table
 
 def render_age_gender_chart(demo: InstagramDemographics, title: str):
     """Renderiza um gráfico de pirâmide/barras cruzadas para Idade e Gênero"""

@@ -186,6 +186,7 @@ class InstagramClient:
                     id=ig_id,
                     caption=item.get("caption", ""),
                     media_url=item.get("media_url"),
+                    thumbnail_url=item.get("thumbnail_url"),
                     media_type=item.get("media_type", ""),
                     media_product_type=item.get("media_product_type", ""),
                     permalink=item.get("permalink", ""),
