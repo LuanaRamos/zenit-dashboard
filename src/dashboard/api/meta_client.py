@@ -170,6 +170,78 @@ class MetaAdsClient:
             countries=countries
         )
 
+    def get_creative_real_audience(
+        self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
+    ) -> dict[str, dict]:
+        """
+        Retorna o público REAL entregue por anúncio (não o targeting configurado).
+
+        Usa breakdowns da Insights API para saber quem de fato viu o anúncio —
+        essencial para campanhas Advantage+ onde a Meta espalha o criativo
+        automaticamente para o melhor público sem configuração manual.
+
+        Returns:
+            Dict[ad_id, {
+                "age_gender": {"25-34 (female)": 812, ...},
+                "regions": {"Ceará": 3439, ...},
+                "countries": {"BR": 47562, ...},
+            }]
+        """
+        endpoint = f"{self.ad_account_id}/insights"
+        base_params: dict = {"level": "ad", "fields": "ad_id,impressions", "limit": "1000"}
+        if time_range:
+            base_params["time_range"] = json.dumps(time_range)
+        else:
+            base_params["date_preset"] = date_preset
+
+        audience_map: dict[str, dict] = {}
+
+        for brk in ["age,gender", "region", "country"]:
+            params = {**base_params, "breakdowns": brk}
+            try:
+                while True:
+                    data = self._make_request(endpoint, params)
+                    for item in data.get("data", []):
+                        ad_id = item.get("ad_id", "")
+                        if not ad_id:
+                            continue
+                        if ad_id not in audience_map:
+                            audience_map[ad_id] = {"age_gender": {}, "regions": {}, "countries": {}}
+
+                        impressions = int(item.get("impressions", 0))
+
+                        if brk == "age,gender":
+                            age = item.get("age", "")
+                            gender = item.get("gender", "")
+                            if age and gender:
+                                key = f"{age} ({gender})"
+                                audience_map[ad_id]["age_gender"][key] = (
+                                    audience_map[ad_id]["age_gender"].get(key, 0) + impressions
+                                )
+                        elif brk == "region":
+                            region = item.get("region", "")
+                            if region:
+                                audience_map[ad_id]["regions"][region] = (
+                                    audience_map[ad_id]["regions"].get(region, 0) + impressions
+                                )
+                        elif brk == "country":
+                            country = item.get("country", "")
+                            if country:
+                                audience_map[ad_id]["countries"][country] = (
+                                    audience_map[ad_id]["countries"].get(country, 0) + impressions
+                                )
+
+                    paging = data.get("paging", {})
+                    if "cursors" in paging and "after" in paging["cursors"]:
+                        params["after"] = paging["cursors"]["after"]
+                    else:
+                        break
+            except Exception as e:
+                logger.warning(f"Erro em real audience breakdown={brk}: {e}")
+                sentry_sdk.capture_exception(e)
+
+        return audience_map
+
     def get_creative_performance(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> list[Any]:
