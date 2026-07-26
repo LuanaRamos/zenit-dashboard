@@ -22,7 +22,8 @@ def render_catalog_tab():
         for cat in data:
             st.markdown(f"### 📦 Catálogo: {cat.name}")
             st.markdown(f"**ID:** `{cat.catalog_id}`")
-            st.metric("Total de Produtos", cat.product_count)
+            count_fmt = f"{int(cat.product_count):,}".replace(",", ".")
+            st.metric("Total de Produtos", count_fmt)
             st.markdown("---")
     except Exception as e:
         sentry_sdk.capture_exception(e)

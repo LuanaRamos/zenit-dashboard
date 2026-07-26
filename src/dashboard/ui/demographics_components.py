@@ -23,28 +23,86 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
             
         # Convert to pandas
         df = pd.DataFrame([d.model_dump() for d in data])
+
+        # Translate columns
+        df = df.rename(columns={
+            "gender": "Gênero",
+            "age": "Idade",
+            "impressions": "Impressões",
+            "spend": "Gastos",
+            "clicks": "Cliques",
+            "leads": "Leads (Form)",
+            "site_leads": "Leads (Site)",
+            "whatsapp_starts": "Conversas",
+        })
+
+        # Translate gender values
+        gender_map = {"male": "Masculino", "female": "Feminino", "unknown": "Desconhecido"}
+        if "Gênero" in df.columns:
+            df["Gênero"] = df["Gênero"].map(lambda x: gender_map.get(str(x).lower(), x))
+            df_gender = df.groupby("Gênero")["Impressões"].sum().reset_index()
+        else:
+            df_gender = pd.DataFrame(columns=["Gênero", "Impressões"])
+
+        if "Idade" in df.columns:
+            df_age = df.groupby("Idade")["Impressões"].sum().reset_index()
+        else:
+            df_age = pd.DataFrame(columns=["Idade", "Impressões"])
         
-        # Ignore Unknown/unclassified if too small, or keep them.
-        # Group by Gender
-        df_gender = df.groupby("gender")["impressions"].sum().reset_index()
-        # Group by Age
-        df_age = df.groupby("age")["impressions"].sum().reset_index()
+        from ui.components import render_glass_chart, render_glass_table
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**Impressões por Gênero**")
-            fig_gender = px.pie(df_gender, values='impressions', names='gender', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-            st.plotly_chart(fig_gender, use_container_width=True)
+            color_map = {"Feminino": "#FF69B4", "Masculino": "#4a90e2", "Desconhecido": "#9e9e9e"}
+            fig_gender = px.pie(
+                df_gender, 
+                values='Impressões', 
+                names='Gênero', 
+                hole=0.4, 
+                color='Gênero',
+                color_discrete_map=color_map
+            )
+            fig_gender.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#8B949E", family="Inter, sans-serif"),
+                margin=dict(l=0, r=0, t=10, b=40),
+                showlegend=True,
+                legend=dict(orientation="h", y=-0.2),
+            )
+            render_glass_chart(fig_gender, title="Impressões por Gênero", height=380)
             
         with col2:
-            st.markdown("**Impressões por Idade**")
-            fig_age = px.bar(df_age, x='age', y='impressions', color_discrete_sequence=["#4a90e2"])
-            st.plotly_chart(fig_age, use_container_width=True)
+            fig_age = px.bar(
+                df_age, 
+                x='Idade', 
+                y='Impressões', 
+                color_discrete_sequence=["#4a90e2"]
+            )
+            fig_age.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#8B949E", family="Inter, sans-serif"),
+                xaxis=dict(showgrid=False, color="#8B949E"),
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", color="#8B949E"),
+                margin=dict(l=0, r=0, t=10, b=40),
+            )
+            render_glass_chart(fig_age, title="Impressões por Idade", height=380)
             
         st.markdown("---")
-        st.markdown("**Tabela Completa (Investimento por Público)**")
-        st.dataframe(df.sort_values(by="spend", ascending=False), use_container_width=True, hide_index=True)
+        st.markdown("### Investimento por Público")
+        
+        # Keep only useful columns for the table
+        display_cols = ["Gênero", "Idade", "Gastos", "Impressões", "Cliques", "Conversas"]
+        table_df = df[[c for c in display_cols if c in df.columns]].sort_values(by="Gastos", ascending=False)
+        
+        render_glass_table(
+            table_df, 
+            currency_cols=["Gastos"], 
+            key="tbl_demographics", 
+            csv_filename="demografia.csv"
+        )
     except Exception as e:
         sentry_sdk.capture_exception(e)
         st.error("Ocorreu um erro ao carregar os dados demográficos. Nossa equipe já foi notificada e está trabalhando nisso.")
