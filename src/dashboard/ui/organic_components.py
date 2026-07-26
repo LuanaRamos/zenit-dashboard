@@ -79,10 +79,8 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             comentarios = f"{int(m.comments_count):,}".replace(",", ".")
             compartilhamentos = f"{int(m.total_shares):,}".replace(",", ".")
             
-            html = f"""
-<div class="glass-card" style="padding: 15px; text-align: center; height: 100%;">
+            html = f"""<div class="glass-card" style="padding: 15px; text-align: center; height: 100%;">
     <img src="{img}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;">
-    
     <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{curtidas}</div>
@@ -97,23 +95,19 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             <div style="font-size: 0.7rem; color: #8B949E;">🔁 Shares</div>
         </div>
     </div>
-    
     <div style="margin-bottom: 15px;">
         <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance: {alcance_total}</div>
         <div style="font-size: 0.8rem; color: #8B949E;">Orgânico: {alcance_org} | Pago: {alcance_pago}</div>
-    </div>
-"""
+    </div>"""
             
             c = best_comments[i] if i < len(best_comments) else None
             if c:
                 text = c.get("text", "")
                 username = c.get("username", "Usuário")
                 likes = c.get("like_count", 0)
-                html += f"""
-    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #FFB300;">
+                html += f"""<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #FFB300; margin-top: 10px;">
         <div style="color: #E2E8F0; margin-bottom: 4px;">"{text}"</div>
         <div style="color: #8B949E; font-size: 0.75rem;"><strong>@{username}</strong> • {likes} curtidas</div>
-    </div>
-"""
+    </div>"""
             html += "</div>"
             st.markdown(html, unsafe_allow_html=True)
