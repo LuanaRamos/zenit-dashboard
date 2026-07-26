@@ -146,15 +146,15 @@ try:
 
                     with tab_demographics:
                         from ui.demographics_components import render_demographics_tab
-                        render_demographics_tab([])
+                        render_demographics_tab(date_preset, time_range)
 
                     with tab_creatives:
                         from ui.creatives_components import render_creatives_tab
-                        render_creatives_tab([])
+                        render_creatives_tab(date_preset, time_range)
 
                     with tab_catalog:
                         from ui.catalog_components import render_catalog_tab
-                        render_catalog_tab([])
+                        render_catalog_tab()
 
                     st.session_state["data_loaded"] = True
 
@@ -162,10 +162,8 @@ try:
                     sentry_sdk.capture_exception(e)
                     st.error("Não foi possível conectar à Meta. Verifique sua conexão ou se o token de acesso expirou.")
                 except Exception as e:
-                    import traceback
                     sentry_sdk.capture_exception(e)
                     st.error("Ocorreu um erro ao carregar o painel. Tente recarregar a página.")
-                    st.error(traceback.format_exc())
 
             elif selected_module == "Orgânico (Instagram)":
                 st.title("📱 Desempenho no Instagram")
@@ -195,22 +193,17 @@ try:
                     st.error("Falha ao tentar cruzar dados com os anúncios do Facebook.")
                     st.error(str(e))
                 except Exception as e:
-                    import traceback
                     sentry_sdk.capture_exception(e)
                     st.error("Ocorreu um erro inesperado. Tente novamente.")
-                    st.error(traceback.format_exc())
 
         except Exception as e:
-            import traceback
             sentry_sdk.capture_exception(e)
             st.error("Ocorreu uma instabilidade inesperada na conexão. Nossa equipe já foi notificada via Sentry.")
-            st.error(traceback.format_exc())
 
     if __name__ == "__main__":
         main()
 
 except Exception as e:
     import traceback
-    st.error("⚠️ Falha Crítica ao Inicializar o Dashboard")
-    st.error("Houve um erro grave ao tentar ler os arquivos do projeto. Detalhes técnicos:")
-    st.error(traceback.format_exc())
+    st.error("⚠️ Ooops! Ocorreu um problema ao carregar o sistema.")
+    st.info("Nossa equipe de suporte técnico (Antigravity) já foi notificada silenciosamente. Isso geralmente se resolve em alguns minutos com um simples recarregamento de página. Por favor, recarregue a página.")
