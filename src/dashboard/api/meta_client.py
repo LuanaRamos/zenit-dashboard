@@ -154,7 +154,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "ad",
-            "fields": "ad_id,ad_name,spend,impressions,clicks,actions",
+            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,actions",
             "limit": "1000",
         }
         if time_range:
@@ -230,6 +230,7 @@ class MetaAdsClient:
             results.append(CreativePerformance(
                 ad_id=ad_id,
                 ad_name=item.get("ad_name", "Unknown"),
+                objective=item.get("objective", "UNKNOWN"),
                 image_url=creative.get("image_url"),
                 thumbnail_url=creative.get("thumbnail_url"),
                 body=creative.get("body"),
@@ -337,6 +338,7 @@ class MetaAdsClient:
         insights_params = {
             "level": "ad",
             "fields": "ad_id,reach,impressions,clicks,actions",
+            "breakdowns": "publisher_platform",
             "limit": "1000",
         }
         if time_range:
@@ -365,16 +367,24 @@ class MetaAdsClient:
         # Mapeia ad_id -> métricas
         ad_metrics_map = {}
         for item in insights_data:
+            if item.get("publisher_platform") != "instagram":
+                continue
+                
             ad_id = item.get("ad_id")
             if ad_id:
-                ad_metrics_map[ad_id] = {
-                    "reach": int(item.get("reach", 0)),
-                    "impressions": int(item.get("impressions", 0)),
-                    "clicks": int(item.get("clicks", 0)),
-                    "likes": 0,
-                    "shares": 0,
-                    "saved": 0,
-                }
+                if ad_id not in ad_metrics_map:
+                    ad_metrics_map[ad_id] = {
+                        "reach": 0,
+                        "impressions": 0,
+                        "clicks": 0,
+                        "likes": 0,
+                        "shares": 0,
+                        "saved": 0,
+                    }
+                
+                ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
+                ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
+                ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
 
                 # Procura interações pagas (curtidas feitas no dark post)
                 for action in item.get("actions", []):
@@ -458,3 +468,4 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
 
         return ig_mapping
+
