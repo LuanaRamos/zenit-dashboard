@@ -37,7 +37,7 @@ try:
         render_profile_campaigns,
         render_whatsapp_campaigns,
     )
-    from ui.data_loader import fetch_active_stories, fetch_campaigns_v8, fetch_organic_v12  # noqa: E402
+    from ui.data_loader import fetch_active_stories, fetch_campaigns_v8, fetch_organic_v12, fetch_account_demographics  # noqa: E402
     from ui.layouts import render_sidebar  # noqa: E402
     from ui.organic_components import render_organic_metrics_cards, render_posts_table, render_top_posts_and_comments, render_historic_top_comment  # noqa: E402
 
@@ -176,18 +176,26 @@ try:
                     with st.spinner("Cruzando dados do Instagram e anúncios..."):
                         media_list = fetch_organic_v12(date_preset, time_range)
                         stories_list = fetch_active_stories()
+                        account_demographics = fetch_account_demographics()
 
-                    st.write("")
-                    render_organic_metrics_cards(media_list)
+                    tab_geral, tab_demografico = st.tabs(["📊 Desempenho", "👥 Demografia (Público)"])
 
-                    st.write("")
-                    render_historic_top_comment()
+                    with tab_geral:
+                        st.write("")
+                        render_organic_metrics_cards(media_list)
 
-                    st.write("")
-                    render_posts_table(media_list, stories_list)
+                        st.write("")
+                        render_historic_top_comment()
 
-                    st.write("")
-                    render_top_posts_and_comments(media_list)
+                        st.write("")
+                        render_posts_table(media_list, stories_list)
+
+                        st.write("")
+                        render_top_posts_and_comments(media_list)
+
+                    with tab_demografico:
+                        from ui.demographics_components import render_demographics_dashboard
+                        render_demographics_dashboard(account_demographics)
 
                 except InstagramAPIError as e:
                     sentry_sdk.capture_exception(e)

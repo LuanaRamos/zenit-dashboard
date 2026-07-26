@@ -86,9 +86,8 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
             if update_data["paid_reach"] > 0:
                 update_data["paid_frequency"] = update_data["paid_impressions"] / update_data["paid_reach"]
                 
-            # O Insights do Instagram Graph API já retorna puramente o Alcance Orgânico!
-            # Não subtraímos o alcance pago dele, senão corrompemos a matemática
-            update_data["organic_reach"] = media.reach
+            # O Alcance puramente orgânico corrigido matematicamente
+            update_data["organic_reach"] = max(0, media.reach - metrics["reach"])
         else:
             # Se não teve anúncio, 100% do alcance é orgânico
             update_data["organic_reach"] = media.reach
@@ -110,3 +109,9 @@ def fetch_best_historic_comment() -> dict:
     all_media_ids = ig_client.get_all_media_ids_since_beginning()
     best_comment = ig_client.get_top_comment_for_account(all_media_ids)
     return best_comment or {}
+
+@st.cache_data(ttl=3600)
+def fetch_account_demographics():
+    """Busca os dados demográficos do perfil (Followers e Engajados)."""
+    ig_client = get_instagram_client()
+    return ig_client.get_account_demographics()

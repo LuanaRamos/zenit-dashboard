@@ -98,7 +98,7 @@ class InstagramClient:
         """
         endpoint = f"{self.instagram_account_id}/media"
         params = {
-            "fields": "id,caption,media_url,permalink,timestamp,like_count,comments_count,media_type,media_product_type",
+            "fields": "id,caption,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_type,media_product_type",
             "limit": str(limit),
         }
 
@@ -388,3 +388,118 @@ class InstagramClient:
             sentry_sdk.capture_exception(e)
             
         return best_comment
+
+    def get_account_demographics(self) -> "AccountDemographics":
+        """
+        Busca os dados demográficos (Idade, Gênero, Cidades, Países) dos Seguidores
+        e do Público Engajado (Últimos 30 dias).
+        """
+        from schemas.instagram import AccountDemographics, InstagramDemographics
+
+        endpoint = f"{self.instagram_account_id}/insights"
+        
+        followers_demo = InstagramDemographics()
+        engaged_demo = InstagramDemographics()
+
+        # 1. Buscar Followers Demographics (Lifetime)
+        params_followers = {
+            "metric": "follower_demographics",
+            "period": "lifetime",
+            "breakdown": "age,gender,city,country",
+            "metric_type": "total_value"
+        }
+        try:
+            data = self._make_request(endpoint, params_followers)
+            insights = data.get("data", [])
+            
+            age_gender = {}
+            cities = {}
+            countries = {}
+            
+            for insight in insights:
+                name = insight.get("name")
+                if name == "follower_demographics":
+                    breakdowns = insight.get("total_value", {}).get("breakdowns", [])
+                    for brk in breakdowns:
+                        dims = brk.get("dimension_keys", [])
+                        results = brk.get("results", [])
+                        
+                        if "age" in dims and "gender" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if len(val_dims) == 2:
+                                    key = f"{val_dims[0]} ({val_dims[1]})"
+                                    age_gender[key] = res.get("value", 0)
+                        elif "city" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if val_dims:
+                                    cities[val_dims[0]] = res.get("value", 0)
+                        elif "country" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if val_dims:
+                                    countries[val_dims[0]] = res.get("value", 0)
+                                    
+            followers_demo = InstagramDemographics(
+                age_gender=age_gender,
+                cities=cities,
+                countries=countries
+            )
+        except Exception as e:
+            logger.warning(f"Erro ao buscar follower_demographics: {e}")
+
+        # 2. Buscar Engaged Audience Demographics (This Month)
+        params_engaged = {
+            "metric": "engaged_audience_demographics",
+            "period": "lifetime",
+            "metric_type": "total_value",
+            "timeframe": "this_month",
+            "breakdown": "age,gender,city,country"
+        }
+        try:
+            data = self._make_request(endpoint, params_engaged)
+            insights = data.get("data", [])
+            
+            age_gender = {}
+            cities = {}
+            countries = {}
+            
+            for insight in insights:
+                name = insight.get("name")
+                if name == "engaged_audience_demographics":
+                    breakdowns = insight.get("total_value", {}).get("breakdowns", [])
+                    for brk in breakdowns:
+                        dims = brk.get("dimension_keys", [])
+                        results = brk.get("results", [])
+                        
+                        if "age" in dims and "gender" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if len(val_dims) == 2:
+                                    key = f"{val_dims[0]} ({val_dims[1]})"
+                                    age_gender[key] = res.get("value", 0)
+                        elif "city" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if val_dims:
+                                    cities[val_dims[0]] = res.get("value", 0)
+                        elif "country" in dims:
+                            for res in results:
+                                val_dims = res.get("dimension_values", [])
+                                if val_dims:
+                                    countries[val_dims[0]] = res.get("value", 0)
+                                    
+            engaged_demo = InstagramDemographics(
+                age_gender=age_gender,
+                cities=cities,
+                countries=countries
+            )
+        except Exception as e:
+            logger.warning(f"Erro ao buscar engaged_audience_demographics: {e}")
+
+        return AccountDemographics(
+            followers=followers_demo,
+            engaged=engaged_demo
+        )
+
