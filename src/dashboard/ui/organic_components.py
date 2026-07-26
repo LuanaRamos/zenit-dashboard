@@ -61,8 +61,8 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             html = f"""
             <div class="glass-card" style="padding: 15px; text-align: center;">
                 <img src="{img}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
-                <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance: {m.organic_reach + m.paid_reach}</div>
-                <div style="font-size: 0.8rem; color: #8B949E;">Orgânico: {m.organic_reach} | Pago: {m.paid_reach}</div>
+                <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance: {f"{int(m.organic_reach + m.paid_reach):,}".replace(",", ".")}</div>
+                <div style="font-size: 0.8rem; color: #8B949E;">Orgânico: {f"{int(m.organic_reach):,}".replace(",", ".")} | Pago: {f"{int(m.paid_reach):,}".replace(",", ".")}</div>
             </div>
             """
             st.markdown(html, unsafe_allow_html=True)
