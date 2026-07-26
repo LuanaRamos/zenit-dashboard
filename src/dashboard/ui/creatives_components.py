@@ -37,7 +37,7 @@ def render_creatives_tab(date_preset: str, time_range: dict = None):
                         else:
                             st.info("Imagem indisponível")
                         
-                        st.markdown(f"**Gasto:** R$ {ad.spend:.2f} | **CPA:** R$ {ad.cpa:.2f}")
+                        st.markdown(f"**Gasto:** R\\$ {ad.spend:.2f} | **CPA:** R\\$ {ad.cpa:.2f}")
                         st.markdown(f"**Leads:** {ad.leads} | **WhatsApp:** {ad.whatsapp_starts}")
                         st.markdown(f"**Impressões:** {ad.impressions} | **Cliques:** {ad.clicks}")
                         st.markdown("---")
