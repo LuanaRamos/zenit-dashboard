@@ -45,19 +45,35 @@ def render_creatives_tab(date_preset: str, time_range: dict = None):
                         
                         gasto = ad.get('spend', 0.0)
                         cpa = ad.get('cpa', 0.0)
+                        cpc = ad.get('cpc', 0.0)
+                        
                         gasto_fmt = f"R\$ {gasto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         cpa_fmt = f"R\$ {cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        cpc_fmt = f"R\$ {cpc:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         
-                        leads_fmt = f"{int(ad.get('leads', 0)):,}".replace(",", ".")
-                        wpp_fmt = f"{int(ad.get('whatsapp_starts', 0)):,}".replace(",", ".")
+                        leads = int(ad.get('leads', 0))
+                        wpp = int(ad.get('whatsapp_starts', 0))
+                        leads_fmt = f"{leads:,}".replace(",", ".")
+                        wpp_fmt = f"{wpp:,}".replace(",", ".")
                         
-                        imp_fmt = f"{int(ad.get('impressions', 0)):,}".replace(",", ".")
-                        clicks_fmt = f"{int(ad.get('clicks', 0)):,}".replace(",", ".")
+                        imp = int(ad.get('impressions', 0))
+                        clicks = int(ad.get('clicks', 0))
+                        imp_fmt = f"{imp:,}".replace(",", ".")
+                        clicks_fmt = f"{clicks:,}".replace(",", ".")
+                        
+                        ctr = (clicks / imp * 100) if imp > 0 else 0
+                        ctr_fmt = f"{ctr:.2f}%".replace(".", ",")
 
-                        st.markdown(f"**Objetivo:** {ad.get('objective_friendly', 'N/A')}")
-                        st.markdown(f"**Gasto:** {gasto_fmt} | **CPA:** {cpa_fmt}")
-                        st.markdown(f"**Leads:** {leads_fmt} | **WhatsApp:** {wpp_fmt}")
-                        st.markdown(f"**Impressões:** {imp_fmt} | **Cliques:** {clicks_fmt}")
+                        obj_friendly = ad.get('objective_friendly', 'N/A')
+                        st.markdown(f"**Objetivo:** {obj_friendly}")
+                        
+                        if "Tráfego" in obj_friendly or "Reconhecimento" in obj_friendly or "Visitas" in obj_friendly or "Engajamento" in obj_friendly:
+                            st.markdown(f"**Gasto:** {gasto_fmt} | **CPC:** {cpc_fmt}")
+                            st.markdown(f"**Impressões:** {imp_fmt} | **Cliques:** {clicks_fmt} | **CTR:** {ctr_fmt}")
+                        else:
+                            st.markdown(f"**Gasto:** {gasto_fmt} | **CPA:** {cpa_fmt} | **CPC:** {cpc_fmt}")
+                            st.markdown(f"**Leads:** {leads_fmt} | **WhatsApp:** {wpp_fmt}")
+                            st.markdown(f"**Impressões:** {imp_fmt} | **Cliques:** {clicks_fmt} | **CTR:** {ctr_fmt}")
                         st.markdown("---")
     except Exception as e:
         sentry_sdk.capture_exception(e)
