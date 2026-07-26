@@ -111,11 +111,13 @@ def render_demographics_dashboard(demo: AccountDemographics):
     st.markdown("### Perfil da Audiência (Insight Demográfico)")
     st.markdown("<p style='color: #94A3B8; margin-bottom: 24px;'>Descubra quem são as pessoas que te seguem e interagem com seu conteúdo organicamente.</p>", unsafe_allow_html=True)
     
-    tab_type = st.radio(
+    tab_type = st.pills(
         "Selecione o Público",
         options=["Seguidores (Lifetime)", "Público Engajado (Este Mês)"],
-        horizontal=True
+        default="Seguidores (Lifetime)"
     )
+    if not tab_type:
+        tab_type = "Seguidores (Lifetime)"
     
     current_demo = demo.followers if tab_type.startswith("Seguidores") else demo.engaged
     title_suffix = "Seguidores" if tab_type.startswith("Seguidores") else "Público Engajado"

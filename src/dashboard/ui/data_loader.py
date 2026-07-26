@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 from typing import List
 from api.meta_client import MetaAdsClient
 from api.instagram_client import InstagramClient
@@ -72,12 +72,9 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
             if update_data['paid_reach'] > 0:
                 update_data['paid_frequency'] = update_data['paid_impressions'] / update_data['paid_reach']
                 
-            organic_likes = max(0, media.like_count - update_data['paid_likes'])
-            if media.like_count > 0 and update_data['paid_likes'] > 0 and organic_likes > 0:
-                organic_ratio = organic_likes / media.like_count
-                update_data['organic_reach'] = int(media.reach * organic_ratio)
-            else:
-                update_data['organic_reach'] = max(0, media.reach - update_data['paid_reach'])
+            # O Graph API do Instagram retorna dados ESTRITAMENTE orgânicos.
+            # Não é necessário subtrair do tráfego pago.
+            update_data['organic_reach'] = media.reach
         else:
             update_data['organic_reach'] = media.reach
             
