@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as st_components
 import pandas as pd
 from schemas.instagram import AccountDemographics, InstagramDemographics
 
@@ -79,7 +81,11 @@ def render_top_locations(
     color: str = "#2A85FF",
     max_items: int = 15,
 ) -> None:
-    """Renderiza barras de localização via Plotly (evita bug de HTML cru em colunas no Streamlit Cloud)."""
+    """
+    Renderiza barras de localização via iframe (components.html).
+    Usa o mesmo padrão do render_glass_chart para evitar corte de labels
+    que ocorre com st.plotly_chart dentro de colunas no Streamlit Cloud.
+    """
     if not data:
         st.info(f"Sem dados de {title.lower()} disponíveis.")
         return
@@ -88,7 +94,10 @@ def render_top_locations(
     names = [x[0] for x in sorted_items]
     values = [x[1] for x in sorted_items]
 
-    import plotly.graph_objects as go
+    # Margem direita generosa para não cortar os valores (textposition=outside)
+    right_margin = max(70, max(len(f"{v:,}") for v in values) * 9)
+    chart_height = max(240, len(sorted_items) * 30 + 70)
+
     fig = go.Figure(go.Bar(
         x=values,
         y=names,
@@ -97,18 +106,39 @@ def render_top_locations(
         text=[f"{v:,}".replace(",", ".") for v in values],
         textposition="outside",
         textfont=dict(color="#E2E8F0", size=12),
+        cliponaxis=False,
     ))
     fig.update_layout(
-        title=dict(text=title, font=dict(color="#F8FAFC", size=14), x=0),
+        title=dict(text=title, font=dict(color="#F8FAFC", size=13), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#CBD5E1", size=12),
-        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)", showticklabels=False),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.07)",
+            showticklabels=False,
+            # Expande o range para caber o texto fora da barra
+            range=[0, max(values) * 1.35] if values else [0, 1],
+        ),
         yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12)),
-        margin=dict(l=0, r=60, t=36, b=0),
-        height=max(220, len(sorted_items) * 28 + 60),
+        margin=dict(l=0, r=right_margin, t=36, b=0),
+        height=chart_height,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+    # Serializa para HTML e injeta em iframe — evita clipping do Streamlit
+    plotly_html = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        config={"displayModeBar": False},
+    )
+    iframe_html = f"""
+    <html><head>
+    <style>
+        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
+    </style></head>
+    <body>{plotly_html}</body></html>
+    """
+    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
 def _render_full_demo_section(demo: InstagramDemographics, label: str) -> None:

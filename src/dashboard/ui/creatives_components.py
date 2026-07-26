@@ -140,14 +140,18 @@ def _render_real_audience(ad: dict) -> None:
 
 
 def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) -> None:
-    """Gráfico de barras compacto para regiões/países dentro do card."""
+    """Gráfico de barras compacto via iframe — evita clipping de labels dentro de colunas."""
+    import streamlit.components.v1 as st_components
+    import plotly.graph_objects as go
+
     sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:max_items]
     if not sorted_items:
         return
 
-    import plotly.graph_objects as go
     names = [x[0] for x in sorted_items]
     values = [x[1] for x in sorted_items]
+    right_margin = max(65, max(len(f"{v:,}") for v in values) * 9)
+    chart_height = max(160, len(sorted_items) * 28 + 50)
 
     fig = go.Figure(go.Bar(
         x=values,
@@ -157,18 +161,36 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
         text=[_fmt_int(v) for v in values],
         textposition="outside",
         textfont=dict(color="#E2E8F0", size=10),
+        cliponaxis=False,
     ))
     fig.update_layout(
         title=dict(text=title, font=dict(color="#94A3B8", size=11), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#CBD5E1", size=10),
-        xaxis=dict(showgrid=False, showticklabels=False),
+        xaxis=dict(
+            showgrid=False,
+            showticklabels=False,
+            range=[0, max(values) * 1.4] if values else [0, 1],
+        ),
         yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10)),
-        margin=dict(l=0, r=50, t=28, b=0),
-        height=max(160, len(sorted_items) * 26 + 40),
+        margin=dict(l=0, r=right_margin, t=28, b=0),
+        height=chart_height,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+    plotly_html = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        config={"displayModeBar": False},
+    )
+    iframe_html = (
+        "<html><head>"
+        "<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent;}</style>"
+        "</head>"
+        f"<body>{plotly_html}</body></html>"
+    )
+    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
+
 
 
 def render_creatives_tab(date_preset: str, time_range: dict | None = None) -> None:
