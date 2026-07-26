@@ -164,5 +164,4 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             st.cache_resource.clear()
             st.rerun()
 
-    # Trigger reload
     return selected_module, date_preset, time_range, selected_client
