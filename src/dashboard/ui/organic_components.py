@@ -77,10 +77,12 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     
     for i, m in enumerate(top_3):
         with cols[i]:
-            img = getattr(m, "thumbnail_url", None) or m.media_url or "https://via.placeholder.com/400x400?text=Imagem+Indisponível"
-            is_video_url = img and (img.split("?")[0].lower().endswith(".mp4") or m.media_type == "VIDEO")
-            
-            media_tag = f'<video src="{img}" controls style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;"></video>' if is_video_url else f'<img src="{img}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;">'
+            # Vídeos do CDN do Instagram têm CORS — não reproduzem em iframe/video.
+            # Solução: usar thumbnail_url como imagem + link para o permalink.
+            thumb = getattr(m, "thumbnail_url", None) or m.media_url or ""
+            is_video = m.media_type in ("VIDEO", "REELS") or (m.media_url or "").split("?")[0].lower().endswith(".mp4")
+            img_url = thumb if thumb else (m.media_url or "https://via.placeholder.com/400x400?text=Sem+Imagem")
+            permalink = getattr(m, "permalink", "") or ""
 
             alcance_total = f"{int(m.organic_reach + m.paid_reach):,}".replace(",", ".")
             alcance_org = f"{int(m.organic_reach):,}".replace(",", ".")
@@ -89,20 +91,37 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             comentarios = f"{int(m.comments_count):,}".replace(",", ".")
             compartilhamentos = f"{int(m.total_shares):,}".replace(",", ".")
             
+            play_badge = (
+                '<div style="position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.6);'
+                'color:white;border-radius:20px;padding:2px 10px;font-size:0.75rem;'
+                'font-weight:600;">&#9654; Vídeo</div>'
+            ) if is_video else ""
+
+            img_link_open = f'<a href="{permalink}" target="_blank" style="display:block;position:relative;">' if permalink else '<div style="position:relative;">'
+            img_link_close = "</a>" if permalink else "</div>"
+
+            media_html = (
+                f'{img_link_open}'
+                f'<img src="{img_url}" style="width:100%;height:200px;object-fit:cover;'
+                f'border-radius:8px;margin-bottom:15px;background:#1a1a1a;">'
+                f'{play_badge}'
+                f'{img_link_close}'
+            )
+
             html = f"""<div class="glass-card" style="padding: 15px; text-align: center; height: 100%;">
-    {media_tag}
+    {media_html}
     <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{curtidas}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">❤️ Curtidas</div>
+            <div style="font-size: 0.7rem; color: #8B949E;">&#10084; Curtidas</div>
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{comentarios}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">💬 Coment.</div>
+            <div style="font-size: 0.7rem; color: #8B949E;">&#128172; Coment.</div>
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{compartilhamentos}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">🔁 Comp.</div>
+            <div style="font-size: 0.7rem; color: #8B949E;">&#128260; Comp.</div>
         </div>
     </div>
     <div style="margin-bottom: 15px;">
@@ -117,7 +136,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
                 likes = c.get("like_count", 0)
                 html += f"""<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #FFB300; margin-top: 10px;">
         <div style="color: #E2E8F0; margin-bottom: 4px;">"{text}"</div>
-        <div style="color: #8B949E; font-size: 0.75rem;"><strong>@{username}</strong> • {likes} curtidas</div>
+        <div style="color: #8B949E; font-size: 0.75rem;"><strong>@{username}</strong> &bull; {likes} curtidas</div>
     </div>"""
             html += "</div>"
             st.markdown(html, unsafe_allow_html=True)

@@ -79,40 +79,36 @@ def render_top_locations(
     color: str = "#2A85FF",
     max_items: int = 15,
 ) -> None:
-    """Renderiza barras de localização (cidade, estado ou país)."""
+    """Renderiza barras de localização via Plotly (evita bug de HTML cru em colunas no Streamlit Cloud)."""
     if not data:
         st.info(f"Sem dados de {title.lower()} disponíveis.")
         return
 
     sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:max_items]
-    max_val = sorted_items[0][1] if sorted_items else 1
+    names = [x[0] for x in sorted_items]
+    values = [x[1] for x in sorted_items]
 
-    html = f"""
-    <div style="background:rgba(15,23,42,0.4);border:1px solid rgba(255,255,255,0.1);
-                border-radius:12px;padding:18px 20px;">
-        <h4 style="margin:0 0 14px 0;color:#F8FAFC;font-weight:600;font-size:0.95rem;">{title}</h4>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-    """
-
-    for name, val in sorted_items:
-        pct = (val / max_val) * 100 if max_val > 0 else 0
-        html += f"""
-            <div>
-                <div style="display:flex;justify-content:space-between;
-                            font-size:0.82rem;color:#CBD5E1;margin-bottom:4px;">
-                    <span style="font-size:0.88rem;">{name}</span>
-                    <span style="font-weight:700;color:#F8FAFC;">{val:,}</span>
-                </div>
-                <div style="width:100%;height:5px;background:rgba(255,255,255,0.06);
-                            border-radius:4px;overflow:hidden;">
-                    <div style="width:{pct:.1f}%;height:100%;background:{color};
-                                border-radius:4px;"></div>
-                </div>
-            </div>
-        """
-
-    html += "</div></div>"
-    st.markdown(html, unsafe_allow_html=True)
+    import plotly.graph_objects as go
+    fig = go.Figure(go.Bar(
+        x=values,
+        y=names,
+        orientation="h",
+        marker_color=color,
+        text=[f"{v:,}".replace(",", ".") for v in values],
+        textposition="outside",
+        textfont=dict(color="#E2E8F0", size=12),
+    ))
+    fig.update_layout(
+        title=dict(text=title, font=dict(color="#F8FAFC", size=14), x=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#CBD5E1", size=12),
+        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)", showticklabels=False),
+        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12)),
+        margin=dict(l=0, r=60, t=36, b=0),
+        height=max(220, len(sorted_items) * 28 + 60),
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def _render_full_demo_section(demo: InstagramDemographics, label: str) -> None:

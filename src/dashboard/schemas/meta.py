@@ -190,6 +190,18 @@ class CreativePerformance(BaseModel):
     whatsapp_starts: int = Field(default=0)
     cpa: float = Field(default=0.0)
     cpc: float = Field(default=0.0)
+    # Público-alvo e agendamento
+    ad_status: str = Field(default="")
+    adset_name: str = Field(default="")
+    start_time: str | None = Field(default=None)
+    end_time: str | None = Field(default=None)
+    adset_status: str = Field(default="")
+    age_min: int | None = Field(default=None)
+    age_max: int | None = Field(default=None)
+    genders: list[str] = Field(default_factory=list)
+    target_cities: list[str] = Field(default_factory=list)
+    target_countries: list[str] = Field(default_factory=list)
+    target_regions: list[str] = Field(default_factory=list)
 
     @property
     def objective_friendly(self) -> str:
@@ -201,6 +213,7 @@ class CreativePerformance(BaseModel):
             return "Tráfego"
         from schemas.meta import CampaignInsight
         return CampaignInsight.OBJECTIVE_MAPPING.get(self.objective, self.objective)
+
 
 class CatalogData(BaseModel):
     """Dados sobre Catálogo e E-commerce"""

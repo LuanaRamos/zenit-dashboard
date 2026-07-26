@@ -173,7 +173,7 @@ class MetaAdsClient:
     def get_creative_performance(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> list[Any]:
-        """Busca a performance focado no Ad e cruza com a imagem do criativo."""
+        """Busca a performance focado no Ad, cruza com criativo, público-alvo e datas do adset."""
         # Passo 1: Insights no nível de ad
         endpoint = f"{self.ad_account_id}/insights"
         params = {
@@ -200,10 +200,14 @@ class MetaAdsClient:
             logger.error(f"Erro em ad insights: {e}")
             sentry_sdk.capture_exception(e)
 
-        # Passo 2: Buscar imagens/thumbnails no endpoint de ads
+        # Passo 2: Buscar imagens/thumbnails + adset (targeting + schedule) no endpoint de ads
         ads_endpoint = f"{self.ad_account_id}/ads"
         ads_params = {
-            "fields": "id,creative{thumbnail_url,image_url,body}",
+            "fields": (
+                "id,name,status,"
+                "creative{thumbnail_url,image_url,body},"
+                "adset{id,name,start_time,end_time,status,targeting}"
+            ),
             "limit": "1000",
         }
         ads_data = []
@@ -220,37 +224,64 @@ class MetaAdsClient:
             logger.error(f"Erro em ads data: {e}")
             sentry_sdk.capture_exception(e)
 
-        # Map ads data
+        # Mapa enriquecido: ad_id -> criativo + targeting + schedule
         creatives_map = {}
         for ad in ads_data:
             c = ad.get("creative", {})
+            adset = ad.get("adset", {})
+            tgt = adset.get("targeting", {})
+            geo = tgt.get("geo_locations", {})
+
+            # Cidades e países do targeting
+            cities_tgt = [x.get("name", "") for x in geo.get("cities", [])]
+            countries_tgt = geo.get("countries", [])
+            regions_tgt = [x.get("name", "") for x in geo.get("regions", [])]
+
+            gender_map = {1: "Masculino", 2: "Feminino"}
+            genders_raw = tgt.get("genders", [])
+            genders_tgt = [gender_map.get(g, str(g)) for g in genders_raw] if genders_raw else ["Todos"]
+
             creatives_map[ad.get("id")] = {
                 "thumbnail_url": c.get("thumbnail_url"),
                 "image_url": c.get("image_url"),
-                "body": c.get("body", "")
+                "body": c.get("body", ""),
+                "ad_status": ad.get("status", ""),
+                "adset_name": adset.get("name", ""),
+                "start_time": adset.get("start_time"),
+                "end_time": adset.get("end_time"),
+                "adset_status": adset.get("status", ""),
+                "age_min": tgt.get("age_min"),
+                "age_max": tgt.get("age_max"),
+                "genders": genders_tgt,
+                "cities": cities_tgt,
+                "countries": countries_tgt,
+                "regions": regions_tgt,
             }
 
-        # Cruzar os dados
+        # Cruzar dados e montar CreativePerformance
         results = []
         from schemas.meta import CreativePerformance
         for item in insights_data:
             ad_id = item.get("ad_id")
-            if not ad_id: continue
-            
+            if not ad_id:
+                continue
+
             leads = 0
             whatsapp = 0
             for action in item.get("actions", []):
                 act_type = action.get("action_type", "")
                 val = int(action.get("value", 0))
-                if act_type in ["lead", "leadgen"]: leads += val
-                if act_type in ["onsite_conversion.messaging_conversation_started_7d"]: whatsapp += val
+                if act_type in ["lead", "leadgen"]:
+                    leads += val
+                if act_type == "onsite_conversion.messaging_conversation_started_7d":
+                    whatsapp += val
 
             spend = float(item.get("spend", 0.0))
             clicks = int(item.get("clicks", 0))
             conversions = leads + whatsapp
 
             creative = creatives_map.get(ad_id, {})
-            
+
             results.append(CreativePerformance(
                 ad_id=ad_id,
                 ad_name=item.get("ad_name", "Unknown"),
@@ -264,11 +295,23 @@ class MetaAdsClient:
                 leads=leads,
                 whatsapp_starts=whatsapp,
                 cpa=spend / conversions if conversions > 0 else 0.0,
-                cpc=spend / clicks if clicks > 0 else 0.0
+                cpc=spend / clicks if clicks > 0 else 0.0,
+                # Novos campos
+                ad_status=creative.get("ad_status", ""),
+                adset_name=creative.get("adset_name", ""),
+                start_time=creative.get("start_time"),
+                end_time=creative.get("end_time"),
+                adset_status=creative.get("adset_status", ""),
+                age_min=creative.get("age_min"),
+                age_max=creative.get("age_max"),
+                genders=creative.get("genders", []),
+                target_cities=creative.get("cities", []),
+                target_countries=creative.get("countries", []),
+                target_regions=creative.get("regions", []),
             ))
 
-        # Ordenar por CPA e retornar
         return sorted(results, key=lambda x: (x.cpa == 0, x.cpa))
+
 
     def check_catalog_assets(self) -> list[Any]:
         """Busca catálogos vinculados à conta de anúncios"""
