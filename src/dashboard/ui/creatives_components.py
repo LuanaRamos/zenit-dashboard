@@ -119,22 +119,38 @@ def _render_real_audience(ad: dict) -> None:
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#E2E8F0", size=11),
-                xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)", showticklabels=False),
-                yaxis=dict(showgrid=False, tickfont=dict(color="#F1F5F9", size=11)),
-                margin=dict(l=0, r=0, t=30, b=0),
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor="rgba(255,255,255,0.07)",
+                    showticklabels=False,
+                    title_text="",
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    tickfont=dict(color="#F1F5F9", size=11),
+                    title_text="",          # Remove o label "Faixa" rotacionado
+                ),
+                # Margem top generosa: título (16px) + espaço (12px) + legenda (22px)
+                margin=dict(l=0, r=0, t=70, b=0),
                 legend=dict(
-                    orientation="h", y=1.12,
-                    font=dict(size=10, color="#F1F5F9"),
+                    orientation="h",
+                    y=1.18,                 # Posiciona legenda acima do gráfico
+                    x=0,
+                    xanchor="left",
+                    title_text="",          # Remove "Gênero" sobre os itens da legenda
+                    font=dict(size=11, color="#F1F5F9"),
+                    itemgap=12,             # Espaço entre itens da legenda
                 ),
                 hoverlabel=dict(
                     bgcolor="rgba(15, 23, 42, 0.95)",
                     bordercolor="rgba(255,255,255,0.2)",
                     font=dict(color="#FFFFFF", size=11, family="Inter"),
                 ),
-                height=260,
+                height=300,
                 title_font=dict(size=12, color="#94A3B8"),
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
 
     # ── Regiões + Países ─────────────────────────────────────────────────────
     if regions or countries:

@@ -66,19 +66,33 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#E2E8F0", size=13),
-        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", tickfont=dict(size=12)),
-        yaxis=dict(showgrid=False, tickfont=dict(size=13)),
-        margin=dict(l=0, r=0, t=40, b=0),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+            tickfont=dict(size=12),
+            title_text="",
+        ),
+        yaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=13, color="#F1F5F9"),
+            title_text="",
+        ),
+        margin=dict(l=0, r=0, t=72, b=0),
         legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            orientation="h",
+            y=1.18,
+            x=0,
+            xanchor="left",
+            title_text="",
             font=dict(color="#F1F5F9", size=12),
+            itemgap=14,
         ),
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
             bordercolor="rgba(255,255,255,0.2)",
             font=dict(color="#FFFFFF", size=12, family="Inter"),
         ),
-        height=320,
+        height=340,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
