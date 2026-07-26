@@ -146,15 +146,15 @@ try:
 
                     with tab_demographics:
                         from ui.demographics_components import render_demographics_tab
-                        render_demographics_tab(date_preset, time_range)
+                        render_demographics_tab([])
 
                     with tab_creatives:
                         from ui.creatives_components import render_creatives_tab
-                        render_creatives_tab(date_preset, time_range)
+                        render_creatives_tab([])
 
                     with tab_catalog:
                         from ui.catalog_components import render_catalog_tab
-                        render_catalog_tab()
+                        render_catalog_tab([])
 
                     st.session_state["data_loaded"] = True
 
