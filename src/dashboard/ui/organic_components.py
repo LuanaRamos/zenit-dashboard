@@ -36,6 +36,10 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         "REELS": "Reels"
     }
     for m in media_list:
+        total_reach = m.organic_reach + m.paid_reach
+        total_eng = m.total_likes + m.comments_count + m.total_shares + m.total_saved
+        eng_rate = (total_eng / total_reach * 100) if total_reach > 0 else 0.0
+        
         data.append({
             "Tipo": tipo_map.get(m.media_type, m.media_type),
             "Alcance Orgânico": m.organic_reach,
@@ -43,6 +47,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques (Pago)": m.paid_clicks,
+            "Taxa de Engajamento": f"{eng_rate:.2f}%".replace(".", ","),
             "Link": m.permalink
         })
         
