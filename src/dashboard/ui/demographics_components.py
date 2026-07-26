@@ -136,7 +136,7 @@ def render_demographics_dashboard(demo: AccountDemographics):
     with col2:
         render_top_locations(current_demo.countries, f"Top Países ({title_suffix})", is_country=True)
 def render_demographics_tab(date_preset: str, time_range: dict = None):
-    "\""Renderiza a aba Demográfica de Anúncios (Ads)"\""
+    """Renderiza a aba Demográfica de Anúncios (Ads)"""
     st.markdown("### 👥 Perfil de Audiência (Anúncios)")
     st.markdown("<p style='color: #94A3B8; margin-bottom: 24px;'>Visão demográfica das pessoas que foram impactadas e interagiram com suas campanhas pagas.</p>", unsafe_allow_html=True)
     
