@@ -49,7 +49,7 @@ class MetaAdsClient:
             logger.error(f"Erro na API da Meta: {error_msg}")
 
             if (
-                "Session has expired" in error_msg
+                "Session has expired"
                 or "Error validating access token" in error_msg
             ):
                 raise MetaAPIError(
@@ -73,7 +73,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,objective,daily_budget,spend,impressions,clicks,cpc,cpm,actions",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions",
             "limit": "1000",
         }
 
