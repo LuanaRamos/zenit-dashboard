@@ -153,7 +153,7 @@ def render_metric_card(label: str, value: str, subtext: str = None, help_text: s
     )
     st.markdown(html, unsafe_allow_html=True)
 
-def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: float) -> None:
+def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: float, paid_conversions: float = 0, organic_conversions: float = 0) -> None:
     cols = st.columns(3)
     with cols[0]:
         # Formata sem casas decimais para impacto visual, assim como R$ 284 investidos do exemplo
@@ -166,11 +166,14 @@ def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: f
         )
     with cols[1]:
         conv_fmt = f"+{int(total_conversions):,}".replace(",", ".")
+        subtext = f"{int(paid_conversions)} Pagos | {int(organic_conversions)} Orgânicos" if organic_conversions > 0 else "novos leads e contatos"
+        help_text = "Tráfego Pago + Orgânico" if organic_conversions > 0 else "Origem: Anúncios (Pago)"
+        
         render_metric_card(
             label='TOTAL DE CONVERSÕES',
             value=conv_fmt,
-            subtext="novos leads e contatos",
-            help_text="Tráfego Pago + Orgânico"
+            subtext=subtext,
+            help_text=help_text
         )
     with cols[2]:
         cpa_fmt = f"R$ {avg_cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -282,7 +285,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
     if not campaigns: return
     st.markdown("### Campanhas de Mensagens (WhatsApp/Direct)")
     
-    data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Alcance": c.impressions} for c in campaigns]
+    data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Conversas": c.whatsapp_starts, "Custo/Conv": round(c.cost_per_whatsapp, 2), "Impressões": c.impressions} for c in campaigns]
     render_glass_table(
         pd.DataFrame(data),
         currency_cols=["Gastos", "Custo/Conv"],
@@ -304,7 +307,7 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
 def render_general_campaigns(campaigns: list[CampaignInsight], title: str = "Outras Campanhas") -> None:
     if not campaigns: return
     st.markdown(f"### {title}")
-    data = [{"Campanha": c.campaign_name, "Objetivo": c.objective_friendly, "Gastos": round(c.spend, 2), "Impr": c.impressions, "Cliques": c.clicks, "CPL": round(c.cpl, 2), "CPM": round(c.cpm, 2)} for c in campaigns]
+    data = [{"Campanha": c.campaign_name, "Objetivo": c.objective_friendly, "Gastos": round(c.spend, 2), "Impr": c.impressions, "Cliques": c.clicks, "Leads (Site)": c.site_leads, "Leads (Form)": c.native_leads, "CPL": round(c.cpl, 2), "CPM": round(c.cpm, 2)} for c in campaigns]
     slug = title.lower().replace(" ", "_")
     render_glass_table(
         pd.DataFrame(data),
