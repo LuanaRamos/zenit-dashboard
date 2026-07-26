@@ -36,10 +36,6 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         "REELS": "Reels"
     }
     for m in media_list:
-        total_reach = m.organic_reach + m.paid_reach
-        total_eng = m.total_likes + m.comments_count + m.total_shares + m.total_saved
-        eng_rate = (total_eng / total_reach * 100) if total_reach > 0 else 0.0
-        
         data.append({
             "Tipo": tipo_map.get(m.media_type, m.media_type),
             "Alcance Orgânico": m.organic_reach,
@@ -47,7 +43,6 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques (Pago)": m.paid_clicks,
-            "Taxa de Engajamento": f"{eng_rate:.2f}%".replace(".", ","),
             "Link": m.permalink
         })
         
@@ -83,6 +78,10 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     for i, m in enumerate(top_3):
         with cols[i]:
             img = getattr(m, "thumbnail_url", None) or m.media_url or "https://via.placeholder.com/400x400?text=Imagem+Indisponível"
+            is_video_url = img and (img.split("?")[0].lower().endswith(".mp4") or m.media_type == "VIDEO")
+            
+            media_tag = f'<video src="{img}" controls style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;"></video>' if is_video_url else f'<img src="{img}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;">'
+
             alcance_total = f"{int(m.organic_reach + m.paid_reach):,}".replace(",", ".")
             alcance_org = f"{int(m.organic_reach):,}".replace(",", ".")
             alcance_pago = f"{int(m.paid_reach):,}".replace(",", ".")
@@ -91,7 +90,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             compartilhamentos = f"{int(m.total_shares):,}".replace(",", ".")
             
             html = f"""<div class="glass-card" style="padding: 15px; text-align: center; height: 100%;">
-    <img src="{img}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #1a1a1a;">
+    {media_tag}
     <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{curtidas}</div>
@@ -103,7 +102,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{compartilhamentos}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">🔄 Comp.</div>
+            <div style="font-size: 0.7rem; color: #8B949E;">🔁 Comp.</div>
         </div>
     </div>
     <div style="margin-bottom: 15px;">

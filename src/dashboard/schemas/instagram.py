@@ -88,3 +88,4 @@ class AccountDemographics(BaseModel):
     model_config = ConfigDict(frozen=True)
     followers: InstagramDemographics = Field(default_factory=InstagramDemographics)
     engaged: InstagramDemographics = Field(default_factory=InstagramDemographics)
+    reached: InstagramDemographics = Field(default_factory=InstagramDemographics)

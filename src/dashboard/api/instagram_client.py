@@ -36,7 +36,7 @@ class InstagramClient:
             "fields": "instagram_business_account"
         }
         try:
-            response = self.session.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10, verify=False)
             response.raise_for_status()
             data = response.json()
             if "instagram_business_account" in data:
@@ -64,7 +64,7 @@ class InstagramClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = self.session.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10, verify=False)
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
@@ -156,7 +156,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20,
+                    timeout=20, verify=False,
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
@@ -244,7 +244,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,  # Batch API não usa versão na URL base
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20,
+                    timeout=20, verify=False,
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
@@ -299,14 +299,14 @@ class InstagramClient:
         # profile_views foi restaurada na v19.0 para nível de conta (period=day)
         endpoint = f"{self.instagram_account_id}/insights"
         params = {
-            "metric": "profile_views,website_clicks,profile_links_taps",
+            "metric": "reach,profile_views,website_clicks,profile_links_taps",
             "metric_type": "total_value",
             "period": "day",
             "since": str(int(since.timestamp())),
             "until": str(int(until.timestamp()))
         }
         
-        results = {"profile_views": 0, "website_clicks": 0, "profile_links_taps": 0}
+        results = {"reach": 0, "profile_views": 0, "website_clicks": 0, "profile_links_taps": 0}
         
         try:
             data = self._make_request(endpoint, params)
@@ -372,7 +372,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20,
+                    timeout=20, verify=False,
                 )
                 batch_res.raise_for_status()
                 for response_item in batch_res.json():
@@ -398,109 +398,70 @@ class InstagramClient:
         from schemas.instagram import AccountDemographics, InstagramDemographics
 
         endpoint = f"{self.instagram_account_id}/insights"
-        
-        followers_demo = InstagramDemographics()
-        engaged_demo = InstagramDemographics()
-
-        # 1. Buscar Followers Demographics (Lifetime)
-        params_followers = {
-            "metric": "follower_demographics",
-            "period": "lifetime",
-            "breakdown": "age,gender,city,country",
-            "metric_type": "total_value"
-        }
-        try:
-            data = self._make_request(endpoint, params_followers)
-            insights = data.get("data", [])
-            
+        def _fetch_demographic(metric: str, timeframe: str = None) -> InstagramDemographics:
             age_gender = {}
             cities = {}
             countries = {}
             
-            for insight in insights:
-                name = insight.get("name")
-                if name == "follower_demographics":
-                    breakdowns = insight.get("total_value", {}).get("breakdowns", [])
-                    for brk in breakdowns:
-                        dims = brk.get("dimension_keys", [])
-                        results = brk.get("results", [])
-                        
-                        if "age" in dims and "gender" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if len(val_dims) == 2:
-                                    key = f"{val_dims[0]} ({val_dims[1]})"
-                                    age_gender[key] = res.get("value", 0)
-                        elif "city" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if val_dims:
-                                    cities[val_dims[0]] = res.get("value", 0)
-                        elif "country" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if val_dims:
-                                    countries[val_dims[0]] = res.get("value", 0)
-                                    
-            followers_demo = InstagramDemographics(
+            # API requires separate queries for these breakdowns
+            breakdown_queries = ["age,gender", "city", "country"]
+            
+            for brk in breakdown_queries:
+                params = {
+                    "metric": metric,
+                    "period": "lifetime",
+                    "breakdown": brk,
+                    "metric_type": "total_value"
+                }
+                
+                if timeframe:
+                    params["timeframe"] = timeframe
+                
+                try:
+                    data = self._make_request(endpoint, params)
+                    insights = data.get("data", [])
+                    for insight in insights:
+                        if insight.get("name") == metric:
+                            breakdowns = insight.get("total_value", {}).get("breakdowns", [])
+                            for brk_data in breakdowns:
+                                dims = brk_data.get("dimension_keys", [])
+                                results = brk_data.get("results", [])
+                                
+                                if "age" in dims and "gender" in dims:
+                                    for res in results:
+                                        val_dims = res.get("dimension_values", [])
+                                        if len(val_dims) == 2:
+                                            key = f"{val_dims[0]} ({val_dims[1]})"
+                                            age_gender[key] = res.get("value", 0)
+                                elif "city" in dims:
+                                    for res in results:
+                                        val_dims = res.get("dimension_values", [])
+                                        if len(val_dims) == 1:
+                                            cities[val_dims[0]] = res.get("value", 0)
+                                elif "country" in dims:
+                                    for res in results:
+                                        val_dims = res.get("dimension_values", [])
+                                        if len(val_dims) == 1:
+                                            countries[val_dims[0]] = res.get("value", 0)
+                except Exception as e:
+                    logger.warning(f"Erro ao buscar {metric} com breakdown {brk}: {e}")
+            
+            return InstagramDemographics(
                 age_gender=age_gender,
                 cities=cities,
                 countries=countries
             )
-        except Exception as e:
-            logger.warning(f"Erro ao buscar follower_demographics: {e}")
 
-        # 2. Buscar Engaged Audience Demographics (This Month)
-        params_engaged = {
-            "metric": "engaged_audience_demographics",
-            "period": "lifetime",
-            "metric_type": "total_value",
-            "timeframe": "this_month",
-            "breakdown": "age,gender,city,country"
-        }
-        try:
-            data = self._make_request(endpoint, params_engaged)
-            insights = data.get("data", [])
-            
-            age_gender = {}
-            cities = {}
-            countries = {}
-            
-            for insight in insights:
-                name = insight.get("name")
-                if name == "engaged_audience_demographics":
-                    breakdowns = insight.get("total_value", {}).get("breakdowns", [])
-                    for brk in breakdowns:
-                        dims = brk.get("dimension_keys", [])
-                        results = brk.get("results", [])
-                        
-                        if "age" in dims and "gender" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if len(val_dims) == 2:
-                                    key = f"{val_dims[0]} ({val_dims[1]})"
-                                    age_gender[key] = res.get("value", 0)
-                        elif "city" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if val_dims:
-                                    cities[val_dims[0]] = res.get("value", 0)
-                        elif "country" in dims:
-                            for res in results:
-                                val_dims = res.get("dimension_values", [])
-                                if val_dims:
-                                    countries[val_dims[0]] = res.get("value", 0)
-                                    
-            engaged_demo = InstagramDemographics(
-                age_gender=age_gender,
-                cities=cities,
-                countries=countries
-            )
-        except Exception as e:
-            logger.warning(f"Erro ao buscar engaged_audience_demographics: {e}")
+        followers_demo = _fetch_demographic("follower_demographics", timeframe=None)
+
+        # engaged e reached precisam de timeframe=this_month (last_30_days foi depreciado na v22.0)
+        engaged_demo = _fetch_demographic("engaged_audience_demographics", timeframe="this_month")
+        reached_demo = _fetch_demographic("reached_audience_demographics", timeframe="this_month")
 
         return AccountDemographics(
             followers=followers_demo,
-            engaged=engaged_demo
+            engaged=engaged_demo,
+            reached=reached_demo,
         )
+
 

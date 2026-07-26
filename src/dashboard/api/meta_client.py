@@ -39,7 +39,7 @@ class MetaAdsClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = self.session.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10, verify=False)
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
@@ -109,42 +109,66 @@ class MetaAdsClient:
 
     def get_demographics_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
-    ) -> list[Any]:
-        """Busca insights demográficos (Idade e Gênero)"""
+    ) -> "InstagramDemographics":
+        """Busca insights demográficos (Idade, Gênero, Cidades, Países) para Ads"""
+        from schemas.instagram import InstagramDemographics
+        
         endpoint = f"{self.ad_account_id}/insights"
-        params = {
-            "level": "account",
-            "breakdowns": "age,gender",
-            "fields": "impressions,clicks,spend",
-            "limit": "1000",
-        }
-        if time_range:
-            params["time_range"] = json.dumps(time_range)
-        else:
-            params["date_preset"] = date_preset
+        
+        age_gender = {}
+        cities = {}
+        countries = {}
 
-        insights = []
-        from schemas.meta import DemographicsInsight
-        try:
-            while True:
-                data = self._make_request(endpoint, params)
-                for item in data.get("data", []):
-                    insights.append(DemographicsInsight(
-                        age=item.get("age", "Unknown"),
-                        gender=item.get("gender", "Unknown"),
-                        impressions=int(item.get("impressions", 0)),
-                        clicks=int(item.get("clicks", 0)),
-                        spend=float(item.get("spend", 0.0))
-                    ))
-                paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    params["after"] = paging["cursors"]["after"]
-                else:
-                    break
-        except Exception as e:
-            logger.error(f"Erro em demographics: {e}")
-            sentry_sdk.capture_exception(e)
-        return insights
+        breakdowns_list = ["age,gender", "country", "region"]
+
+        for brk in breakdowns_list:
+            params = {
+                "level": "account",
+                "breakdowns": brk,
+                "fields": "impressions,spend",
+                "limit": "1000",
+            }
+            if time_range:
+                params["time_range"] = json.dumps(time_range)
+            else:
+                params["date_preset"] = date_preset
+
+            try:
+                while True:
+                    data = self._make_request(endpoint, params)
+                    for item in data.get("data", []):
+                        val = int(item.get("impressions", 0))
+                        
+                        if brk == "age,gender":
+                            a = item.get("age", "Unknown")
+                            g = item.get("gender", "Unknown")
+                            if a != "Unknown" and g != "Unknown":
+                                key = f"{a} ({g})"
+                                age_gender[key] = age_gender.get(key, 0) + val
+                        elif brk == "country":
+                            country = item.get("country", "Unknown")
+                            if country != "Unknown":
+                                countries[country] = countries.get(country, 0) + val
+                        elif brk == "region":
+                            # 'region' no Meta Ads = estado/região (o mais próximo de cidade disponível)
+                            region = item.get("region", "Unknown")
+                            if region != "Unknown":
+                                cities[region] = cities.get(region, 0) + val
+                                
+                    paging = data.get("paging", {})
+                    if "cursors" in paging and "after" in paging["cursors"]:
+                        params["after"] = paging["cursors"]["after"]
+                    else:
+                        break
+            except Exception as e:
+                logger.error(f"Erro em demographics (breakdown {brk}): {e}")
+                sentry_sdk.capture_exception(e)
+
+        return InstagramDemographics(
+            age_gender=age_gender,
+            cities=cities,
+            countries=countries
+        )
 
     def get_creative_performance(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
