@@ -54,9 +54,8 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
         media_list = ig_client.get_recent_media(limit=100, since_timestamp=since_timestamp, until_timestamp=until_timestamp)
         
     elif date_preset == "maximum":
-        # 1 ano exato para trás em Unix Timestamp
-        one_year_ago = int((datetime.datetime.now() - datetime.timedelta(days=365)).timestamp())
-        media_list = ig_client.get_recent_media(limit=100, since_timestamp=one_year_ago)
+        # Sem limites de data, puxa tudo desde o início da conta
+        media_list = ig_client.get_recent_media(limit=100)
     else:
         # 30 dias exatos para trás em Unix Timestamp
         thirty_days_ago = int((datetime.datetime.now() - datetime.timedelta(days=30)).timestamp())

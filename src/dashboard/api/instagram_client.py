@@ -109,10 +109,8 @@ class InstagramClient:
             params["until"] = str(until_timestamp)
 
         media_items_data = []
-        max_pages = 5
-        current_page = 0
 
-        while current_page < max_pages:
+        while True:
             try:
                 data = self._make_request(endpoint, params)
                 page_data = data.get("data", [])
@@ -126,8 +124,6 @@ class InstagramClient:
                     params["after"] = paging["cursors"]["after"]
                 else:
                     break
-
-                current_page += 1
             except Exception as e:
                 logger.warning(f"Erro durante a paginação do Instagram: {e}")
                 sentry_sdk.capture_exception(e)

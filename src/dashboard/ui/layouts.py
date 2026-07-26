@@ -71,7 +71,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
             "Período de Análise",
             [
                 "Últimos 30 Dias",
-                "Máximo (Ads: Sempre | Orgânico: 1 Ano)",
+                "Desde o início (Sempre)",
                 "Personalizado",
             ],
             label_visibility="collapsed"
@@ -80,7 +80,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
         date_preset = "last_30d"
         time_range = None
 
-        if "Máximo" in periodo_selecionado:
+        if "Desde o início" in periodo_selecionado:
             date_preset = "maximum"
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
@@ -108,10 +108,16 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None]:
 
             if start_date and end_date:
                 if start_date <= end_date:
-                    time_range = {
-                        "since": start_date.strftime("%Y-%m-%d"),
-                        "until": end_date.strftime("%Y-%m-%d"),
-                    }
+                    delta = end_date - start_date
+                    # Meta API restricts custom time_range to ~37 months (approx 1125 days).
+                    if delta.days > 1125:
+                        st.warning("⚠️ A API da Meta permite um intervalo personalizado máximo de 37 meses (aprox. 3 anos). Para ver todo o histórico, selecione 'Desde o início' no filtro acima.")
+                        st.stop()
+                    else:
+                        time_range = {
+                            "since": start_date.strftime("%Y-%m-%d"),
+                            "until": end_date.strftime("%Y-%m-%d"),
+                        }
                 else:
                     st.warning("A data inicial não pode ser maior que a data final.")
                     st.stop()
