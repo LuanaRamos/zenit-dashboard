@@ -66,6 +66,7 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
                 color_discrete_map=color_map
             )
             fig_gender.update_layout(
+                separators=",.",
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#8B949E", family="Inter, sans-serif"),
@@ -85,6 +86,7 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
                 color_discrete_sequence=["#4a90e2"]
             )
             fig_age.update_layout(
+                separators=",.",
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#8B949E", family="Inter, sans-serif"),

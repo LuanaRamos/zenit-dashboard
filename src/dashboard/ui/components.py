@@ -234,6 +234,7 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         hovertemplate='<b>%{label}</b><br>Gastos: %{value:$.2f}<br>Proporção: %{percent}<extra></extra>'
     )])
     fig.update_layout(
+        separators=",.",
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
@@ -269,6 +270,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
         ))
         
         fig.update_layout(
+            separators=",.",
             plot_bgcolor="rgba(0,0,0,0)", 
             paper_bgcolor="rgba(0,0,0,0)", 
             xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
