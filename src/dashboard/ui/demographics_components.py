@@ -182,59 +182,102 @@ def render_demographics_dashboard(demo: AccountDemographics) -> None:
 # Aba Pago — Meta Ads
 # ─────────────────────────────────────────────────────────────────────────────
 
+@st.cache_data(ttl=3600)
+def _fetch_ads_real_audience(date_preset: str, time_range: dict | None) -> dict:
+    """Agrega o público REAL entregue (impressões) por todas as campanhas no período."""
+    from api.meta_client import MetaAdsClient
+    raw = MetaAdsClient().get_creative_real_audience(date_preset, time_range)
+
+    age_gender: dict[str, int] = {}
+    regions: dict[str, int] = {}
+    countries: dict[str, int] = {}
+
+    for aud in raw.values():
+        for k, v in aud.get("age_gender", {}).items():
+            age_gender[k] = age_gender.get(k, 0) + v
+        for k, v in aud.get("regions", {}).items():
+            regions[k] = regions.get(k, 0) + v
+        for k, v in aud.get("countries", {}).items():
+            countries[k] = countries.get(k, 0) + v
+
+    return {"age_gender": age_gender, "regions": regions, "countries": countries}
+
+
+def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
+    """Gráfico Idade × Gênero com eixo em Impressões (para Ads)."""
+    rows = _normalize_age_gender(ag)
+    if not rows:
+        st.info("Sem dados de Idade/Gênero disponíveis.")
+        return
+
+    df = pd.DataFrame(rows).rename(columns={"Pessoas": "Impressões"})
+
+    fig = px.bar(
+        df,
+        x="Impressões",
+        y="Faixa Etária",
+        color="Gênero",
+        barmode="group",
+        category_orders={"Faixa Etária": _AGE_ORDER},
+        color_discrete_map=_COLOR_GENDER,
+        orientation="h",
+        title=title,
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#E2E8F0", size=13),
+        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", showticklabels=False),
+        yaxis=dict(showgrid=False, tickfont=dict(size=13)),
+        margin=dict(l=0, r=0, t=40, b=0),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        height=320,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
 def render_demographics_tab(date_preset: str, time_range: dict | None = None) -> None:
-    """Renderiza a aba Demográfica de Anúncios (Ads)."""
+    """Renderiza a aba Demográfica de Anúncios (Ads) — público real entregue pelo algoritmo."""
     st.markdown("### 👥 Perfil de Audiência (Anúncios Pagos — Meta Ads)")
     st.markdown(
-        "<p style='color:#94A3B8;margin-bottom:24px;'>"
-        "Visão demográfica das pessoas impactadas pelas suas campanhas pagas "
-        "(Idade/Gênero, Região/Estado e País)."
+        "<p style='color:#94A3B8;margin-bottom:8px;'>"
+        "Dados reais de entrega: quem de fato viu seus anúncios "
+        "(Idade/Gênero, Estado/Região e País) — em Impressões."
         "</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<div style='background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);"
+        "border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:0.82rem;color:#A5B4FC;'>"
+        "&#9888; <b>Advantage+ / IA da Meta:</b> Os dados refletem a entrega <i>real</i> "
+        "do algoritmo — não o público configurado manualmente."
+        "</div>",
         unsafe_allow_html=True,
     )
 
     try:
-        from api.meta_client import MetaAdsClient
+        with st.spinner("Carregando audiência real entregue..."):
+            real = _fetch_ads_real_audience(date_preset, time_range)
 
-        client = MetaAdsClient()
-        demo = client.get_demographics_insights(date_preset, time_range)
-
-        if not demo or (not demo.age_gender and not demo.cities and not demo.countries):
+        if not any([real["age_gender"], real["regions"], real["countries"]]):
             st.info("Não há dados demográficos disponíveis para o período selecionado.")
             return
 
-        # Normalizar keys do Ads para formato uniforme (ex: "25-34 (male)" → "25-34 (M)")
-        formatted_ag: dict[str, int] = {}
-        for k, v in demo.age_gender.items():
-            norm = k.replace("(male)", "(M)").replace("(female)", "(F)").replace("(unknown)", "(U)")
-            formatted_ag[norm] = v
-
-        demo_fmt = InstagramDemographics(
-            age_gender=formatted_ag,
-            cities=demo.cities,     # regions/estados
-            countries=demo.countries,
+        _render_age_gender_impressions(
+            real["age_gender"],
+            "Impressões por Idade & Gênero (Entrega Real)",
         )
-
-        render_age_gender_chart(demo_fmt, "Anúncios (Impressões por faixa)")
 
         st.write("")
         col1, col2 = st.columns(2)
         with col1:
-            render_top_locations(
-                demo_fmt.cities,
-                "Top Regiões/Estados (Ads)",
-                color="#F59E0B",
-            )
+            render_top_locations(real["regions"], "Top Estados/Regiões", color="#F59E0B")
         with col2:
-            render_top_locations(
-                demo_fmt.countries,
-                "Top Países (Ads)",
-                color="#10B981",
-            )
+            render_top_locations(real["countries"], "Top Países", color="#10B981")
 
     except Exception as e:
-        st.error("Erro ao carregar dados demográficos de anúncios.")
         import sentry_sdk
-        sentry_sdk.capture_exception(e)
         import logging
+        sentry_sdk.capture_exception(e)
         logging.getLogger(__name__).error(f"Erro demographics ads: {e}")
+        st.error("Erro ao carregar dados demográficos de anúncios.")
