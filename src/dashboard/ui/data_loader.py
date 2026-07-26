@@ -86,8 +86,9 @@ def fetch_organic_v12(date_preset: str, time_range: dict = None) -> List[Instagr
             if update_data["paid_reach"] > 0:
                 update_data["paid_frequency"] = update_data["paid_impressions"] / update_data["paid_reach"]
                 
-            # O Alcance puramente orgânico corrigido matematicamente
-            update_data["organic_reach"] = max(0, media.reach - metrics["reach"])
+            # O Insights do Instagram Graph API já retorna puramente o Alcance Orgânico!
+            # Não subtraímos o alcance pago dele, senão corrompemos a matemática
+            update_data["organic_reach"] = media.reach
         else:
             # Se não teve anúncio, 100% do alcance é orgânico
             update_data["organic_reach"] = media.reach
