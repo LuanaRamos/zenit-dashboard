@@ -19,7 +19,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     with cols[1]:
         render_metric_card("Alcance Pago", f"{int(total_paid_reach):,}".replace(",", "."), "Pessoas", "Impulsionamentos")
     with cols[2]:
-        render_metric_card("Engajamento Total", f"{int(total_engagement):,}".replace(",", "."), "Interações", "Likes, comentários")
+        render_metric_card("Engajamento Total", f"{int(total_engagement):,}".replace(",", "."), "Interações", "Curtidas, comentários")
 
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]) -> None:
     """Renderiza tabela de posts."""
@@ -29,13 +29,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         return
         
     data = []
+    tipo_map = {
+        "VIDEO": "Vídeo",
+        "IMAGE": "Imagem",
+        "CAROUSEL_ALBUM": "Carrossel",
+        "REELS": "Reels"
+    }
     for m in media_list:
         data.append({
-            "Tipo": m.media_type,
+            "Tipo": tipo_map.get(m.media_type, m.media_type),
             "Alcance Orgânico": m.organic_reach,
             "Alcance Pago": m.paid_reach,
-            "Likes (Orgânico)": m.like_count,
-            "Likes (Pago)": m.paid_likes,
+            "Curtidas (Orgânico)": m.like_count,
+            "Curtidas (Pago)": m.paid_likes,
             "Cliques (Pago)": m.paid_clicks,
             "Link": m.permalink
         })
@@ -92,7 +98,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{compartilhamentos}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">🔁 Shares</div>
+            <div style="font-size: 0.7rem; color: #8B949E;">🔄 Comp.</div>
         </div>
     </div>
     <div style="margin-bottom: 15px;">
