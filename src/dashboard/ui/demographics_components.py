@@ -39,12 +39,13 @@ def render_demographics_tab(date_preset: str, time_range: dict = None):
         # Translate gender values
         gender_map = {"male": "Masculino", "female": "Feminino", "unknown": "Desconhecido"}
         if "Gênero" in df.columns:
-            df["Gênero"] = df["Gênero"].map(lambda x: gender_map.get(str(x).lower(), x))
+            df["Gênero"] = df["Gênero"].map(lambda x: gender_map.get(str(x).lower(), x) if pd.notna(x) else x)
             df_gender = df.groupby("Gênero")["Impressões"].sum().reset_index()
         else:
             df_gender = pd.DataFrame(columns=["Gênero", "Impressões"])
 
         if "Idade" in df.columns:
+            df["Idade"] = df["Idade"].map(lambda x: "Desconhecido" if str(x).lower() == "unknown" else x)
             df_age = df.groupby("Idade")["Impressões"].sum().reset_index()
         else:
             df_age = pd.DataFrame(columns=["Idade", "Impressões"])
