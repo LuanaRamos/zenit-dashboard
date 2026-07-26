@@ -86,10 +86,14 @@ class MetaAdsClient:
         try:
             while True:
                 data = self._make_request(endpoint, params)
-                insights_data = data.get("data", [])
+                insights_data = data.get("data") or []
                 
                 for item in insights_data:
-                    insights.append(CampaignInsight.from_api_response(item))
+                    try:
+                        insights.append(CampaignInsight.from_api_response(item))
+                    except Exception as e:
+                        logger.error(f"Erro ao converter insight da campanha: {e}")
+                        sentry_sdk.capture_exception(e)
                 
                 paging = data.get("paging", {})
                 if "cursors" in paging and "after" in paging["cursors"]:
@@ -453,4 +457,3 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
 
         return ig_mapping
-
