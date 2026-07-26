@@ -101,3 +101,11 @@ def fetch_active_stories() -> list:
     """Busca stories ativos com cache local."""
     ig_client = get_instagram_client()
     return ig_client.get_active_stories()
+
+@st.cache_data(ttl=86400)
+def fetch_best_historic_comment() -> dict:
+    """Busca o comentário mais curtido de toda a história do perfil."""
+    ig_client = get_instagram_client()
+    all_media_ids = ig_client.get_all_media_ids_since_beginning()
+    best_comment = ig_client.get_top_comment_for_account(all_media_ids)
+    return best_comment or {}

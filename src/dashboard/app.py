@@ -39,7 +39,7 @@ try:
     )
     from ui.data_loader import fetch_active_stories, fetch_campaigns_v8, fetch_organic_v12  # noqa: E402
     from ui.layouts import render_sidebar  # noqa: E402
-    from ui.organic_components import render_organic_metrics_cards, render_posts_table, render_top_posts_and_comments  # noqa: E402
+    from ui.organic_components import render_organic_metrics_cards, render_posts_table, render_top_posts_and_comments, render_historic_top_comment  # noqa: E402
 
     # Configuração do Logging
     logging.basicConfig(level=logging.INFO)  # noqa: E402
@@ -179,6 +179,9 @@ try:
 
                     st.write("")
                     render_organic_metrics_cards(media_list)
+
+                    st.write("")
+                    render_historic_top_comment()
 
                     st.write("")
                     render_posts_table(media_list, stories_list)

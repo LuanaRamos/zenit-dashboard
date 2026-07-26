@@ -111,3 +111,31 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     </div>"""
             html += "</div>"
             st.markdown(html, unsafe_allow_html=True)
+
+def render_historic_top_comment() -> None:
+    """Renderiza o comentário mais curtido da história do perfil."""
+    try:
+        from ui.data_loader import fetch_best_historic_comment
+        best = fetch_best_historic_comment()
+        
+        if not best:
+            return
+            
+        st.markdown("### 👑 O Comentário de Ouro (Recorde da Conta)")
+        
+        text = best.get("text", "")
+        username = best.get("username", "Usuário")
+        likes = best.get("like_count", 0)
+        
+        html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
+    <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">"{text}"</div>
+    <div style="color: #8B949E; font-size: 0.9rem;">
+        <strong>@{username}</strong> • 🏆 {int(likes):,} curtidas
+    </div>
+</div>""".replace(",", ".")
+        st.markdown(html, unsafe_allow_html=True)
+    except Exception as e:
+        import sentry_sdk
+        import logging
+        logging.getLogger(__name__).error(f"Erro ao renderizar top comment historico: {e}")
+        sentry_sdk.capture_exception(e)
