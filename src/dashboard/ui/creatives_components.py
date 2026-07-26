@@ -118,11 +118,19 @@ def _render_real_audience(ad: dict) -> None:
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#CBD5E1", size=11),
+                font=dict(color="#E2E8F0", size=11),
                 xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.07)", showticklabels=False),
-                yaxis=dict(showgrid=False),
+                yaxis=dict(showgrid=False, tickfont=dict(color="#F1F5F9", size=11)),
                 margin=dict(l=0, r=0, t=30, b=0),
-                legend=dict(orientation="h", y=1.12, font=dict(size=10)),
+                legend=dict(
+                    orientation="h", y=1.12,
+                    font=dict(size=10, color="#F1F5F9"),
+                ),
+                hoverlabel=dict(
+                    bgcolor="rgba(15, 23, 42, 0.95)",
+                    bordercolor="rgba(255,255,255,0.2)",
+                    font=dict(color="#FFFFFF", size=11, family="Inter"),
+                ),
                 height=260,
                 title_font=dict(size=12, color="#94A3B8"),
             )
@@ -160,22 +168,28 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
         marker_color=color,
         text=[_fmt_int(v) for v in values],
         textposition="outside",
-        textfont=dict(color="#E2E8F0", size=10),
+        textfont=dict(color="#FFFFFF", size=10, family="Inter"),
         cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>%{x:,}<extra></extra>",
     ))
     fig.update_layout(
         title=dict(text=title, font=dict(color="#94A3B8", size=11), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#CBD5E1", size=10),
+        font=dict(color="#E2E8F0", size=10),
         xaxis=dict(
             showgrid=False,
             showticklabels=False,
             range=[0, max(values) * 1.4] if values else [0, 1],
         ),
-        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10)),
+        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10, color="#F1F5F9")),
         margin=dict(l=0, r=right_margin, t=28, b=0),
         height=chart_height,
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="rgba(255,255,255,0.2)",
+            font=dict(color="#FFFFFF", size=11, family="Inter"),
+        ),
     )
 
     plotly_html = fig.to_html(

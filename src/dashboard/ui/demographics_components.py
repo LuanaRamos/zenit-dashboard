@@ -69,7 +69,15 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", tickfont=dict(size=12)),
         yaxis=dict(showgrid=False, tickfont=dict(size=13)),
         margin=dict(l=0, r=0, t=40, b=0),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font=dict(color="#F1F5F9", size=12),
+        ),
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="rgba(255,255,255,0.2)",
+            font=dict(color="#FFFFFF", size=12, family="Inter"),
+        ),
         height=320,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -105,8 +113,9 @@ def render_top_locations(
         marker_color=color,
         text=[f"{v:,}".replace(",", ".") for v in values],
         textposition="outside",
-        textfont=dict(color="#E2E8F0", size=12),
+        textfont=dict(color="#FFFFFF", size=12, family="Inter"),
         cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>%{x:,}<extra></extra>",
     ))
     fig.update_layout(
         title=dict(text=title, font=dict(color="#F8FAFC", size=13), x=0),
@@ -117,15 +126,18 @@ def render_top_locations(
             showgrid=True,
             gridcolor="rgba(255,255,255,0.07)",
             showticklabels=False,
-            # Expande o range para caber o texto fora da barra
             range=[0, max(values) * 1.35] if values else [0, 1],
         ),
-        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12)),
+        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#F1F5F9")),
         margin=dict(l=0, r=right_margin, t=36, b=0),
         height=chart_height,
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="rgba(255,255,255,0.2)",
+            font=dict(color="#FFFFFF", size=12, family="Inter"),
+        ),
     )
 
-    # Serializa para HTML e injeta em iframe — evita clipping do Streamlit
     plotly_html = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn",

@@ -239,10 +239,14 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         plot_bgcolor="rgba(0,0,0,0)", 
         font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
         margin={"l": 0, "r": 0, "t": 10, "b": 60},  # Margem bottom bem maior para a legenda caber
-        showlegend=True, 
-        legend={"orientation": "h", "y": -0.25, "font": {"size": 11}}, 
+        showlegend=True,
+        legend={"orientation": "h", "y": -0.25, "font": {"size": 11, "color": "#F1F5F9"}}, 
         height=400,  # Aumenta a altura interna do Plotly
-        hoverlabel=dict(bgcolor="rgba(20,20,20,0.9)", bordercolor="#FFB300", font=dict(family="Montserrat", size=13))
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="#FFB300",
+            font=dict(family="Montserrat", size=13, color="#FFFFFF"),
+        )
     )
     # Mesma altura para os dois gráficos
     render_glass_chart(fig, title="Distribuição de Investimento", height=460)
@@ -278,7 +282,13 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             margin=dict(l=0, r=0, t=10, b=40), # Espaço embaixo para a label X
             height=400, 
             hovermode="x unified",
-            hoverlabel=dict(bgcolor="#0B1739", font_size=12, font_family="Inter", bordercolor="#7E89AC")
+            hoverlabel=dict(
+                bgcolor="rgba(15, 23, 42, 0.95)",
+                font_size=12,
+                font_family="Inter",
+                font_color="#FFFFFF",
+                bordercolor="#7E89AC",
+            ),
         )
         # Mesma altura para os dois gráficos
         render_glass_chart(fig, title="Desempenho de Custo", height=460)
