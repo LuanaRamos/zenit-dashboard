@@ -7,7 +7,12 @@ import sentry_sdk
 def fetch_creatives(date_preset: str, time_range: dict = None):
     client = MetaAdsClient()
     data = client.get_creative_performance(date_preset, time_range)
-    return [d.model_dump() for d in data]
+    results = []
+    for d in data:
+        dump = d.model_dump()
+        dump["objective_friendly"] = d.objective_friendly
+        results.append(dump)
+    return results
 
 def render_creatives_tab(date_preset: str, time_range: dict = None):
     st.subheader("🎨 Laboratório de Criativos")
@@ -40,8 +45,8 @@ def render_creatives_tab(date_preset: str, time_range: dict = None):
                         
                         gasto = ad.get('spend', 0.0)
                         cpa = ad.get('cpa', 0.0)
-                        gasto_fmt = f"R\\$ {gasto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                        cpa_fmt = f"R\\$ {cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        gasto_fmt = f"R\$ {gasto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        cpa_fmt = f"R\$ {cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         
                         leads_fmt = f"{int(ad.get('leads', 0)):,}".replace(",", ".")
                         wpp_fmt = f"{int(ad.get('whatsapp_starts', 0)):,}".replace(",", ".")
@@ -49,6 +54,7 @@ def render_creatives_tab(date_preset: str, time_range: dict = None):
                         imp_fmt = f"{int(ad.get('impressions', 0)):,}".replace(",", ".")
                         clicks_fmt = f"{int(ad.get('clicks', 0)):,}".replace(",", ".")
 
+                        st.markdown(f"**Objetivo:** {ad.get('objective_friendly', 'N/A')}")
                         st.markdown(f"**Gasto:** {gasto_fmt} | **CPA:** {cpa_fmt}")
                         st.markdown(f"**Leads:** {leads_fmt} | **WhatsApp:** {wpp_fmt}")
                         st.markdown(f"**Impressões:** {imp_fmt} | **Cliques:** {clicks_fmt}")
