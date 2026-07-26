@@ -135,3 +135,37 @@ def render_demographics_dashboard(demo: AccountDemographics):
         render_top_locations(current_demo.cities, f"Top Cidades ({title_suffix})", is_country=False)
     with col2:
         render_top_locations(current_demo.countries, f"Top Países ({title_suffix})", is_country=True)
+def render_demographics_tab(date_preset: str, time_range: dict = None):
+    "\""Renderiza a aba Demográfica de Anúncios (Ads)"\""
+    st.markdown("### 👥 Perfil de Audiência (Anúncios)")
+    st.markdown("<p style='color: #94A3B8; margin-bottom: 24px;'>Visão demográfica das pessoas que foram impactadas e interagiram com suas campanhas pagas.</p>", unsafe_allow_html=True)
+    
+    try:
+        from api.meta_client import MetaAdsClient
+        client = MetaAdsClient()
+        insights = client.get_demographics_insights(date_preset, time_range)
+        
+        if not insights:
+            st.info("Não há dados demográficos disponíveis para o período.")
+            return
+            
+        # Converter dados para o formato que a função de chart espera
+        age_gender_dict = {}
+        for item in insights:
+            # item.age: '25-34', item.gender: 'female'
+            gender = "U"
+            if item.gender == "male": gender = "M"
+            elif item.gender == "female": gender = "F"
+            elif item.gender == "unknown": gender = "U"
+            
+            key = f"{item.age} ({gender})"
+            # Usar impressões como peso principal para demografia de ads
+            age_gender_dict[key] = age_gender_dict.get(key, 0) + item.impressions
+            
+        demo = InstagramDemographics(age_gender=age_gender_dict)
+        render_age_gender_chart(demo, "Anúncios (Impressões)")
+        
+    except Exception as e:
+        st.error(f"Erro ao carregar dados demográficos de ads.")
+        import sentry_sdk
+        sentry_sdk.capture_exception(e)
