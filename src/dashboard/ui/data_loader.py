@@ -93,11 +93,11 @@ def fetch_active_stories(client_name: str) -> list:
     return ig_client.get_active_stories()
 
 @st.cache_data(ttl=86400)
-def fetch_best_historic_comment(client_name: str) -> dict:
+def fetch_all_historic_comments(client_name: str) -> list:
     ig_client = get_instagram_client(client_name)
     all_media_ids = ig_client.get_all_media_ids_since_beginning()
-    best_comment = ig_client.get_top_comment_for_account(all_media_ids)
-    return best_comment or {}
+    all_comments = ig_client.get_all_comments_for_account(all_media_ids)
+    return all_comments
 
 @st.cache_data(ttl=3600)
 def fetch_account_demographics(client_name: str):

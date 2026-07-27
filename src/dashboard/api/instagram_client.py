@@ -354,12 +354,11 @@ class InstagramClient:
             logger.warning(f"Erro ao buscar all_media_ids: {e}")
         return media_ids
 
-    def get_top_comment_for_account(self, media_ids: list[str]) -> dict[str, Any] | None:
-        """Busca o comentário mais curtido dado uma lista de media_ids (Sem limite, usa chunks de 50 no Batch)"""
-        if not media_ids: return None
-        best_comment = None
-        max_likes = -1
+    def get_all_comments_for_account(self, media_ids: list[str]) -> list[dict[str, Any]]:
+        """Busca todos os comentários dados uma lista de media_ids (Sem limite, usa chunks de 50 no Batch)"""
+        if not media_ids: return []
         
+        all_comments = []
         batch_requests = []
         for ig_id in media_ids:
             batch_requests.append(
@@ -379,16 +378,12 @@ class InstagramClient:
                     if response_item.get("code") == 200:
                         body = json.loads(response_item.get("body", "{}"))
                         comments = body.get("data", [])
-                        for c in comments:
-                            likes = int(c.get("like_count", 0))
-                            if likes > max_likes:
-                                max_likes = likes
-                                best_comment = c
+                        all_comments.extend(comments)
         except Exception as e:
-            logger.error(f"Erro ao buscar top comment: {e}")
+            logger.error(f"Erro ao buscar comments: {e}")
             sentry_sdk.capture_exception(e)
             
-        return best_comment
+        return all_comments
 
     def get_account_demographics(self) -> "AccountDemographics":
         """

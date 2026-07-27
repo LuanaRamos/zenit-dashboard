@@ -51,6 +51,11 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]) -> None:
     """Renderiza tabela de posts."""
     st.markdown("### 📝 Publicações")
+    
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        filtro_tipo = st.selectbox("Filtrar por formato", options=["Todos", "Imagem", "Vídeo", "Carrossel", "Reels"])
+        
     if not media_list:
         st.info("Nenhuma publicação encontrada no período.")
         return
@@ -63,8 +68,13 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         "REELS": "Reels"
     }
     for m in media_list:
+        tipo = "Reels" if m.media_product_type == "REELS" else tipo_map.get(m.media_type, m.media_type)
+        
+        if filtro_tipo != "Todos" and tipo != filtro_tipo:
+            continue
+            
         data.append({
-            "Tipo": tipo_map.get(m.media_type, m.media_type),
+            "Tipo": tipo,
             "Alcance (Orgânico)": m.organic_reach,
             "Alcance (Pago)": m.paid_reach,
             "Visitas ao Perfil (Org)": m.profile_visits,
@@ -172,11 +182,16 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             st.markdown(html, unsafe_allow_html=True)
 
 def render_historic_top_comment(client_name: str) -> None:
-    """Renderiza o comentário mais curtido da história do perfil."""
+    """Renderiza o comentário mais curtido da história do perfil e permite baixar todos."""
     try:
-        from ui.data_loader import fetch_best_historic_comment
-        best = fetch_best_historic_comment(client_name)
+        from ui.data_loader import fetch_all_historic_comments
+        import pandas as pd
+        all_comments = fetch_all_historic_comments(client_name)
         
+        if not all_comments:
+            return
+            
+        best = max(all_comments, key=lambda c: int(c.get("like_count", 0)), default=None)
         if not best:
             return
             
@@ -193,6 +208,16 @@ def render_historic_top_comment(client_name: str) -> None:
     </div>
 </div>""".replace(",", ".")
         st.markdown(html, unsafe_allow_html=True)
+        
+        st.write("")
+        df_comments = pd.DataFrame(all_comments)
+        csv = df_comments.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar todos os comentários (CSV)",
+            data=csv,
+            file_name=f"todos_comentarios_{client_name}.csv",
+            mime="text/csv",
+        )
     except Exception as e:
         import sentry_sdk
         import logging
