@@ -79,8 +79,9 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
             if update_data['paid_reach'] > 0:
                 update_data['paid_frequency'] = update_data['paid_impressions'] / update_data['paid_reach']
                 
-            # O alcance orgânico é o alcance total (media.reach) menos o que veio do pago
-            update_data['organic_reach'] = max(0, media.reach - update_data['paid_reach'])
+            # A API Graph do Instagram (media/{id}/insights) já retorna APENAS o alcance orgânico
+            # Métricas de anúncios NÃO estão inclusas nesse número, logo não devemos subtrair.
+            update_data['organic_reach'] = media.reach
         else:
             update_data['organic_reach'] = media.reach
             
