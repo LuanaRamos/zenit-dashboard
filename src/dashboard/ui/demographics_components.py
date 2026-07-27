@@ -51,6 +51,10 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
 
     df = pd.DataFrame(parsed)
 
+    # Altura flexível: 45px por faixa etária + espaço para título/legenda/margem
+    n_age_groups = df["Faixa Etária"].nunique()
+    chart_height = max(280, n_age_groups * 45 + 120)
+
     fig = px.bar(
         df,
         x="Pessoas",
@@ -77,11 +81,11 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             tickfont=dict(size=13, color="#F1F5F9"),
             title_text="",
         ),
-        margin=dict(l=0, r=0, t=60, b=80),
+        margin=dict(l=0, r=0, t=50, b=60),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.15,
+            y=-0.12,
             xanchor="center",
             x=0.5,
             title_text="",
@@ -92,8 +96,22 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             bordercolor="rgba(255,255,255,0.2)",
             font=dict(color="#FFFFFF", size=12, family="Inter"),
         ),
+        height=chart_height,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+
+    plotly_html = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        config={"displayModeBar": False},
+    )
+    iframe_html = f"""
+    <html><head>
+    <style>
+        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
+    </style></head>
+    <body>{plotly_html}</body></html>
+    """
+    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
 def render_top_locations(
@@ -267,6 +285,10 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
 
     df = pd.DataFrame(rows).rename(columns={"Pessoas": "Impressões"})
 
+    # Altura flexível: 45px por faixa etária + espaço para título/legenda/margem
+    n_age_groups = df["Faixa Etária"].nunique()
+    chart_height = max(280, n_age_groups * 45 + 120)
+
     fig = px.bar(
         df,
         x="Impressões",
@@ -284,18 +306,32 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
         font=dict(color="#E2E8F0", size=13),
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", showticklabels=False),
         yaxis=dict(showgrid=False, tickfont=dict(size=13)),
-        margin=dict(l=0, r=0, t=60, b=80),
+        margin=dict(l=0, r=0, t=50, b=60),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.15,
+            y=-0.12,
             xanchor="center",
             x=0.5,
             title_text="",
             font=dict(color="#F1F5F9", size=12),
         ),
+        height=chart_height,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+
+    plotly_html = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        config={"displayModeBar": False},
+    )
+    iframe_html = f"""
+    <html><head>
+    <style>
+        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
+    </style></head>
+    <body>{plotly_html}</body></html>
+    """
+    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
 def render_demographics_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
