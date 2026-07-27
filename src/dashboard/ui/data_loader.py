@@ -110,3 +110,23 @@ def fetch_account_demographics(client_name: str):
 def fetch_account_insights_cached(client_name: str) -> dict:
     ig_client = get_instagram_client(client_name)
     return ig_client.get_account_insights()
+
+@st.cache_data(ttl=3600)
+def fetch_followers_history_cached(client_name: str) -> list:
+    from datetime import datetime
+    ig_client = get_instagram_client(client_name)
+    raw_history = ig_client.get_followers_history()
+    
+    clean_history = []
+    for item in raw_history:
+        end_time_str = item.get("end_time")
+        val = item.get("value", 0)
+        if end_time_str:
+            try:
+                # '2026-07-04T07:00:00+0000'
+                dt = datetime.strptime(end_time_str, "%Y-%m-%dT%H:%M:%S%z")
+                clean_history.append({"Data": dt.strftime("%d/%m"), "Novos Seguidores": val})
+            except Exception:
+                pass
+                
+    return clean_history

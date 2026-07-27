@@ -188,8 +188,9 @@ try:
                         media_list = fetch_organic_v12(date_preset, time_range, selected_client.name)
                         stories_list = fetch_active_stories(selected_client.name)
                         account_demographics = fetch_account_demographics(selected_client.name)
-                        from ui.data_loader import fetch_account_insights_cached
+                        from ui.data_loader import fetch_account_insights_cached, fetch_followers_history_cached
                         account_insights = fetch_account_insights_cached(selected_client.name)
+                        followers_history = fetch_followers_history_cached(selected_client.name)
 
                     tab_geral, tab_demografico = st.tabs(["📊 Desempenho", "👥 Demografia (Público)"])
 
@@ -211,6 +212,10 @@ try:
                         render_top_posts_and_comments(media_list)
 
                     with tab_demografico:
+                        from ui.organic_components import render_followers_timeline
+                        render_followers_timeline(followers_history)
+                        st.write("")
+                        
                         from ui.demographics_components import render_demographics_dashboard
                         render_demographics_dashboard(account_demographics)
 

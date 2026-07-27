@@ -223,3 +223,74 @@ def render_historic_top_comment(client_name: str) -> None:
         import logging
         logging.getLogger(__name__).error(f"Erro ao renderizar top comment historico: {e}")
         sentry_sdk.capture_exception(e)
+
+def render_followers_timeline(history_data: list) -> None:
+    """Renderiza a linha do tempo de ganho de seguidores dos últimos 30 dias."""
+    if not history_data:
+        st.info("O histórico de seguidores não está disponível para esta conta.")
+        return
+        
+    import pandas as pd
+    import plotly.express as px
+    
+    df = pd.DataFrame(history_data)
+    if df.empty or "Data" not in df.columns or "Novos Seguidores" not in df.columns:
+        st.info("Sem dados suficientes de histórico no momento.")
+        return
+        
+    st.markdown("### 📈 Evolução de Seguidores (Últimos 30 Dias)")
+    
+    # Encontrar o pico
+    peak_row = df.loc[df["Novos Seguidores"].idxmax()]
+    peak_val = peak_row["Novos Seguidores"]
+    peak_date = peak_row["Data"]
+    
+    # Criar um card de destaque para o recorde
+    st.markdown(f"""
+    <div class="metric-card" style="margin-bottom: 20px;">
+        <div class="metric-label">Maior Pico (Últimos 30d)</div>
+        <div class="metric-value" style="color: #FFB300;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #8B949E;">Seguidores</span></div>
+        <div style="font-size: 0.8rem; color: #8B949E; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Gráfico de Área
+    fig = px.area(
+        df, 
+        x="Data", 
+        y="Novos Seguidores",
+        color_discrete_sequence=["#FFB300"]
+    )
+    
+    fig.update_traces(
+        line_shape='spline',
+        mode='lines+markers',
+        fill='tozeroy',
+        marker=dict(size=6, color="#FFB300", line=dict(width=1, color="white")),
+        hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>"
+    )
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color="#E2E8F0"),
+        xaxis=dict(
+            title="", 
+            showgrid=False,
+            zeroline=False,
+            showline=True,
+            linecolor="rgba(255,255,255,0.1)"
+        ),
+        yaxis=dict(
+            title="", 
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.05)",
+            zeroline=True,
+            zerolinecolor="rgba(255,255,255,0.1)"
+        ),
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=350,
+        hovermode="x unified"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})

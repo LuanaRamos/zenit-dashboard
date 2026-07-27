@@ -443,6 +443,37 @@ class InstagramClient:
             
         return all_comments
 
+    def get_followers_history(self) -> list:
+        """
+        Busca o histórico de follower_count (novos seguidores diários) dos últimos 30 dias.
+        A API da Meta bloqueia a consulta de período maior que 30 dias para essa métrica.
+        Retorna uma lista de dicionários contendo o ganho diário.
+        """
+        import datetime
+        endpoint = f"{self.instagram_account_id}/insights"
+        
+        # Meta restringe a janela máxima exata de 30 dias
+        until_dt = datetime.datetime.now()
+        since_dt = until_dt - datetime.timedelta(days=30)
+        
+        params = {
+            "metric": "follower_count",
+            "period": "day",
+            "since": int(since_dt.timestamp()),
+            "until": int(until_dt.timestamp())
+        }
+        
+        try:
+            data = self._make_request(endpoint, params)
+            insights = data.get("data", [])
+            if insights and insights[0].get("values"):
+                return insights[0]["values"]
+            return []
+        except Exception as e:
+            # Silencia o erro 400 da Meta para contas não comerciais antigas
+            logger.warning(f"Não foi possível buscar follower_count history (possivelmente conta pré-business): {e}")
+            return []
+
     def get_account_demographics(self) -> "AccountDemographics":
         """
         Busca os dados demográficos (Idade, Gênero, Cidades, Países) dos Seguidores
