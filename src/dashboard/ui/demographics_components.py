@@ -77,11 +77,11 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             tickfont=dict(size=13, color="#F1F5F9"),
             title_text="",
         ),
-        margin=dict(l=0, r=0, t=60, b=50),
+        margin=dict(l=0, r=0, t=60, b=80),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.1,
+            y=-0.15,
             xanchor="center",
             x=0.5,
             title_text="",
@@ -92,9 +92,8 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             bordercolor="rgba(255,255,255,0.2)",
             font=dict(color="#FFFFFF", size=12, family="Inter"),
         ),
-        height=340,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
 
 
 def render_top_locations(
@@ -285,19 +284,18 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
         font=dict(color="#E2E8F0", size=13),
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", showticklabels=False),
         yaxis=dict(showgrid=False, tickfont=dict(size=13)),
-        margin=dict(l=0, r=0, t=40, b=50),
+        margin=dict(l=0, r=0, t=60, b=80),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.1,
+            y=-0.15,
             xanchor="center",
             x=0.5,
             title_text="",
             font=dict(color="#F1F5F9", size=12),
         ),
-        height=320,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
 
 
 def render_demographics_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
