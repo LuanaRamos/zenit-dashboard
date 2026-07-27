@@ -364,6 +364,7 @@ class MetaAdsClient:
 
             spend = float(item.get("spend", 0.0))
             clicks = int(item.get("clicks", 0))
+            clicks = max(clicks, link_clicks)
             
             objective = item.get("objective", "UNKNOWN")
             if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:
