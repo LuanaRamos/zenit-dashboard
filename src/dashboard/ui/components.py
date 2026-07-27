@@ -187,7 +187,7 @@ def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: f
 def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> None:
     """Isola completamente o gráfico Plotly em um iframe HTML para evitar barras de rolagem
     e bugs de padding do Streamlit. Renderiza o glassmorphism nativamente no HTML."""
-    plotly_html = fig.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False})
+    plotly_html = fig.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False, 'responsive': True})
     title_html = f"<div class='title'>{title}</div>" if title else ""
     
     html_content = f"""
