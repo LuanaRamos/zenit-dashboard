@@ -171,7 +171,6 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        # Fallback for older media where profile_activity etc. are not supported
                         metrics = "engagement,impressions,reach,saved"
                         fallback_requests.append({
                             "method": "GET",
@@ -179,21 +178,51 @@ class InstagramClient:
                         })
                         fallback_indices.append(req_idx)
                         
-                # Executa o fallback se houver falhas
                 if fallback_requests:
                     fallback_res = self.session.post(
                         self.BATCH_URL,
                         data={"access_token": self.token, "batch": json.dumps(fallback_requests)},
                         timeout=20, verify=False,
                     )
+                    
+                    ultra_fallback_requests = []
+                    ultra_fallback_indices = []
+                    
                     if fallback_res.status_code == 200:
                         for j, fallback_item in enumerate(fallback_res.json()):
+                            req_idx = fallback_indices[j]
+                            ig_id = media_items_data[req_idx]["id"]
+                            
                             if fallback_item.get("code") == 200:
                                 body = json.loads(fallback_item.get("body", "{}"))
-                                req_idx = fallback_indices[j]
-                                ig_id = media_items_data[req_idx]["id"]
                                 insights_map[ig_id] = body.get("data", [])
+                            else:
+                                # Ultra fallback: try just reach
+                                ultra_fallback_requests.append({
+                                    "method": "GET",
+                                    "relative_url": f"/{ig_id}/insights?metric=reach",
+                                })
+                                ultra_fallback_indices.append(req_idx)
                                 
+                    if ultra_fallback_requests:
+                        ultra_res = self.session.post(
+                            self.BATCH_URL,
+                            data={"access_token": self.token, "batch": json.dumps(ultra_fallback_requests)},
+                            timeout=20, verify=False,
+                        )
+                        if ultra_res.status_code == 200:
+                            for j, ultra_item in enumerate(ultra_res.json()):
+                                req_idx = ultra_fallback_indices[j]
+                                ig_id = media_items_data[req_idx]["id"]
+                                
+                                if ultra_item.get("code") == 200:
+                                    body = json.loads(ultra_item.get("body", "{}"))
+                                    insights_map[ig_id] = body.get("data", [])
+                                else:
+                                    body = json.loads(ultra_item.get("body", "{}"))
+                                    err_msg = body.get("error", {}).get("message", "Unknown API Error")
+                                    logger.warning(f"Ultra-Fallback falhou para {ig_id}: {err_msg}")
+                                    
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights: {e}")
                 sentry_sdk.capture_exception(e)

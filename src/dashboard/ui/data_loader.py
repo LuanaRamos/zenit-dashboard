@@ -10,7 +10,7 @@ from core.config import settings
 @st.cache_resource
 def get_api_client(client_name: str) -> MetaAdsClient:
     clients = settings.get_clients()
-    _cache_buster = 1
+    _cache_buster = 2
     client_config = next(c for c in clients if c.name == client_name)
     return MetaAdsClient(client_config)
 
@@ -22,7 +22,7 @@ def get_account_creation_date_cached(client_name: str) -> datetime.date:
 @st.cache_resource
 def get_instagram_client(client_name: str) -> InstagramClient:
     clients = settings.get_clients()
-    _cache_buster = 1
+    _cache_buster = 2
     client_config = next(c for c in clients if c.name == client_name)
     return InstagramClient(client_config)
 
