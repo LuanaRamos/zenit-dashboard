@@ -22,6 +22,8 @@ class MetaAdsClient:
     def __init__(self, client_config) -> None:
         self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
         self.ad_account_id = client_config.ad_account_id
+        if not self.ad_account_id.startswith("act_"):
+            self.ad_account_id = f"act_{self.ad_account_id}"
         self.page_id = client_config.page_id
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
