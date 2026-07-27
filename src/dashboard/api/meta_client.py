@@ -386,6 +386,7 @@ class MetaAdsClient:
                 impressions=int(item.get("impressions", 0)),
                 clicks=clicks,
                 link_clicks=link_clicks,
+                other_clicks=max(0, clicks - link_clicks - profile_visits),
                 leads=leads,
                 whatsapp_starts=whatsapp,
                 instagram_follows=instagram_follows,
