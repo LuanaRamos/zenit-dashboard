@@ -82,7 +82,8 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Tempo Médio": format_hhmmss(m.ig_reels_avg_watch_time),
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
-            "Cliques (Pago)": m.paid_clicks,
+            "Cliques (Pago) (T)": m.paid_clicks,
+            "Cliques no Link (Pago)": m.paid_link_clicks,
             "Link": m.permalink
         })
         

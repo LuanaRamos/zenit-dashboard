@@ -539,6 +539,7 @@ class MetaAdsClient:
                         "reach": 0,
                         "impressions": 0,
                         "clicks": 0,
+                        "link_clicks": 0,
                         "likes": 0,
                         "shares": 0,
                         "saved": 0,
@@ -548,10 +549,12 @@ class MetaAdsClient:
                 ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
                 ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
 
-                # Procura interações pagas (curtidas feitas no dark post)
+                # Procura interações pagas (curtidas feitas no dark post) e link clicks
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
-                    if action_type in [
+                    if action_type == "link_click":
+                        ad_metrics_map[ad_id]["link_clicks"] += int(action.get("value", 0))
+                    elif action_type in [
                         "post_reaction",
                         "onsite_conversion.post_net_like",
                     ]:
@@ -617,6 +620,7 @@ class MetaAdsClient:
                         "reach": 0,
                         "impressions": 0,
                         "clicks": 0,
+                        "link_clicks": 0,
                         "likes": 0,
                         "shares": 0,
                         "saved": 0,
@@ -625,6 +629,7 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]
                 ig_mapping[ig_id]["clicks"] += metrics["clicks"]
+                ig_mapping[ig_id]["link_clicks"] += metrics.get("link_clicks", 0)
                 ig_mapping[ig_id]["likes"] += metrics["likes"]
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
