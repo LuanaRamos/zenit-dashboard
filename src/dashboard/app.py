@@ -222,5 +222,11 @@ try:
 
 except Exception as e:
     import traceback
+    import sentry_sdk
+    try:
+        sentry_sdk.capture_exception(e)
+    except:
+        pass
     st.error("⚠️ Ooops! Ocorreu um problema ao carregar o sistema.")
     st.info("Nossa equipe de suporte técnico (Antigravity) já foi notificada silenciosamente. Isso geralmente se resolve em alguns minutos com um simples recarregamento de página. Por favor, recarregue a página.")
+    st.exception(e)
