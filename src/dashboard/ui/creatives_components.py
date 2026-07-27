@@ -104,6 +104,16 @@ def _render_real_audience(ad: dict) -> None:
 
         if rows:
             df = pd.DataFrame(rows)
+            
+            n_age_groups = df["Faixa"].nunique()
+            n_genders = df["Gênero"].nunique()
+            
+            # Dynamic height calculation standardized
+            per_item = 28
+            if n_genders > 1:
+                per_item = int(28 * 1.6)
+            chart_height = max(200, n_age_groups * per_item + 100)
+            
             fig = px.bar(
                 df,
                 x="Impressões",
@@ -129,13 +139,15 @@ def _render_real_audience(ad: dict) -> None:
                     showgrid=False,
                     tickfont=dict(color="#F1F5F9", size=11),
                     title_text="",
+                    automargin=True,
                 ),
-                margin=dict(l=0, r=0, t=70, b=0),
+                margin=dict(l=60, r=10, t=60, b=10),
                 legend=dict(
                     orientation="h",
-                    y=1.18,
-                    x=0,
-                    xanchor="left",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
                     title_text="",
                     font=dict(size=11, color="#F1F5F9"),
                 ),
@@ -144,7 +156,7 @@ def _render_real_audience(ad: dict) -> None:
                     bordercolor="rgba(255,255,255,0.2)",
                     font=dict(color="#FFFFFF", size=11, family="Inter"),
                 ),
-                height=300,
+                height=chart_height,
                 title_font=dict(size=12, color="#94A3B8"),
             )
             # iframe obrigatorio aqui: chart esta dentro de st.columns aninhadas
@@ -160,7 +172,7 @@ def _render_real_audience(ad: dict) -> None:
                 "</head>"
                 f"<body>{plotly_html}</body></html>"
             )
-            st_components.html(iframe_html, height=314, scrolling=False)
+            st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
     # ── Regiões + Países ─────────────────────────────────────────────────────
@@ -209,8 +221,8 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
             showticklabels=False,
             range=[0, max(values) * 1.4] if values else [0, 1],
         ),
-        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10, color="#F1F5F9")),
-        margin=dict(l=0, r=right_margin, t=28, b=0),
+        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10, color="#F1F5F9"), automargin=True),
+        margin=dict(l=40, r=right_margin, t=28, b=10),
         height=chart_height,
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
