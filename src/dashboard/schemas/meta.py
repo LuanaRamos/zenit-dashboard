@@ -114,11 +114,7 @@ class CampaignInsight(BaseModel):
                 site_leads += val
             elif act_type == "leadgen":
                 native_leads += val
-            elif act_type in [
-                "onsite_conversion.messaging_conversation_started_7d",
-                "onsite_conversion.messaging_first_reply",
-                "onsite_conversion.messaging_connections"
-            ]:
+            elif act_type.startswith("onsite_conversion.messaging_conversation_started"):
                 whatsapp_starts += val
             elif act_type == "instagram_follows":
                 instagram_follows += val
