@@ -40,6 +40,52 @@ def _normalize_age_gender(raw: dict[str, int]) -> list[dict]:
             gender = _GENDER_MAP.get(gender_raw, gender_raw)
             rows.append({"Faixa Etária": age, "Gênero": gender, "Pessoas": value})
     return rows
+# ─────────────────────────────────────────────────────────────────────────────
+# Sistema Unificado de Gráficos Horizontais (Flexível)
+# ─────────────────────────────────────────────────────────────────────────────
+# Regra-mestre: a altura NUNCA é fixa. É sempre calculada como:
+#   height = max(MIN, n_barras_visuais * PX_POR_BARRA + OVERHEAD)
+# Isso garante que se houver 3 faixas ou 15 regiões, o gráfico cresce/encolhe.
+# Renderiza via iframe (components.html) para encaixe perfeito sem scrollbar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_HBAR_PX_PER_ITEM = 38        # pixels por barra (ou grupo de barras)
+_HBAR_GROUP_MULTIPLIER = 1.6  # se barmode=group com N cores, multiplica
+_HBAR_OVERHEAD = 140          # título + legenda + margens
+_HBAR_MIN_HEIGHT = 280        # mínimo absoluto
+
+
+def _calc_chart_height(n_items: int, n_colors: int = 1) -> int:
+    """Calcula altura flexível para gráficos de barras horizontais.
+
+    Args:
+        n_items: Quantidade de categorias no eixo Y (faixas etárias, regiões, etc).
+        n_colors: Quantidade de séries/cores (gêneros, por exemplo). Se > 1, barmode=group.
+
+    Returns:
+        Altura em pixels proporcional aos dados.
+    """
+    per_item = _HBAR_PX_PER_ITEM
+    if n_colors > 1:
+        per_item = int(_HBAR_PX_PER_ITEM * _HBAR_GROUP_MULTIPLIER)
+    return max(_HBAR_MIN_HEIGHT, n_items * per_item + _HBAR_OVERHEAD)
+
+
+def _render_hbar_iframe(fig: go.Figure, chart_height: int) -> None:
+    """Renderiza qualquer gráfico Plotly via iframe com altura exata, sem scrollbar."""
+    plotly_html = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        config={"displayModeBar": False},
+    )
+    iframe_html = f"""
+    <html><head>
+    <style>
+        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
+    </style></head>
+    <body>{plotly_html}</body></html>
+    """
+    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
 def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
@@ -51,9 +97,9 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
 
     df = pd.DataFrame(parsed)
 
-    # Altura flexível: 45px por faixa etária + espaço para título/legenda/margem
     n_age_groups = df["Faixa Etária"].nunique()
-    chart_height = max(280, n_age_groups * 45 + 120)
+    n_genders = df["Gênero"].nunique()
+    chart_height = _calc_chart_height(n_age_groups, n_genders)
 
     fig = px.bar(
         df,
@@ -80,16 +126,18 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
             showgrid=False,
             tickfont=dict(size=13, color="#F1F5F9"),
             title_text="",
+            automargin=True,
         ),
-        margin=dict(l=0, r=0, t=50, b=60),
+        margin=dict(l=70, r=10, t=50, b=60),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.12,
+            y=-0.08,
             xanchor="center",
             x=0.5,
             title_text="",
             font=dict(color="#F1F5F9", size=12),
+            itemwidth=40,
         ),
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
@@ -98,20 +146,7 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
         ),
         height=chart_height,
     )
-
-    plotly_html = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"displayModeBar": False},
-    )
-    iframe_html = f"""
-    <html><head>
-    <style>
-        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
-    </style></head>
-    <body>{plotly_html}</body></html>
-    """
-    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
+    _render_hbar_iframe(fig, chart_height)
 
 
 def render_top_locations(
@@ -120,11 +155,7 @@ def render_top_locations(
     color: str = "#2A85FF",
     max_items: int = 15,
 ) -> None:
-    """
-    Renderiza barras de localização via iframe (components.html).
-    Usa o mesmo padrão do render_glass_chart para evitar corte de labels
-    que ocorre com st.plotly_chart dentro de colunas no Streamlit Cloud.
-    """
+    """Renderiza barras de localização usando o sistema unificado de gráficos."""
     if not data:
         st.info(f"Sem dados de {title.lower()} disponíveis.")
         return
@@ -133,9 +164,8 @@ def render_top_locations(
     names = [x[0] for x in sorted_items]
     values = [x[1] for x in sorted_items]
 
-    # Margem direita generosa para não cortar os valores (textposition=outside)
     right_margin = max(70, max(len(f"{v:,}") for v in values) * 9)
-    chart_height = max(240, len(sorted_items) * 30 + 70)
+    chart_height = _calc_chart_height(len(sorted_items), n_colors=1)
 
     fig = go.Figure(go.Bar(
         x=values,
@@ -159,8 +189,13 @@ def render_top_locations(
             showticklabels=False,
             range=[0, max(values) * 1.35] if values else [0, 1],
         ),
-        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=12, color="#F1F5F9")),
-        margin=dict(l=0, r=right_margin, t=36, b=0),
+        yaxis=dict(
+            showgrid=False,
+            autorange="reversed",
+            tickfont=dict(size=12, color="#F1F5F9"),
+            automargin=True,
+        ),
+        margin=dict(l=70, r=right_margin, t=36, b=10),
         height=chart_height,
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
@@ -168,20 +203,7 @@ def render_top_locations(
             font=dict(color="#FFFFFF", size=12, family="Inter"),
         ),
     )
-
-    plotly_html = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"displayModeBar": False},
-    )
-    iframe_html = f"""
-    <html><head>
-    <style>
-        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
-    </style></head>
-    <body>{plotly_html}</body></html>
-    """
-    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
+    _render_hbar_iframe(fig, chart_height)
 
 
 def _render_full_demo_section(demo: InstagramDemographics, label: str) -> None:
@@ -285,9 +307,9 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
 
     df = pd.DataFrame(rows).rename(columns={"Pessoas": "Impressões"})
 
-    # Altura flexível: 45px por faixa etária + espaço para título/legenda/margem
     n_age_groups = df["Faixa Etária"].nunique()
-    chart_height = max(280, n_age_groups * 45 + 120)
+    n_genders = df["Gênero"].nunique()
+    chart_height = _calc_chart_height(n_age_groups, n_genders)
 
     fig = px.bar(
         df,
@@ -305,33 +327,30 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#E2E8F0", size=13),
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", showticklabels=False),
-        yaxis=dict(showgrid=False, tickfont=dict(size=13)),
-        margin=dict(l=0, r=0, t=50, b=60),
+        yaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=13, color="#F1F5F9"),
+            automargin=True,
+        ),
+        margin=dict(l=70, r=10, t=50, b=60),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.12,
+            y=-0.08,
             xanchor="center",
             x=0.5,
             title_text="",
             font=dict(color="#F1F5F9", size=12),
+            itemwidth=40,
+        ),
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="rgba(255,255,255,0.2)",
+            font=dict(color="#FFFFFF", size=12, family="Inter"),
         ),
         height=chart_height,
     )
-
-    plotly_html = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"displayModeBar": False},
-    )
-    iframe_html = f"""
-    <html><head>
-    <style>
-        html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
-    </style></head>
-    <body>{plotly_html}</body></html>
-    """
-    st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
+    _render_hbar_iframe(fig, chart_height)
 
 
 def render_demographics_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
