@@ -103,3 +103,8 @@ def fetch_best_historic_comment(client_name: str) -> dict:
 def fetch_account_demographics(client_name: str):
     ig_client = get_instagram_client(client_name)
     return ig_client.get_account_demographics()
+
+@st.cache_data(ttl=3600)
+def fetch_account_insights_cached(client_name: str) -> dict:
+    ig_client = get_instagram_client(client_name)
+    return ig_client.get_account_insights()

@@ -188,15 +188,21 @@ try:
                         media_list = fetch_organic_v12(date_preset, time_range, selected_client.name)
                         stories_list = fetch_active_stories(selected_client.name)
                         account_demographics = fetch_account_demographics(selected_client.name)
+                        from ui.data_loader import fetch_account_insights_cached
+                        account_insights = fetch_account_insights_cached(selected_client.name)
 
                     tab_geral, tab_demografico = st.tabs(["📊 Desempenho", "👥 Demografia (Público)"])
 
                     with tab_geral:
                         st.write("")
+                        from ui.organic_components import render_account_insights_cards
+                        render_account_insights_cards(account_insights)
+                        
+                        st.write("")
                         render_organic_metrics_cards(media_list)
 
                         st.write("")
-                        render_historic_top_comment()
+                        render_historic_top_comment(selected_client.name)
 
                         st.write("")
                         render_posts_table(media_list, stories_list)

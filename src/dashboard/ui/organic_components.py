@@ -5,6 +5,33 @@ from schemas.instagram import InstagramMedia
 import plotly.graph_objects as go
 from ui.components import render_glass_table, render_metric_card
 
+def format_hhmmss(ms_val: float) -> str:
+    """Formata milissegundos em HH:MM:SS"""
+    if not ms_val: return "0s"
+    s = int(ms_val / 1000)
+    h, s = divmod(s, 3600)
+    m, s = divmod(s, 60)
+    if h > 0:
+        return f"{h:02d}h {m:02d}m {s:02d}s"
+    elif m > 0:
+        return f"{m:02d}m {s:02d}s"
+    else:
+        return f"{s:02d}s"
+
+def render_account_insights_cards(insights: dict) -> None:
+    """Renderiza os KPIs de nível de conta (Visitas, Cliques, etc)."""
+    st.markdown("### 👁️ Visão Geral da Conta (Últimos 28 dias)")
+    cols = st.columns(4)
+    with cols[0]:
+        render_metric_card("Visitas ao Perfil", f"{insights.get('profile_views', 0):,}".replace(",", "."), "Vistas", "Total da conta")
+    with cols[1]:
+        render_metric_card("Toques no Link", f"{insights.get('profile_links_taps', 0):,}".replace(",", "."), "Cliques", "Bio")
+    with cols[2]:
+        render_metric_card("Cliques no Site", f"{insights.get('website_clicks', 0):,}".replace(",", "."), "Cliques", "Site")
+    with cols[3]:
+        render_metric_card("Alcance da Conta", f"{insights.get('reach', 0):,}".replace(",", "."), "Pessoas", "Total")
+
+
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Renderiza KPIs orgânicos vs pagos."""
     st.markdown("### 📊 Alcance: Orgânico vs Ads")
@@ -38,8 +65,11 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     for m in media_list:
         data.append({
             "Tipo": tipo_map.get(m.media_type, m.media_type),
-            "Alcance Orgânico": m.organic_reach,
-            "Alcance Pago": m.paid_reach,
+            "Alcance (Orgânico)": m.organic_reach,
+            "Alcance (Pago)": m.paid_reach,
+            "Visitas ao Perfil (Org)": m.profile_visits,
+            "Tempo Assistido": format_hhmmss(m.ig_reels_video_view_total_time),
+            "Tempo Médio": format_hhmmss(m.ig_reels_avg_watch_time),
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques (Pago)": m.paid_clicks,
@@ -141,11 +171,11 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             html += "</div>"
             st.markdown(html, unsafe_allow_html=True)
 
-def render_historic_top_comment() -> None:
+def render_historic_top_comment(client_name: str) -> None:
     """Renderiza o comentário mais curtido da história do perfil."""
     try:
         from ui.data_loader import fetch_best_historic_comment
-        best = fetch_best_historic_comment()
+        best = fetch_best_historic_comment(client_name)
         
         if not best:
             return
