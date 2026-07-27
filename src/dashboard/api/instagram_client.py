@@ -154,17 +154,46 @@ class InstagramClient:
             chunk = batch_requests[i : i + 50]
             try:
                 batch_res = self.session.post(
-                    self.BATCH_URL,  # Batch API não usa versão na URL base
+                    self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20, verify=False,
                 )
                 batch_res.raise_for_status()
+                
+                fallback_requests = []
+                fallback_indices = []
+                
                 for j, response_item in enumerate(batch_res.json()):
+                    req_idx = i + j
+                    ig_id = media_items_data[req_idx]["id"]
+                    
                     if response_item.get("code") == 200:
                         body = json.loads(response_item.get("body", "{}"))
-                        req_idx = i + j
-                        ig_id = media_items_data[req_idx]["id"]
                         insights_map[ig_id] = body.get("data", [])
+                    else:
+                        # Fallback for older media where profile_activity etc. are not supported
+                        metrics = "engagement,impressions,reach,saved"
+                        fallback_requests.append({
+                            "method": "GET",
+                            "relative_url": f"/{ig_id}/insights?metric={metrics}",
+                        })
+                        fallback_indices.append(req_idx)
+                        
+                # Executa o fallback se houver falhas
+                if fallback_requests:
+                    fallback_res = self.session.post(
+                        self.BATCH_URL,
+                        data={"access_token": self.token, "batch": json.dumps(fallback_requests)},
+                        timeout=20, verify=False,
+                    )
+                    if fallback_res.status_code == 200:
+                        for j, fallback_item in enumerate(fallback_res.json()):
+                            if fallback_item.get("code") == 200:
+                                body = json.loads(fallback_item.get("body", "{}"))
+                                req_idx = fallback_indices[j]
+                                ig_id = media_items_data[req_idx]["id"]
+                                insights_map[ig_id] = body.get("data", [])
+                                
             except Exception as e:
                 logger.error(f"Erro no Batch de Insights: {e}")
                 sentry_sdk.capture_exception(e)
