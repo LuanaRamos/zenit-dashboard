@@ -18,12 +18,16 @@ try:
     from core.config import settings
 
     if settings.sentry_dsn:
+        from sentry_sdk.integrations.threading import ThreadingIntegration
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
             environment=settings.sentry_environment,
             release=settings.sentry_release,
             traces_sample_rate=settings.sentry_traces_sample_rate,
             enable_tracing=True,
+            integrations=[
+                ThreadingIntegration(propagate_traces=False),
+            ],
         )
 
     # Adiciona o diretório dashboard ao path para permitir imports absolutos internos
