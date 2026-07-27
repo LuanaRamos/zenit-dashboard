@@ -102,15 +102,19 @@ try:
                         organic_leads = fetch_organic_leads_cached(date_preset, time_range, selected_client.name)
                         
                         total_spend = sum(c.spend for c in campaigns)
-                        paid_conversions = sum((c.leads + c.whatsapp_starts) for c in campaigns)
+                        total_leads = sum(c.leads for c in campaigns)
+                        total_wpp = sum(c.whatsapp_starts for c in campaigns)
                         
-                        total_conversions = paid_conversions + organic_leads
-                        avg_cpa = total_spend / paid_conversions if paid_conversions > 0 else 0.0
+                        leads_spend = sum(c.spend for c in campaigns if c.leads > 0 or c.objective_friendly == "Cadastros")
+                        wpp_spend = sum(c.spend for c in campaigns if c.whatsapp_starts > 0 or c.objective_friendly == "Mensagens (WhatsApp/Direct)")
+                        
+                        cpl = leads_spend / total_leads if total_leads > 0 else 0.0
+                        cpw = wpp_spend / total_wpp if total_wpp > 0 else 0.0
 
                         # Renderiza a UI
                         # --- BENTO GRID: Topo (Métricas) ---
                         st.write("")
-                        render_metric_cards(total_spend, total_conversions, avg_cpa, paid_conversions, organic_leads)
+                        render_metric_cards(total_spend, total_leads, cpl, total_wpp, cpw, organic_leads)
                         st.write("")
 
                         # Filtragem inteligente por Objetivo ODAX, Legacy ou presença de métricas fortes

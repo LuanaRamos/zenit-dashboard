@@ -119,7 +119,6 @@ class CampaignInsight(BaseModel):
             elif act_type == "instagram_follows":
                 instagram_follows += val
             elif act_type in [
-                "onsite_conversion.post_engagement",
                 "profile_visit",
                 "instagram_profile_views"
             ]:
@@ -184,6 +183,8 @@ class CreativePerformance(BaseModel):
     clicks: int = Field(default=0)
     leads: int = Field(default=0)
     whatsapp_starts: int = Field(default=0)
+    instagram_follows: int = Field(default=0)
+    profile_visits: int = Field(default=0)
     cpa: float = Field(default=0.0)
     cpc: float = Field(default=0.0)
     # Público-alvo e agendamento

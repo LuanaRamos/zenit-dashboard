@@ -342,17 +342,32 @@ class MetaAdsClient:
 
             leads = 0
             whatsapp = 0
+            instagram_follows = 0
+            profile_visits = 0
             for action in item.get("actions", []):
                 act_type = action.get("action_type", "")
                 val = int(action.get("value", 0))
                 if act_type in ["lead", "leadgen"]:
                     leads += val
-                if act_type == "onsite_conversion.messaging_conversation_started_7d":
+                if act_type.startswith("onsite_conversion.messaging_conversation_started"):
                     whatsapp += val
+                if act_type == "instagram_follows":
+                    instagram_follows += val
+                if act_type in ["profile_visit", "instagram_profile_views"]:
+                    profile_visits += val
+                    
+            if instagram_follows == 0:
+                instagram_follows = int(item.get("instagram_follows", 0))
 
             spend = float(item.get("spend", 0.0))
             clicks = int(item.get("clicks", 0))
-            conversions = leads + whatsapp
+            
+            objective = item.get("objective", "UNKNOWN")
+            if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:
+                cpa = spend / instagram_follows
+            else:
+                conversions = leads + whatsapp
+                cpa = spend / conversions if conversions > 0 else 0.0
 
             creative = creatives_map.get(ad_id, {})
 
@@ -368,7 +383,9 @@ class MetaAdsClient:
                 clicks=clicks,
                 leads=leads,
                 whatsapp_starts=whatsapp,
-                cpa=spend / conversions if conversions > 0 else 0.0,
+                instagram_follows=instagram_follows,
+                profile_visits=profile_visits,
+                cpa=cpa,
                 cpc=spend / clicks if clicks > 0 else 0.0,
                 # Novos campos
                 ad_status=creative.get("ad_status", ""),

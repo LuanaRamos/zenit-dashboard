@@ -153,10 +153,9 @@ def render_metric_card(label: str, value: str, subtext: str = None, help_text: s
     )
     st.markdown(html, unsafe_allow_html=True)
 
-def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: float, paid_conversions: float = 0, organic_conversions: float = 0) -> None:
-    cols = st.columns(3)
+def render_metric_cards(total_spend: float, total_leads: float, cpl: float, total_wpp: float, cpw: float, organic_leads: float = 0) -> None:
+    cols = st.columns(4)
     with cols[0]:
-        # Formata sem casas decimais para impacto visual, assim como R$ 284 investidos do exemplo
         spend_fmt = f"R$ {int(total_spend):,}".replace(",", ".")
         render_metric_card(
             label='INVESTIMENTO TOTAL',
@@ -165,23 +164,32 @@ def render_metric_cards(total_spend: float, total_conversions: float, avg_cpa: f
             help_text="Orçamento distribuído"
         )
     with cols[1]:
-        conv_fmt = f"+{int(total_conversions):,}".replace(",", ".")
-        subtext = f"{int(paid_conversions)} Pagos | {int(organic_conversions)} Orgânicos" if organic_conversions > 0 else "novos leads e contatos"
-        help_text = "Tráfego Pago + Orgânico" if organic_conversions > 0 else "Origem: Anúncios (Pago)"
-        
+        leads_fmt = f"+{int(total_leads + organic_leads):,}".replace(",", ".")
+        subtext = f"{int(total_leads)} Pagos | {int(organic_leads)} Orgânicos" if organic_leads > 0 else f"CPL Pago: R$ {cpl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        help_text = "Leads via site e formulários"
         render_metric_card(
-            label='TOTAL DE CONVERSÕES',
-            value=conv_fmt,
+            label='CADASTROS (LEADS)',
+            value=leads_fmt,
             subtext=subtext,
             help_text=help_text
         )
     with cols[2]:
+        wpp_fmt = f"+{int(total_wpp):,}".replace(",", ".")
+        render_metric_card(
+            label='WHATSAPP INICIADOS',
+            value=wpp_fmt,
+            subtext=f"Custo: R$ {cpw:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            help_text="Conversas geradas"
+        )
+    with cols[3]:
+        total_conv = total_leads + total_wpp
+        avg_cpa = total_spend / total_conv if total_conv > 0 else 0.0
         cpa_fmt = f"R$ {avg_cpa:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         render_metric_card(
-            label='CUSTO POR CONVERSÃO',
+            label='CPA MÉDIO',
             value=cpa_fmt,
-            subtext="média de CPA geral",
-            help_text="Performance do período"
+            subtext="Geral da agência",
+            help_text="Investimento / Todas as Conversões"
         )
 
 def render_glass_chart(fig: go.Figure, title: str = None, height: int = 400) -> None:
