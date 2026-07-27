@@ -14,21 +14,28 @@ st.set_page_config(
 )
 
 try:
+    import os
+    sentry_dsn = os.getenv("SENTRY_DSN")
+
+    def filter_sentry_events(event, hint):
+        if "exc_info" in hint:
+            exc_type, exc_value, tb = hint["exc_info"]
+            if isinstance(exc_value, TypeError) and "Timer.run() takes 1 positional argument but 2" in str(exc_value):
+                return None
+        return event
+
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
+            release=os.getenv("SENTRY_RELEASE", "unknown"),
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+            enable_tracing=True,
+            before_send=filter_sentry_events
+        )
+
     from streamlit_option_menu import option_menu
     from core.config import settings
-
-    if settings.sentry_dsn:
-        from sentry_sdk.integrations.threading import ThreadingIntegration
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            environment=settings.sentry_environment,
-            release=settings.sentry_release,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            enable_tracing=True,
-            integrations=[
-                ThreadingIntegration(propagate_traces=False),
-            ],
-        )
 
     # Adiciona o diretório dashboard ao path para permitir imports absolutos internos
     sys.path.append(str(Path(__file__).parent))
@@ -229,4 +236,3 @@ except Exception as e:
         pass
     st.error("⚠️ Ooops! Ocorreu um problema ao carregar o sistema.")
     st.info("Nossa equipe de suporte técnico (Antigravity) já foi notificada silenciosamente. Isso geralmente se resolve em alguns minutos com um simples recarregamento de página. Por favor, recarregue a página.")
-    st.exception(e)
