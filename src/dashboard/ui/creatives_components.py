@@ -332,23 +332,35 @@ def _render_creative_card(ad: dict) -> None:
     impressions = int(ad.get("impressions", 0))
     clicks = int(ad.get("clicks", 0))
 
+    objective_friendly = ad.get("objective_friendly", "Desconhecido")
+    
+    st.markdown(
+        f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #8B949E;'>"
+        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
     c1, c2 = st.columns(2)
     c1.metric("💸 Gasto", _fmt_brl(gasto))
-    
-    objective_friendly = ad.get("objective_friendly", "")
     
     if objective_friendly == "Mensagens (WhatsApp/Direct)":
         c2.metric("🎯 Custo p/ Mensagem", _fmt_brl(cpa) if cpa > 0 else "—")
         c1.metric("💬 WhatsApp", _fmt_int(wpp))
         c2.metric("🖱 Cliques", _fmt_int(clicks))
+        c1.metric("👁 Impressões", _fmt_int(impressions))
     elif objective_friendly in ["Tráfego", "Reconhecimento"] or instagram_follows > 0:
         c2.metric("🎯 Custo p/ Seguidor", _fmt_brl(cpa) if cpa > 0 else "—")
         c1.metric("👥 Seguidores", _fmt_int(instagram_follows))
         c2.metric("👁 Visitas ao Perfil", _fmt_int(profile_visits))
+        c1.metric("👁 Impressões", _fmt_int(impressions))
+        c2.metric("🖱 Cliques", _fmt_int(clicks))
     else:
         c2.metric("🎯 CPA", _fmt_brl(cpa) if cpa > 0 else "—")
         c1.metric("📋 Leads", _fmt_int(leads))
         c2.metric("💬 WhatsApp", _fmt_int(wpp))
+        c1.metric("👁 Impressões", _fmt_int(impressions))
+        c2.metric("🖱 Cliques", _fmt_int(clicks))
 
     # ── Público REAL Atraído ─────────────────────────────────────────────────
     _render_real_audience(ad)
