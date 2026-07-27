@@ -112,7 +112,7 @@ def _render_real_audience(ad: dict) -> None:
             per_item = 28
             if n_genders > 1:
                 per_item = int(28 * 1.6)
-            chart_height = max(200, n_age_groups * per_item + 100)
+            chart_height = max(200, n_age_groups * per_item + 120)
             
             fig = px.bar(
                 df,
@@ -141,15 +141,16 @@ def _render_real_audience(ad: dict) -> None:
                     title_text="",
                     automargin=True,
                 ),
-                margin=dict(l=60, r=10, t=60, b=10),
+                margin=dict(l=60, r=10, t=40, b=50),
                 legend=dict(
                     orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1,
+                    yanchor="top",
+                    y=-0.05,
+                    xanchor="center",
+                    x=0.5,
                     title_text="",
                     font=dict(size=11, color="#F1F5F9"),
+                    itemwidth=40,
                 ),
                 hoverlabel=dict(
                     bgcolor="rgba(15, 23, 42, 0.95)",
