@@ -344,9 +344,12 @@ class MetaAdsClient:
             whatsapp = 0
             instagram_follows = 0
             profile_visits = 0
+            link_clicks = 0
             for action in item.get("actions", []):
                 act_type = action.get("action_type", "")
                 val = int(action.get("value", 0))
+                if act_type == "link_click":
+                    link_clicks += val
                 if act_type in ["lead", "leadgen"]:
                     leads += val
                 if act_type.startswith("onsite_conversion.messaging_conversation_started"):
@@ -381,6 +384,7 @@ class MetaAdsClient:
                 spend=spend,
                 impressions=int(item.get("impressions", 0)),
                 clicks=clicks,
+                link_clicks=link_clicks,
                 leads=leads,
                 whatsapp_starts=whatsapp,
                 instagram_follows=instagram_follows,

@@ -40,6 +40,7 @@ class CampaignInsight(BaseModel):
     spend: float = Field(default=0.0)
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
+    link_clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
 
@@ -105,12 +106,15 @@ class CampaignInsight(BaseModel):
         whatsapp_starts = 0
         instagram_follows = 0
         profile_visits = 0
+        link_clicks = 0
 
         for action in actions:
             act_type = action.get("action_type", "")
             val = int(action.get("value", 0))
 
-            if act_type == "lead":
+            if act_type == "link_click":
+                link_clicks += val
+            elif act_type == "lead":
                 site_leads += val
             elif act_type == "leadgen":
                 native_leads += val
@@ -135,6 +139,7 @@ class CampaignInsight(BaseModel):
         parsed_data["whatsapp_starts"] = whatsapp_starts
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
+        parsed_data["link_clicks"] = link_clicks
 
         # Calcular Custos
         spend = parsed_data["spend"]
@@ -181,6 +186,7 @@ class CreativePerformance(BaseModel):
     spend: float = Field(default=0.0)
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
+    link_clicks: int = Field(default=0)
     leads: int = Field(default=0)
     whatsapp_starts: int = Field(default=0)
     instagram_follows: int = Field(default=0)

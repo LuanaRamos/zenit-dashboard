@@ -316,7 +316,7 @@ def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
 def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
     if not campaigns: return
     st.markdown("### Campanhas de Seguidores e Visitas")
-    data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Cliques": c.clicks, "CPC": round(c.cpc, 2), "Visitas": c.profile_visits, "Seguidores": c.instagram_follows, "Custo/Seg": round(c.cost_per_follower, 2)} for c in campaigns]
+    data = [{"Campanha": c.campaign_name, "Gastos": round(c.spend, 2), "Cliques (T)": c.clicks, "Cliques no Link": c.link_clicks, "CPC": round(c.cpc, 2), "Visitas": c.profile_visits, "Seguidores": c.instagram_follows, "Custo/Seg": round(c.cost_per_follower, 2)} for c in campaigns]
     render_glass_table(
         pd.DataFrame(data),
         currency_cols=["Gastos", "CPC", "Custo/Seg"],
@@ -327,7 +327,7 @@ def render_profile_campaigns(campaigns: list[CampaignInsight]) -> None:
 def render_general_campaigns(campaigns: list[CampaignInsight], title: str = "Outras Campanhas") -> None:
     if not campaigns: return
     st.markdown(f"### {title}")
-    data = [{"Campanha": c.campaign_name, "Objetivo": c.objective_friendly, "Gastos": round(c.spend, 2), "Impr": c.impressions, "Cliques": c.clicks, "Leads (Site)": c.site_leads, "Leads (Form)": c.native_leads, "CPL": round(c.cpl, 2), "CPM": round(c.cpm, 2)} for c in campaigns]
+    data = [{"Campanha": c.campaign_name, "Objetivo": c.objective_friendly, "Gastos": round(c.spend, 2), "Impr": c.impressions, "Cliques (T)": c.clicks, "Cliques no Link": c.link_clicks, "Leads (Site)": c.site_leads, "Leads (Form)": c.native_leads, "CPL": round(c.cpl, 2), "CPM": round(c.cpm, 2)} for c in campaigns]
     slug = title.lower().replace(" ", "_")
     render_glass_table(
         pd.DataFrame(data),
