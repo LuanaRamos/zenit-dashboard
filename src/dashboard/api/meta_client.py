@@ -529,7 +529,7 @@ class MetaAdsClient:
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "ad",
-            "fields": "ad_id,reach,impressions,clicks,actions",
+            "fields": "ad_id,reach,impressions,clicks,actions,outbound_clicks",
             "breakdowns": "publisher_platform",
             "limit": "1000",
         }
@@ -584,9 +584,10 @@ class MetaAdsClient:
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
                     if action_type == "link_click":
+                        # Mantém clicks no criativo se precisar, mas a saída vai vir de outbound
                         ad_metrics_map[ad_id]["link_clicks"] += int(action.get("value", 0))
                     elif action_type in [
-                        "post_reaction",
+                        "like",
                         "onsite_conversion.post_net_like",
                     ]:
                         ad_metrics_map[ad_id]["likes"] = max(
@@ -607,6 +608,12 @@ class MetaAdsClient:
                         ad_metrics_map[ad_id]["views"] = max(
                             ad_metrics_map[ad_id]["views"], int(action.get("value", 0))
                         )
+                
+                # Outbound Clicks (Cliques de Saída reais)
+                outbound = item.get("outbound_clicks", [])
+                for out_action in outbound:
+                    if out_action.get("action_type") == "outbound_click":
+                        ad_metrics_map[ad_id]["link_clicks"] += int(out_action.get("value", 0))
 
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
@@ -683,7 +690,7 @@ class MetaAdsClient:
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "account",
-            "fields": "reach,impressions,actions",
+            "fields": "reach,impressions,clicks,actions,outbound_clicks",
             "breakdowns": "publisher_platform",
         }
         if time_range:
@@ -700,11 +707,11 @@ class MetaAdsClient:
                     totals["reach"] = int(item.get("reach", 0))
                     totals["impressions"] = int(item.get("impressions", 0))
                     
-                    for action in item.get("actions", []):
+                    actions = item.get("actions", [])
+                    for action in actions:
                         action_type = action.get("action_type")
                         val = int(action.get("value", 0))
-                        
-                        if action_type in ["post_reaction", "onsite_conversion.post_net_like"]:
+                        if action_type in ["like", "onsite_conversion.post_net_like"]:
                             totals["likes"] = max(totals["likes"], val)
                         elif action_type == "post":
                             totals["shares"] = max(totals["shares"], val)
