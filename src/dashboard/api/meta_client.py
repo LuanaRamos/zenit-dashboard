@@ -648,15 +648,22 @@ class MetaAdsClient:
                     if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
                         ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
 
-                # Bug 3 fix: Apenas action_types primários confirmados, sem max()
+                # Bug 3 fix: Apenas action_types primários confirmados
+                like_priority = {"onsite_conversion.post_net_like": 3, "like": 2, "post_reaction": 1}
+                current_like_prio = 0
+                
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
-                    if action_type in ("like", "post_reaction"):
-                        ad_metrics_map[ad_id]["likes"] = int(action.get("value", 0))
+                    val = int(action.get("value", 0))
+                    
+                    if action_type in like_priority:
+                        if like_priority[action_type] > current_like_prio:
+                            ad_metrics_map[ad_id]["likes"] = val
+                            current_like_prio = like_priority[action_type]
                     elif action_type == "post":
-                        ad_metrics_map[ad_id]["shares"] = int(action.get("value", 0))
+                        ad_metrics_map[ad_id]["shares"] = val
                     elif action_type == "comment":
-                        ad_metrics_map[ad_id]["comments"] = int(action.get("value", 0))
+                        ad_metrics_map[ad_id]["comments"] = val
                     elif action_type == "onsite_conversion.post_save":
                         ad_metrics_map[ad_id]["saved"] = int(action.get("value", 0))
                     elif action_type == "video_view":
