@@ -98,7 +98,7 @@ class InstagramClient:
         """
         endpoint = f"{self.instagram_account_id}/media"
         params = {
-            "fields": "id,caption,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_type,media_product_type",
+            "fields": "id,caption,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,saved_count,shares_count,reposts_count,media_type,media_product_type",
             "limit": str(limit),
         }
 
@@ -251,6 +251,9 @@ class InstagramClient:
                     timestamp=item.get("timestamp", ""),
                     like_count=int(item.get("like_count", 0)),
                     comments_count=int(item.get("comments_count", 0)),
+                    saved_count=int(item.get("saved_count", 0)),
+                    shares_count=int(item.get("shares_count", 0)),
+                    reposts_count=int(item.get("reposts_count", 0)),
                     reach=int(metrics_dict.get("reach", 0)),
                     shares=int(metrics_dict.get("shares", 0)),
                     saved=int(metrics_dict.get("saved", 0)),

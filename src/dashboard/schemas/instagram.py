@@ -32,6 +32,9 @@ class InstagramMedia(BaseModel):
     media_product_type: str = ""
     like_count: int = 0
     comments_count: int = 0
+    saved_count: int = 0
+    shares_count: int = 0
+    reposts_count: int = 0
     permalink: str = ""
     timestamp: str = ""
     reach: int = Field(
@@ -74,11 +77,11 @@ class InstagramMedia(BaseModel):
 
     @property
     def total_shares(self) -> int:
-        return self.shares + self.paid_shares
+        return self.shares_count + self.paid_shares
 
     @property
     def total_saved(self) -> int:
-        return self.saved + self.paid_saved
+        return self.saved_count + self.paid_saved
 
 
 class InstagramDemographics(BaseModel):
