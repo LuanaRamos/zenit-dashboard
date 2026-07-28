@@ -121,12 +121,12 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         if filtro_tipo != "Todos" and tipo != filtro_tipo:
             continue
             
-        # Fallbacks (N/A) para métricas que não existem em certos formatos
-        visitas = "N/A" if tipo == "Reels" else m.profile_visits
-        tempo_total = format_hhmmss(m.ig_reels_video_view_total_time) if tipo == "Reels" else "N/A"
-        tempo_medio = format_hhmmss(m.ig_reels_avg_watch_time) if tipo == "Reels" else "N/A"
+        # Fallbacks (None) para métricas que não existem em certos formatos
+        visitas = None if tipo == "Reels" else m.profile_visits
+        tempo_total = format_hhmmss(m.ig_reels_video_view_total_time) if tipo == "Reels" else None
+        tempo_medio = format_hhmmss(m.ig_reels_avg_watch_time) if tipo == "Reels" else None
         
-        visualizacoes = "N/A" if tipo not in ["Reels", "Vídeo"] else m.organic_views
+        visualizacoes = None if tipo not in ["Reels", "Vídeo"] else m.organic_views
 
         data.append({
             "ID": m.id,
