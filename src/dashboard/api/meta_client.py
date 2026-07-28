@@ -50,9 +50,15 @@ class MetaAdsClient:
 
             logger.error(f"Erro na API da Meta: {error_msg}")
 
+            if e.response and e.response.status_code == 401:
+                raise MetaAPIError(
+                    "Token de Acesso Inválido ou Expirado. Por favor, gere um novo token da Meta e atualize o painel de configurações/variáveis de ambiente (Erro 401)."
+                )
+
             if (
                 "Session has expired" in error_msg
                 or "Error validating access token" in error_msg
+                or "OAuthException" in error_msg
             ):
                 raise MetaAPIError(
                     "O seu Token expirou ou é inválido. Por favor, gere um novo no portal de desenvolvedores e atualize o arquivo .env."

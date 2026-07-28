@@ -72,15 +72,21 @@ class InstagramClient:
             error_msg = error_data.get("error", {}).get("message", str(e))
             logger.error(f"Erro na API do Instagram: {error_msg}")
 
+            if e.response and e.response.status_code == 401:
+                raise InstagramAPIError(
+                    "Token de Acesso do Instagram Inválido ou Expirado. Por favor, gere um novo token e atualize as configurações (Erro 401)."
+                )
+
             if (
                 "Session has expired" in error_msg
                 or "Error validating access token" in error_msg
+                or "OAuthException" in error_msg
             ):
                 raise InstagramAPIError(
-                    "O seu Token de Acesso expirou ou é inválido. Atualize o .env com um novo token."
+                    "O seu Token expirou ou é inválido. Por favor, gere um novo no portal de desenvolvedores e atualize o arquivo .env."
                 )
 
-            raise InstagramAPIError(f"Erro ao consultar o Instagram: {error_msg}")
+            raise InstagramAPIError(f"Erro ao consultar a API do Instagram: {error_msg}")
         except requests.exceptions.RequestException as e:
             logger.error(f"Erro de rede ao consultar o Instagram: {e}")
             raise InstagramAPIError(
