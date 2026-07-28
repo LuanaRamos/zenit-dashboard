@@ -363,8 +363,17 @@ class MetaAdsClient:
                 instagram_follows = int(item.get("instagram_follows", 0))
 
             spend = float(item.get("spend", 0.0))
-            clicks = int(item.get("clicks", 0))
-            clicks = max(clicks, link_clicks)
+            
+            # Recuperando as interações grossas (Likes, Saves, Comments, Shares, etc) da veia da Meta
+            post_interaction_gross = 0
+            for action in item.get("actions", []):
+                if action.get("action_type") == "post_interaction_gross":
+                    post_interaction_gross = int(action.get("value", 0))
+
+            other_clicks = post_interaction_gross
+            
+            # Recriando o "Total de Cliques" matematicamente correto, ignorando o totalizador quebrado da Meta
+            clicks = link_clicks + profile_visits + other_clicks
             
             objective = item.get("objective", "UNKNOWN")
             if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:
@@ -386,7 +395,7 @@ class MetaAdsClient:
                 impressions=int(item.get("impressions", 0)),
                 clicks=clicks,
                 link_clicks=link_clicks,
-                other_clicks=max(0, clicks - link_clicks - profile_visits),
+                other_clicks=other_clicks,
                 leads=leads,
                 whatsapp_starts=whatsapp,
                 instagram_follows=instagram_follows,

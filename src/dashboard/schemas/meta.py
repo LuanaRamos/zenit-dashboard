@@ -108,6 +108,7 @@ class CampaignInsight(BaseModel):
         instagram_follows = 0
         profile_visits = 0
         link_clicks = 0
+        other_clicks = 0
 
         for action in actions:
             act_type = action.get("action_type", "")
@@ -128,6 +129,8 @@ class CampaignInsight(BaseModel):
                 "instagram_profile_views"
             ]:
                 profile_visits += val
+            elif act_type == "post_interaction_gross":
+                other_clicks += val
 
         # Fallback para instagram_follows caso a Meta retorne apenas na raiz
         if instagram_follows == 0:
@@ -141,9 +144,10 @@ class CampaignInsight(BaseModel):
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
         parsed_data["link_clicks"] = link_clicks
-        clicks = max(parsed_data["clicks"], link_clicks)
+        parsed_data["other_clicks"] = other_clicks
+        
+        clicks = link_clicks + profile_visits + other_clicks
         parsed_data["clicks"] = clicks
-        parsed_data["other_clicks"] = max(0, clicks - link_clicks - profile_visits)
 
         # Calcular Custos
         spend = parsed_data["spend"]
