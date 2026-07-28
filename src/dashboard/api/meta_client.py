@@ -279,7 +279,7 @@ class MetaAdsClient:
         ads_params = {
             "fields": (
                 "id,name,status,"
-                "creative{thumbnail_url,image_url,body},"
+                "creative{thumbnail_url,image_url,body,call_to_action_type},"
                 "adset{id,name,start_time,end_time,status,targeting}"
             ),
             "limit": "1000",
@@ -319,6 +319,7 @@ class MetaAdsClient:
                 "thumbnail_url": c.get("thumbnail_url"),
                 "image_url": c.get("image_url"),
                 "body": c.get("body", ""),
+                "call_to_action_type": c.get("call_to_action_type", ""),
                 "ad_status": ad.get("status", ""),
                 "adset_name": adset.get("name", ""),
                 "start_time": adset.get("start_time"),
@@ -398,6 +399,20 @@ class MetaAdsClient:
                 cpa = spend / conversions if conversions > 0 else 0.0
 
             creative = creatives_map.get(ad_id, {})
+            
+            cta_type = creative.get("call_to_action_type", "")
+            if cta_type == "WHATSAPP_MESSAGE":
+                traffic_dest = "WhatsApp"
+            elif cta_type == "VIEW_INSTAGRAM_PROFILE":
+                traffic_dest = "Instagram"
+            elif cta_type in ["LEARN_MORE", "SHOP_NOW", "SIGN_UP", "DOWNLOAD", "CONTACT_US", "APPLY_NOW", "BOOK_TRAVEL"]:
+                traffic_dest = "Site Externo"
+            elif cta_type == "MESSAGE_PAGE":
+                traffic_dest = "Messenger"
+            elif cta_type == "":
+                traffic_dest = "Não Identificado"
+            else:
+                traffic_dest = f"Site Externo"
 
             results.append(CreativePerformance(
                 ad_id=ad_id,
@@ -427,6 +442,7 @@ class MetaAdsClient:
                 start_time=creative.get("start_time"),
                 end_time=creative.get("end_time"),
                 adset_status=creative.get("adset_status", ""),
+                traffic_destination=traffic_dest,
                 age_min=creative.get("age_min"),
                 age_max=creative.get("age_max"),
                 genders=creative.get("genders", []),
@@ -618,7 +634,7 @@ class MetaAdsClient:
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
         ads_params = {
-            "fields": "id,creative{effective_instagram_story_id,effective_instagram_media_id,source_instagram_media_id}",
+            "fields": "id,creative{effective_instagram_story_id,effective_instagram_media_id,source_instagram_media_id,call_to_action_type}",
             "limit": "1000",
         }
 
@@ -656,6 +672,20 @@ class MetaAdsClient:
             # Se esse anúncio está atrelado a um post do IG e possui métricas registradas
             if ig_id and ad_id in ad_metrics_map:
                 metrics = ad_metrics_map[ad_id]
+                
+                cta_type = creative.get("call_to_action_type", "")
+                if cta_type == "WHATSAPP_MESSAGE":
+                    traffic_dest = "WhatsApp"
+                elif cta_type == "VIEW_INSTAGRAM_PROFILE":
+                    traffic_dest = "Instagram"
+                elif cta_type in ["LEARN_MORE", "SHOP_NOW", "SIGN_UP", "DOWNLOAD", "CONTACT_US", "APPLY_NOW"]:
+                    traffic_dest = "Site Externo"
+                elif cta_type == "MESSAGE_PAGE":
+                    traffic_dest = "Messenger"
+                elif cta_type == "":
+                    traffic_dest = "N/A"
+                else:
+                    traffic_dest = f"Site Externo"
 
                 if ig_id not in ig_mapping:
                     ig_mapping[ig_id] = {
@@ -667,7 +697,13 @@ class MetaAdsClient:
                         "shares": 0,
                         "saved": 0,
                         "views": 0,
+                        "paid_destination": traffic_dest,
                     }
+
+                # Update the destination if it's the first time we see a real destination
+                if ig_mapping[ig_id].get("paid_destination") in ["N/A", "Não Identificado"] and traffic_dest not in ["N/A", "Não Identificado"]:
+                    ig_mapping[ig_id]["paid_destination"] = traffic_dest
+
 
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]

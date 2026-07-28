@@ -61,6 +61,7 @@ class InstagramMedia(BaseModel):
     paid_other_clicks: int = Field(default=0, description="Soma de outros cliques (Ads)")
     paid_ctr: float = Field(default=0.0, description="CTR Ponderado Pago (%)")
     paid_frequency: float = Field(default=0.0, description="Frequência Ponderada Paga")
+    paid_destination: str = Field(default="N/A", description="Destino do Tráfego (Ads)")
     paid_likes: int = Field(
         default=0, description="Soma de curtidas pagas nos anúncios (Dark Posts)"
     )

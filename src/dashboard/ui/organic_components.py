@@ -145,6 +145,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
             "Cliques de Saída (Pago)": m.paid_link_clicks,
+            "Destino do Tráfego (Pago)": m.paid_destination,
             "Link": m.permalink
         })
         
@@ -170,7 +171,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     
     # 3. Tabela Paga (apenas posts que receberam tráfego pago)
     st.markdown("#### Desempenho Pago (Dark Posts / Impulsionados)")
-    cols_paid = ["ID", "Tipo", "Alcance (Pago)", "Curtidas (Pago)", "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", "Link"]
+    cols_paid = ["ID", "Tipo", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Curtidas (Pago)", "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", "Link"]
     df_paid = df[df["Alcance (Pago)"] > 0][cols_paid]
     
     if not df_paid.empty:

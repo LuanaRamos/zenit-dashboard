@@ -334,10 +334,12 @@ def _render_creative_card(ad: dict) -> None:
     link_clicks = int(ad.get("link_clicks", 0))
 
     objective_friendly = ad.get("objective_friendly", "Desconhecido")
-    
+    traffic_dest = ad.get("traffic_destination", "Não Identificado")
+
     st.markdown(
         f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #8B949E;'>"
-        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span>"
+        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span><br>"
+        f"🔗 Destino: <span style='color: #F1F5F9;'>{traffic_dest}</span>"
         f"</div>",
         unsafe_allow_html=True
     )

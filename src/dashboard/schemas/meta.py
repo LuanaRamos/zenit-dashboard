@@ -230,6 +230,7 @@ class CreativePerformance(BaseModel):
     profile_visits: int = Field(default=0)
     cpa: float = Field(default=0.0)
     cpc: float = Field(default=0.0)
+    traffic_destination: str = Field(default="Não Identificado")
     # Público-alvo e agendamento
     ad_status: str = Field(default="")
     adset_name: str = Field(default="")
