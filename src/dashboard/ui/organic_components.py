@@ -83,7 +83,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
-            "Cliques no Link (Pago)": m.paid_link_clicks,
+            "Cliques de Saída (Pago)": m.paid_link_clicks,
             "Link": m.permalink
         })
         

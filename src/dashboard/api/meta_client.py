@@ -366,9 +366,24 @@ class MetaAdsClient:
             
             # Recuperando as interações grossas (Likes, Saves, Comments, Shares, etc) da veia da Meta
             post_interaction_gross = 0
+            post_reactions = 0
+            post_shares = 0
+            post_saves = 0
+            post_comments = 0
+
             for action in item.get("actions", []):
-                if action.get("action_type") == "post_interaction_gross":
-                    post_interaction_gross = int(action.get("value", 0))
+                act_type = action.get("action_type")
+                val = int(action.get("value", 0))
+                if act_type == "post_interaction_gross":
+                    post_interaction_gross = val
+                elif act_type == "post_reaction":
+                    post_reactions = val
+                elif act_type == "post":
+                    post_shares = val
+                elif act_type == "onsite_conversion.post_save":
+                    post_saves = val
+                elif act_type == "comment":
+                    post_comments = val
 
             other_clicks = post_interaction_gross
             
@@ -396,6 +411,10 @@ class MetaAdsClient:
                 clicks=clicks,
                 link_clicks=link_clicks,
                 other_clicks=other_clicks,
+                post_reactions=post_reactions,
+                post_shares=post_shares,
+                post_saves=post_saves,
+                post_comments=post_comments,
                 leads=leads,
                 whatsapp_starts=whatsapp,
                 instagram_follows=instagram_follows,

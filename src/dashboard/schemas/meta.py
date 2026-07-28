@@ -44,6 +44,11 @@ class CampaignInsight(BaseModel):
     other_clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
+    
+    post_reactions: int = Field(default=0)
+    post_shares: int = Field(default=0)
+    post_saves: int = Field(default=0)
+    post_comments: int = Field(default=0)
 
     # Métricas Específicas Dinâmicas
     leads: int = Field(default=0)
@@ -110,6 +115,11 @@ class CampaignInsight(BaseModel):
         link_clicks = 0
         other_clicks = 0
 
+        post_reactions = 0
+        post_shares = 0
+        post_saves = 0
+        post_comments = 0
+
         for action in actions:
             act_type = action.get("action_type", "")
             val = int(action.get("value", 0))
@@ -131,6 +141,14 @@ class CampaignInsight(BaseModel):
                 profile_visits += val
             elif act_type == "post_interaction_gross":
                 other_clicks += val
+            elif act_type == "post_reaction":
+                post_reactions += val
+            elif act_type == "post":
+                post_shares += val
+            elif act_type == "onsite_conversion.post_save":
+                post_saves += val
+            elif act_type == "comment":
+                post_comments += val
 
         # Fallback para instagram_follows caso a Meta retorne apenas na raiz
         if instagram_follows == 0:
@@ -145,6 +163,10 @@ class CampaignInsight(BaseModel):
         parsed_data["profile_visits"] = profile_visits
         parsed_data["link_clicks"] = link_clicks
         parsed_data["other_clicks"] = other_clicks
+        parsed_data["post_reactions"] = post_reactions
+        parsed_data["post_shares"] = post_shares
+        parsed_data["post_saves"] = post_saves
+        parsed_data["post_comments"] = post_comments
         
         clicks = link_clicks + profile_visits + other_clicks
         parsed_data["clicks"] = clicks
@@ -196,6 +218,12 @@ class CreativePerformance(BaseModel):
     clicks: int = Field(default=0)
     link_clicks: int = Field(default=0)
     other_clicks: int = Field(default=0)
+    
+    post_reactions: int = Field(default=0)
+    post_shares: int = Field(default=0)
+    post_saves: int = Field(default=0)
+    post_comments: int = Field(default=0)
+
     leads: int = Field(default=0)
     whatsapp_starts: int = Field(default=0)
     instagram_follows: int = Field(default=0)

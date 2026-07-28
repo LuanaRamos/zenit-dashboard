@@ -377,9 +377,27 @@ def _render_creative_card(ad: dict) -> None:
             c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
 
     # Linha 3 (Os 3 tipos de cliques separados, sem somar)
-    c1.metric("🔗 Cliques no Link", _fmt_int(link_clicks))
+    c1.metric("🚀 Cliques de Saída", _fmt_int(link_clicks))
     c2.metric("👁 Visitas ao Perfil", _fmt_int(profile_visits))
-    c3.metric("📸 Cliques no Criativo", _fmt_int(outros_cliques), help="Cliques para ampliar a foto, ler 'Ver Mais', curtidas, etc.")
+    
+    with c3:
+        st.metric("📸 Cliques no Criativo", _fmt_int(outros_cliques), help="Cliques para ampliar a foto, ler 'Ver Mais', curtidas, etc.")
+        if outros_cliques > 0:
+            likes = ad.get("post_reactions", 0)
+            shares = ad.get("post_shares", 0)
+            saves = ad.get("post_saves", 0)
+            comments = ad.get("post_comments", 0)
+            
+            # HTML para o texto pequeno alinhado ao Metric
+            st.markdown(
+                f"<div style='font-size:0.75rem; color:#A0AEC0; margin-top:-10px; line-height:1.2;'>"
+                f"{f'❤️ {likes} Likes<br>' if likes else ''}"
+                f"{f'🔁 {shares} Compartilhamentos<br>' if shares else ''}"
+                f"{f'💬 {comments} Comentários<br>' if comments else ''}"
+                f"{f'💾 {saves} Salvamentos<br>' if saves else ''}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
     # ── Público REAL Atraído ─────────────────────────────────────────────────
     _render_real_audience(ad)
