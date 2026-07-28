@@ -45,8 +45,12 @@ class MetaAdsClient:
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
-            error_data = e.response.json() if e.response else {}
-            error_msg = error_data.get("error", {}).get("message", str(e))
+            raw_text = e.response.text if e.response else "No response body"
+            try:
+                error_data = e.response.json() if e.response else {}
+                error_msg = error_data.get("error", {}).get("message", f"{str(e)} | Corpo: {raw_text}")
+            except Exception:
+                error_msg = f"{str(e)} | Corpo: {raw_text}"
 
             logger.error(f"Erro na API da Meta: {error_msg}")
 
