@@ -651,7 +651,7 @@ class MetaAdsClient:
                 # Bug 3 fix: Apenas action_types primários confirmados, sem max()
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
-                    if action_type == "like":
+                    if action_type in ("like", "post_reaction"):
                         ad_metrics_map[ad_id]["likes"] = int(action.get("value", 0))
                     elif action_type == "post":
                         ad_metrics_map[ad_id]["shares"] = int(action.get("value", 0))

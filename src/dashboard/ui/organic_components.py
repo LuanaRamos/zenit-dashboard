@@ -154,8 +154,8 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "CPC (R$)": m.paid_cpc,
             "CPP (R$)": m.paid_cpp,
             "CTR (%)": m.paid_ctr,
-            "Custo por Engajamento (CPA) (R$)": m.paid_cpa,
-            "Custo por Clique de Saída (R$)": m.paid_cost_per_outbound_click,
+            "Custo por Engajamento (CPA) (R$)": m.paid_cpa if m.paid_cpa > 0 else None,
+            "Custo por Clique de Saída (R$)": m.paid_cost_per_outbound_click if m.paid_cost_per_outbound_click > 0 else None,
             
             # Entrega
             "Impressões (Pago)": m.paid_impressions,
@@ -172,9 +172,9 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Vídeo 50% (Pago)": m.paid_video_p50,
             "Vídeo 75% (Pago)": m.paid_video_p75,
             
-            # Conversão
-            "Valor de Ação (R$)": m.paid_action_values,
-            "ROAS": m.paid_roas,
+            # Conversão (N/A se não há pixel de compra)
+            "Valor de Ação (R$)": m.paid_action_values if m.paid_action_values > 0 else None,
+            "ROAS": m.paid_roas if m.paid_roas > 0 else None,
             
             # Contexto
             "Objetivo (Pago)": m.paid_objective,
