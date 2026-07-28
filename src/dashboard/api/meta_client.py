@@ -579,81 +579,81 @@ class MetaAdsClient:
                 continue
                 
             ad_id = item.get("ad_id")
-                if ad_id:
-                    if ad_id not in ad_metrics_map:
-                        ad_metrics_map[ad_id] = {
-                            "reach": 0,
-                            "impressions": 0,
-                            "clicks": 0,
-                            "link_clicks": 0,
-                            "likes": 0,
-                            "shares": 0,
-                            "saved": 0,
-                            "comments": 0,
-                            "views": 0,
-                            "spend": 0.0,
-                            "cpm": 0.0,
-                            "cpc": 0.0,
-                            "cpp": 0.0,
-                            "ctr": 0.0,
-                            "cpa": 0.0,
-                            "cost_per_outbound_click": 0.0,
-                            "frequency": 0.0,
-                            "video_avg_time": 0.0,
-                            "video_p25": 0,
-                            "video_p50": 0,
-                            "video_p75": 0,
-                            "action_values": 0.0,
-                            "roas": 0.0,
-                            "objective": item.get("objective", ""),
-                            "optimization_goal": item.get("optimization_goal", ""),
-                            "date_start": item.get("date_start", ""),
-                            "date_stop": item.get("date_stop", ""),
-                        }
-                    
-                    ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
-                    ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
-                    ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
-                    ad_metrics_map[ad_id]["spend"] += float(item.get("spend", 0.0))
-                    ad_metrics_map[ad_id]["cpm"] = float(item.get("cpm", 0.0))
-                    ad_metrics_map[ad_id]["cpc"] = float(item.get("cpc", 0.0))
-                    ad_metrics_map[ad_id]["cpp"] = float(item.get("cpp", 0.0))
-                    ad_metrics_map[ad_id]["ctr"] = float(item.get("ctr", 0.0))
-                    ad_metrics_map[ad_id]["frequency"] = float(item.get("frequency", 0.0))
+            if ad_id:
+                if ad_id not in ad_metrics_map:
+                    ad_metrics_map[ad_id] = {
+                        "reach": 0,
+                        "impressions": 0,
+                        "clicks": 0,
+                        "link_clicks": 0,
+                        "likes": 0,
+                        "shares": 0,
+                        "saved": 0,
+                        "comments": 0,
+                        "views": 0,
+                        "spend": 0.0,
+                        "cpm": 0.0,
+                        "cpc": 0.0,
+                        "cpp": 0.0,
+                        "ctr": 0.0,
+                        "cpa": 0.0,
+                        "cost_per_outbound_click": 0.0,
+                        "frequency": 0.0,
+                        "video_avg_time": 0.0,
+                        "video_p25": 0,
+                        "video_p50": 0,
+                        "video_p75": 0,
+                        "action_values": 0.0,
+                        "roas": 0.0,
+                        "objective": item.get("objective", ""),
+                        "optimization_goal": item.get("optimization_goal", ""),
+                        "date_start": item.get("date_start", ""),
+                        "date_stop": item.get("date_stop", ""),
+                    }
+                
+                ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
+                ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
+                ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
+                ad_metrics_map[ad_id]["spend"] += float(item.get("spend", 0.0))
+                ad_metrics_map[ad_id]["cpm"] = float(item.get("cpm", 0.0))
+                ad_metrics_map[ad_id]["cpc"] = float(item.get("cpc", 0.0))
+                ad_metrics_map[ad_id]["cpp"] = float(item.get("cpp", 0.0))
+                ad_metrics_map[ad_id]["ctr"] = float(item.get("ctr", 0.0))
+                ad_metrics_map[ad_id]["frequency"] = float(item.get("frequency", 0.0))
 
-                    # Tratar cost per action type (CPA) -> Pega total ou post_engagement
-                    for cpa_item in item.get("cost_per_action_type", []):
-                        if cpa_item.get("action_type") in ["post_engagement", "post_interaction_gross"]:
-                            ad_metrics_map[ad_id]["cpa"] = float(cpa_item.get("value", 0.0))
+                # Tratar cost per action type (CPA) -> Pega total ou post_engagement
+                for cpa_item in item.get("cost_per_action_type", []):
+                    if cpa_item.get("action_type") in ["post_engagement", "post_interaction_gross"]:
+                        ad_metrics_map[ad_id]["cpa"] = float(cpa_item.get("value", 0.0))
 
-                    for cpo_item in item.get("cost_per_outbound_click", []):
-                        if cpo_item.get("action_type") == "outbound_click":
-                            ad_metrics_map[ad_id]["cost_per_outbound_click"] = float(cpo_item.get("value", 0.0))
+                for cpo_item in item.get("cost_per_outbound_click", []):
+                    if cpo_item.get("action_type") == "outbound_click":
+                        ad_metrics_map[ad_id]["cost_per_outbound_click"] = float(cpo_item.get("value", 0.0))
 
-                    for v_avg in item.get("video_avg_time_watched_actions", []):
-                        if v_avg.get("action_type") == "video_view":
-                            ad_metrics_map[ad_id]["video_avg_time"] = float(v_avg.get("value", 0.0))
-                    for v_p25 in item.get("video_p25_watched_actions", []):
-                        if v_p25.get("action_type") == "video_view":
-                            ad_metrics_map[ad_id]["video_p25"] += int(v_p25.get("value", 0))
-                    for v_p50 in item.get("video_p50_watched_actions", []):
-                        if v_p50.get("action_type") == "video_view":
-                            ad_metrics_map[ad_id]["video_p50"] += int(v_p50.get("value", 0))
-                    for v_p75 in item.get("video_p75_watched_actions", []):
-                        if v_p75.get("action_type") == "video_view":
-                            ad_metrics_map[ad_id]["video_p75"] += int(v_p75.get("value", 0))
+                for v_avg in item.get("video_avg_time_watched_actions", []):
+                    if v_avg.get("action_type") == "video_view":
+                        ad_metrics_map[ad_id]["video_avg_time"] = float(v_avg.get("value", 0.0))
+                for v_p25 in item.get("video_p25_watched_actions", []):
+                    if v_p25.get("action_type") == "video_view":
+                        ad_metrics_map[ad_id]["video_p25"] += int(v_p25.get("value", 0))
+                for v_p50 in item.get("video_p50_watched_actions", []):
+                    if v_p50.get("action_type") == "video_view":
+                        ad_metrics_map[ad_id]["video_p50"] += int(v_p50.get("value", 0))
+                for v_p75 in item.get("video_p75_watched_actions", []):
+                    if v_p75.get("action_type") == "video_view":
+                        ad_metrics_map[ad_id]["video_p75"] += int(v_p75.get("value", 0))
 
-                    # Retorno de conversões
-                    for act_val in item.get("action_values", []):
-                        if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
-                            ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
-                    for roas in item.get("website_purchase_roas", []):
-                        if roas.get("action_type") == "offsite_conversion.fb_pixel_purchase":
-                            ad_metrics_map[ad_id]["roas"] = float(roas.get("value", 0.0))
+                # Retorno de conversões
+                for act_val in item.get("action_values", []):
+                    if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
+                        ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
+                for roas in item.get("website_purchase_roas", []):
+                    if roas.get("action_type") == "offsite_conversion.fb_pixel_purchase":
+                        ad_metrics_map[ad_id]["roas"] = float(roas.get("value", 0.0))
 
-                    # Procura interações pagas (curtidas feitas no dark post) e link clicks
-                    for action in item.get("actions", []):
-                        action_type = action.get("action_type")
+                # Procura interações pagas (curtidas feitas no dark post) e link clicks
+                for action in item.get("actions", []):
+                    action_type = action.get("action_type")
                     if action_type == "link_click":
                         # Mantém clicks no criativo se precisar, mas a saída vai vir de outbound
                         ad_metrics_map[ad_id]["link_clicks"] += int(action.get("value", 0))
@@ -679,7 +679,7 @@ class MetaAdsClient:
                         ad_metrics_map[ad_id]["saved"] = max(
                             ad_metrics_map[ad_id]["saved"], int(action.get("value", 0))
                         )
-                    elif action_type in ["video_view", "video_play_actions"]:
+                    elif action_type == "video_view":
                         ad_metrics_map[ad_id]["views"] = max(
                             ad_metrics_map[ad_id]["views"], int(action.get("value", 0))
                         )
