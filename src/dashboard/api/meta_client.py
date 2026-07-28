@@ -17,7 +17,7 @@ class MetaAdsClient:
     Responsável por fazer o fetch de insights das campanhas e páginas.
     """
 
-    BASE_URL = "https://graph.facebook.com/v22.0"
+    BASE_URL = "https://graph.facebook.com/v25.0"
 
     def __init__(self, client_config) -> None:
         self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()

@@ -18,7 +18,7 @@ class InstagramClient:
     """
 
     # URL base para requests normais (versionada)
-    BASE_URL = "https://graph.facebook.com/v22.0"
+    BASE_URL = "https://graph.facebook.com/v25.0"
     # URL para Batch Requests (SEM versão — exigência da Graph API)
     BATCH_URL = "https://graph.facebook.com"
 
