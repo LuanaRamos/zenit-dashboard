@@ -664,6 +664,8 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
 
+        return ig_mapping
+
     def get_instagram_paid_totals(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> dict[str, int]:
