@@ -22,43 +22,38 @@ def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
     """Renderiza os KPIs de nível de conta com a 'Subtração Mágica' separando Orgânico e Pago."""
     st.markdown("### 👁️ Visão Geral da Conta (Últimos 30 dias)")
     
-    # Cálculos de Subtração Mágica (Total - Pago = Orgânico)
-    r_tot = insights.get('reach', 0)
+    # Removida a "Subtração Mágica". Exibimos os números absolutos de cada fonte.
+    r_ig = insights.get('reach', 0)
     r_paid = paid_totals.get('reach', 0)
-    r_org = max(0, r_tot - r_paid)
     
-    likes_tot = insights.get('likes', 0)
+    likes_ig = insights.get('likes', 0)
     likes_paid = paid_totals.get('likes', 0)
-    likes_org = max(0, likes_tot - likes_paid)
     
-    shares_tot = insights.get('shares', 0)
+    shares_ig = insights.get('shares', 0)
     shares_paid = paid_totals.get('shares', 0)
-    shares_org = max(0, shares_tot - shares_paid)
     
-    saves_tot = insights.get('saves', 0)
+    saves_ig = insights.get('saves', 0)
     saves_paid = paid_totals.get('saved', 0)
-    saves_org = max(0, saves_tot - saves_paid)
     
-    int_tot = insights.get('total_interactions', 0)
-    int_paid = likes_paid + shares_paid + saves_paid # Aproximação baseada nas actions conhecidas
-    int_org = max(0, int_tot - int_paid)
+    int_ig = insights.get('total_interactions', 0)
+    int_paid = likes_paid + shares_paid + saves_paid # Aproximação
     
     def fmt(val): return f"{int(val):,}".replace(",", ".")
-    def bkd(org, pd): return f"Org: {fmt(org)} | Pago: {fmt(pd)}"
+    def bkd(ig, pd): return f"IG: {fmt(ig)} | Pago: {fmt(pd)}"
     
-    st.markdown("#### 🎯 Métricas Mistas (Orgânico + Ads)")
+    st.markdown("#### 🎯 Métricas Totais (Cuidado com sobreposição)")
     cols_mix = st.columns(4)
     with cols_mix[0]:
-        render_metric_card("Alcance da Conta", fmt(r_tot), bkd(r_org, r_paid), "Pessoas alcançadas")
+        render_metric_card("Alcance", fmt(r_ig), bkd(r_ig, r_paid), "Pessoas (Instagram vs Ads)")
     with cols_mix[1]:
-        render_metric_card("Total de Interações", fmt(int_tot), bkd(int_org, int_paid), "Soma de engajamento")
+        render_metric_card("Total de Interações", fmt(int_ig), bkd(int_ig, int_paid), "Engajamento (Instagram vs Ads)")
     with cols_mix[2]:
-        render_metric_card("Curtidas", fmt(likes_tot), bkd(likes_org, likes_paid), "Curtidas em posts")
+        render_metric_card("Curtidas", fmt(likes_ig), bkd(likes_ig, likes_paid), "Curtidas (Instagram vs Ads)")
     with cols_mix[3]:
-        render_metric_card("Compartilhamentos", fmt(shares_tot), bkd(shares_org, shares_paid), "Envios para amigos")
+        render_metric_card("Compartilhamentos", fmt(shares_ig), bkd(shares_ig, shares_paid), "Envios (Instagram vs Ads)")
 
     st.write("")
-    st.markdown("#### 👤 Exceções e Ações (100% Orgânico)")
+    st.markdown("#### 👤 Ações Registradas no Perfil")
     cols_org = st.columns(4)
     with cols_org[0]:
         render_metric_card("Visitas ao Perfil", fmt(insights.get('profile_views', 0)), "Total", "Acessos à bio")
@@ -74,7 +69,7 @@ def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
     with cols_org2[0]:
         render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total", "Respostas no perfil")
     with cols_org2[1]:
-        render_metric_card("Salvamentos", fmt(saves_tot), bkd(saves_org, saves_paid), "Posts guardados")
+        render_metric_card("Salvamentos", fmt(saves_ig), bkd(saves_ig, saves_paid), "Posts guardados")
     with cols_org2[2]:
         render_metric_card("Novos Seguidores", fmt(insights.get('follows_and_unfollows', 0)), "Total", "Saldo no período")
     with cols_org2[3]:
@@ -84,13 +79,13 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Renderiza KPIs orgânicos vs pagos."""
     st.markdown("### 📊 Alcance: Orgânico vs Ads")
     
-    total_organic_reach = sum(m.organic_reach for m in media_list)
+    total_ig_reach = sum(m.instagram_reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
     total_engagement = sum(m.like_count + m.comments_count + m.paid_likes for m in media_list)
     
     cols = st.columns(3)
     with cols[0]:
-        render_metric_card("Alcance Orgânico", f"{int(total_organic_reach):,}".replace(",", "."), "Pessoas", "Tráfego gratuito")
+        render_metric_card("Alcance Instagram", f"{int(total_ig_reach):,}".replace(",", "."), "Pessoas", "Alcance do post")
     with cols[1]:
         render_metric_card("Alcance Pago", f"{int(total_paid_reach):,}".replace(",", "."), "Pessoas", "Impulsionamentos")
     with cols[2]:
@@ -132,15 +127,14 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "ID": m.id,
             "Tipo": tipo,
             "Visualizações (Orgânico)": visualizacoes,
-            "Alcance (Orgânico)": m.organic_reach,
-            "Visitas ao Perfil (Org)": visitas,
+            "Alcance (Instagram)": m.instagram_reach,
+            "Visitas ao Perfil": visitas,
             "Tempo Assistido": tempo_total,
             "Tempo Médio": tempo_medio,
-            "Curtidas (Orgânico)": m.like_count,
-            "Comentários (Orgânico)": m.comments_count,
-            "Salvamentos (Orgânico)": m.saved_count,
-            "Compartilhamentos (Orgânico)": m.shares_count,
-            "Reposts (Orgânico)": m.reposts_count,
+            "Curtidas (Instagram)": m.like_count,
+            "Comentários (Instagram)": m.comments_count,
+            "Salvamentos (Instagram)": m.saved,
+            "Compartilhamentos (Instagram)": m.shares,
             "Alcance (Pago)": m.paid_reach,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
@@ -197,9 +191,9 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     )
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 2. Tabela Orgânica
-    st.markdown("#### Desempenho Orgânico Puro")
-    cols_org = ["ID", "Tipo", "Visualizações (Orgânico)", "Alcance (Orgânico)", "Visitas ao Perfil (Org)", "Tempo Assistido", "Tempo Médio", "Curtidas (Orgânico)", "Comentários (Orgânico)", "Salvamentos (Orgânico)", "Compartilhamentos (Orgânico)", "Reposts (Orgânico)", "Link"]
+    # 2. Tabela Instagram
+    st.markdown("#### Desempenho no Instagram")
+    cols_org = ["ID", "Tipo", "Visualizações (Orgânico)", "Alcance (Instagram)", "Visitas ao Perfil", "Tempo Assistido", "Tempo Médio", "Curtidas (Instagram)", "Comentários (Instagram)", "Salvamentos (Instagram)", "Compartilhamentos (Instagram)", "Link"]
     df_org = df[cols_org]
     render_glass_table(df_org, key="tbl_posts_org", hide_download=True, link_col="Link", link_label="Ver no Instagram")
     
@@ -233,8 +227,8 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     if not media_list:
         return
         
-    # Ordena por alcance total (orgânico + pago)
-    sorted_media = sorted(media_list, key=lambda x: (x.organic_reach + x.paid_reach), reverse=True)
+    # Ordena por alcance IG
+    sorted_media = sorted(media_list, key=lambda x: x.instagram_reach, reverse=True)
     top_3 = sorted_media[:3]
     
     cols = st.columns(3)
@@ -261,12 +255,11 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             img_url = thumb if thumb else (m.media_url or "https://via.placeholder.com/400x400?text=Sem+Imagem")
             permalink = getattr(m, "permalink", "") or ""
 
-            alcance_total = f"{int(m.organic_reach + m.paid_reach):,}".replace(",", ".")
-            alcance_org = f"{int(m.organic_reach):,}".replace(",", ".")
+            alcance_org = f"{int(m.instagram_reach):,}".replace(",", ".")
             alcance_pago = f"{int(m.paid_reach):,}".replace(",", ".")
-            curtidas = f"{int(m.total_likes):,}".replace(",", ".")
+            curtidas = f"{int(m.like_count):,}".replace(",", ".")
             comentarios = f"{int(m.comments_count):,}".replace(",", ".")
-            compartilhamentos = f"{int(m.total_shares):,}".replace(",", ".")
+            compartilhamentos = f"{int(m.shares):,}".replace(",", ".")
             
             play_badge = (
                 '<div style="position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.6);'
@@ -302,8 +295,8 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
         </div>
     </div>
     <div style="margin-bottom: 15px;">
-        <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance: {alcance_total}</div>
-        <div style="font-size: 0.8rem; color: #8B949E;">Orgânico: {alcance_org} | Pago: {alcance_pago}</div>
+        <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance (Instagram): {alcance_org}</div>
+        <div style="font-size: 0.8rem; color: #8B949E;">Alcance Pago (Ads): {alcance_pago}</div>
     </div>"""
             
             c = best_comments[i] if i < len(best_comments) else None

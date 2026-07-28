@@ -98,7 +98,7 @@ class InstagramClient:
         """
         endpoint = f"{self.instagram_account_id}/media"
         params = {
-            "fields": "id,caption,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,saved_count,shares_count,reposts_count,media_type,media_product_type",
+            "fields": "id,caption,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_type,media_product_type",
             "limit": str(limit),
         }
 
@@ -140,7 +140,7 @@ class InstagramClient:
                 # 'plays' foi substituído por 'views'
                 metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
             else:
-                metrics = "reach,saved,shares,profile_activity,profile_visits,follows"
+                metrics = "reach,views,saved,shares,total_interactions"
 
             batch_requests.append(
                 {
@@ -171,7 +171,7 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        metrics = "engagement,impressions,reach,saved"
+                        metrics = "total_interactions,views,reach,saved,shares"
                         fallback_requests.append({
                             "method": "GET",
                             "relative_url": f"/{ig_id}/insights?metric={metrics}",
@@ -251,9 +251,6 @@ class InstagramClient:
                     timestamp=item.get("timestamp", ""),
                     like_count=int(item.get("like_count", 0)),
                     comments_count=int(item.get("comments_count", 0)),
-                    saved_count=int(item.get("saved_count", 0)),
-                    shares_count=int(item.get("shares_count", 0)),
-                    reposts_count=int(item.get("reposts_count", 0)),
                     reach=int(metrics_dict.get("reach", 0)),
                     shares=int(metrics_dict.get("shares", 0)),
                     saved=int(metrics_dict.get("saved", 0)),

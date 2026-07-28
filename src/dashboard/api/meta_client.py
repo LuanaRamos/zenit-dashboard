@@ -252,7 +252,8 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "ad",
-            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,actions",
+            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions",
+            "breakdowns": "publisher_platform",
             "limit": "1000",
         }
         if time_range:
@@ -337,6 +338,9 @@ class MetaAdsClient:
         results = []
         from schemas.meta import CreativePerformance
         for item in insights_data:
+            if item.get("publisher_platform") != "instagram":
+                continue
+            
             ad_id = item.get("ad_id")
             if not ad_id:
                 continue
@@ -386,10 +390,12 @@ class MetaAdsClient:
                 elif act_type == "comment":
                     post_comments = val
 
-            other_clicks = post_interaction_gross
+            # Clicks nativos da API, em vez de somar manualmente
+            clicks = int(item.get("clicks", 0))
+            inline_link_clicks = int(item.get("inline_link_clicks", 0))
             
-            # Recriando o "Total de Cliques" matematicamente correto, ignorando o totalizador quebrado da Meta
-            clicks = link_clicks + profile_visits + other_clicks
+            # Recriando "other_clicks" como a diferenca, se precisar
+            other_clicks = max(0, clicks - inline_link_clicks)
             
             objective = item.get("objective", "UNKNOWN")
             if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:

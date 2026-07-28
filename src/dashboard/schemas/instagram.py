@@ -63,9 +63,6 @@ class InstagramMedia(BaseModel):
     media_product_type: str = ""
     like_count: int = 0
     comments_count: int = 0
-    saved_count: int = 0
-    shares_count: int = 0
-    reposts_count: int = 0
     permalink: str = ""
     timestamp: str = ""
     reach: int = Field(
@@ -99,21 +96,11 @@ class InstagramMedia(BaseModel):
     paid_shares: int = Field(default=0, description="Shares via Ads")
     paid_saved: int = Field(default=0, description="Saves via Ads")
     paid_views: int = Field(default=0, description="Views via Ads (video_view)")
-    organic_reach: int = Field(
-        default=0, description="Alcance puramente orgânico (Total - Pago)"
+    instagram_reach: int = Field(
+        default=0, description="Alcance reportado pelo Instagram Insights (pode conter sobreposicao com ads)"
     )
 
-    @property
-    def total_likes(self) -> int:
-        return self.like_count + self.paid_likes
 
-    @property
-    def total_shares(self) -> int:
-        return self.shares_count + self.paid_shares
-
-    @property
-    def total_saved(self) -> int:
-        return self.saved_count + self.paid_saved
 
 
 class InstagramDemographics(BaseModel):
