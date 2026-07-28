@@ -126,14 +126,21 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         tempo_total = format_hhmmss(m.ig_reels_video_view_total_time) if tipo == "Reels" else "N/A"
         tempo_medio = format_hhmmss(m.ig_reels_avg_watch_time) if tipo == "Reels" else "N/A"
         
+        visualizacoes = "N/A" if tipo not in ["Reels", "Vídeo"] else m.organic_views
+
         data.append({
             "Tipo": tipo,
+            "Visualizações (Orgânico)": visualizacoes,
             "Alcance (Orgânico)": m.organic_reach,
             "Alcance (Pago)": m.paid_reach,
             "Visitas ao Perfil (Org)": visitas,
             "Tempo Assistido": tempo_total,
             "Tempo Médio": tempo_medio,
             "Curtidas (Orgânico)": m.like_count,
+            "Comentários (Orgânico)": m.comments_count,
+            "Salvamentos (Orgânico)": m.saved_count,
+            "Compartilhamentos (Orgânico)": m.shares_count,
+            "Reposts (Orgânico)": m.reposts_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
             "Cliques de Saída (Pago)": m.paid_link_clicks,
