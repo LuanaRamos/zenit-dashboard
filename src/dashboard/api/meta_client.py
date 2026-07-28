@@ -778,6 +778,16 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["spend"] += metrics.get("spend", 0.0)
                 ig_mapping[ig_id]["action_values"] += metrics.get("action_values", 0.0)
 
+                # Passthrough das taxas da API (para posts com 1 anúncio, serão usadas direto)
+                # Para multi-ad, serão sobrescritas no recálculo posterior
+                ig_mapping[ig_id]["cpm"] = metrics.get("cpm", 0.0)
+                ig_mapping[ig_id]["cpc"] = metrics.get("cpc", 0.0)
+                ig_mapping[ig_id]["ctr"] = metrics.get("ctr", 0.0)
+                ig_mapping[ig_id]["cpp"] = metrics.get("cpp", 0.0)
+                ig_mapping[ig_id]["frequency"] = metrics.get("frequency", 0.0)
+                ig_mapping[ig_id]["cpa"] = metrics.get("cpa", 0.0)
+                ig_mapping[ig_id]["cost_per_outbound_click"] = metrics.get("cost_per_outbound_click", 0.0)
+
                 # Vídeo: somar contadores, média ponderada do tempo
                 ig_mapping[ig_id]["video_p25"] += metrics.get("video_p25", 0)
                 ig_mapping[ig_id]["video_p50"] += metrics.get("video_p50", 0)
@@ -823,24 +833,35 @@ class MetaAdsClient:
                     logger.warning(f"Falha ao buscar reach desduplicado para {ig_id}: {e}")
                     # Mantém a soma como fallback
 
-            # Bug 6 fix: Recalcular taxas derivadas a partir dos blocos fundamentais
-            spend = ig_data["spend"]
-            impressions = ig_data["impressions"]
-            clicks = ig_data["clicks"]
-            link_clicks = ig_data["link_clicks"]
-            reach = ig_data["reach"]
-            action_values = ig_data["action_values"]
+            # Garantia de paridade com Ads Manager:
+            # - 1 anúncio: usa valores EXATOS da API (bit-a-bit idêntico ao Ads Manager)
+            # - N anúncios: recalcula dos fundamentais (mesma lógica do Ads Manager ao agregar)
+            if ig_data["ad_count"] == 1:
+                # Valores da API já estão no ig_data via passthrough da agregação
+                # (cpm, cpc, cpp, ctr, frequency, cpa, cost_per_outbound_click foram
+                #  copiados do ad_metrics_map no loop acima — só precisamos do ROAS)
+                spend = ig_data["spend"]
+                action_values = ig_data["action_values"]
+                ig_data["roas"] = action_values / spend if spend > 0 else 0.0
+            else:
+                # Multi-ad: recalcular taxas derivadas a partir dos blocos fundamentais
+                spend = ig_data["spend"]
+                impressions = ig_data["impressions"]
+                clicks = ig_data["clicks"]
+                link_clicks = ig_data["link_clicks"]
+                reach = ig_data["reach"]
+                action_values = ig_data["action_values"]
 
-            ig_data["cpm"] = (spend / impressions) * 1000 if impressions > 0 else 0.0
-            ig_data["cpc"] = spend / clicks if clicks > 0 else 0.0
-            ig_data["ctr"] = (clicks / impressions) * 100 if impressions > 0 else 0.0
-            ig_data["cpp"] = (spend / reach) * 1000 if reach > 0 else 0.0
-            ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
-            ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
-            ig_data["roas"] = action_values / spend if spend > 0 else 0.0
-            # CPA: recalcular com engajamentos totais (likes+comments+shares+saved)
-            total_engagements = ig_data["likes"] + ig_data["comments"] + ig_data["shares"] + ig_data["saved"]
-            ig_data["cpa"] = spend / total_engagements if total_engagements > 0 else 0.0
+                ig_data["cpm"] = (spend / impressions) * 1000 if impressions > 0 else 0.0
+                ig_data["cpc"] = spend / clicks if clicks > 0 else 0.0
+                ig_data["ctr"] = (clicks / impressions) * 100 if impressions > 0 else 0.0
+                ig_data["cpp"] = (spend / reach) * 1000 if reach > 0 else 0.0
+                ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
+                ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
+                ig_data["roas"] = action_values / spend if spend > 0 else 0.0
+                # CPA: recalcular com engajamentos totais
+                total_engagements = ig_data["likes"] + ig_data["comments"] + ig_data["shares"] + ig_data["saved"]
+                ig_data["cpa"] = spend / total_engagements if total_engagements > 0 else 0.0
 
         return ig_mapping
 
