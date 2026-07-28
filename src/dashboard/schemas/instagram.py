@@ -79,28 +79,6 @@ class InstagramMedia(BaseModel):
     profile_visits: int = Field(default=0)
     follows: int = Field(default=0)
 
-    # Dados de Mapeamento de Ads (Calculados posteriormente)
-    paid_reach: int = Field(default=0, description="Soma do alcance pago (Ads)")
-    paid_impressions: int = Field(
-        default=0, description="Soma das impressões pagas (Ads)"
-    )
-    paid_clicks: int = Field(default=0, description="Soma de cliques no total (Ads)")
-    paid_link_clicks: int = Field(default=0, description="Soma de cliques no link (Ads)")
-    paid_other_clicks: int = Field(default=0, description="Soma de outros cliques (Ads)")
-    paid_ctr: float = Field(default=0.0, description="CTR Ponderado Pago (%)")
-    paid_frequency: float = Field(default=0.0, description="Frequência Ponderada Paga")
-    paid_destination: str = Field(default="N/A", description="Destino do Tráfego (Ads)")
-    paid_likes: int = Field(
-        default=0, description="Soma de curtidas pagas nos anúncios (Dark Posts)"
-    )
-    paid_shares: int = Field(default=0, description="Shares via Ads")
-    paid_saved: int = Field(default=0, description="Saves via Ads")
-    paid_views: int = Field(default=0, description="Views via Ads (video_view)")
-    instagram_reach: int = Field(
-        default=0, description="Alcance reportado pelo Instagram Insights (pode conter sobreposicao com ads)"
-    )
-
-
 
 
 class InstagramDemographics(BaseModel):

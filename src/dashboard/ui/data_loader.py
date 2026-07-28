@@ -110,9 +110,6 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
                 
             # A API Graph do Instagram (media/{id}/insights) já retorna APENAS o alcance orgânico
             # Métricas de anúncios NÃO estão inclusas nesse número, logo não devemos subtrair.
-            update_data['organic_reach'] = media.reach
-        else:
-            update_data['organic_reach'] = media.reach
             
         updated_media_list.append(media.model_copy(update=update_data))
         

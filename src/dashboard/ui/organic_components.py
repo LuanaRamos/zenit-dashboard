@@ -79,7 +79,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Renderiza KPIs orgânicos vs pagos."""
     st.markdown("### 📊 Alcance: Orgânico vs Ads")
     
-    total_ig_reach = sum(m.instagram_reach for m in media_list)
+    total_ig_reach = sum(m.reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
     total_engagement = sum(m.like_count + m.comments_count + m.paid_likes for m in media_list)
     
@@ -127,7 +127,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "ID": m.id,
             "Tipo": tipo,
             "Visualizações (Orgânico)": visualizacoes,
-            "Alcance (Instagram)": m.instagram_reach,
+            "Alcance (Instagram)": m.reach,
             "Visitas ao Perfil": visitas,
             "Tempo Assistido": tempo_total,
             "Tempo Médio": tempo_medio,
@@ -228,7 +228,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
         return
         
     # Ordena por alcance IG
-    sorted_media = sorted(media_list, key=lambda x: x.instagram_reach, reverse=True)
+    sorted_media = sorted(media_list, key=lambda x: x.reach, reverse=True)
     top_3 = sorted_media[:3]
     
     cols = st.columns(3)
@@ -255,7 +255,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             img_url = thumb if thumb else (m.media_url or "https://via.placeholder.com/400x400?text=Sem+Imagem")
             permalink = getattr(m, "permalink", "") or ""
 
-            alcance_org = f"{int(m.instagram_reach):,}".replace(",", ".")
+            alcance_org = f"{int(m.reach):,}".replace(",", ".")
             alcance_pago = f"{int(m.paid_reach):,}".replace(",", ".")
             curtidas = f"{int(m.like_count):,}".replace(",", ".")
             comentarios = f"{int(m.comments_count):,}".replace(",", ".")
