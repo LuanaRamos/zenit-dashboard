@@ -573,6 +573,7 @@ class MetaAdsClient:
                         "likes": 0,
                         "shares": 0,
                         "saved": 0,
+                        "views": 0,
                     }
                 
                 ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
@@ -601,6 +602,10 @@ class MetaAdsClient:
                     ]:
                         ad_metrics_map[ad_id]["saved"] = max(
                             ad_metrics_map[ad_id]["saved"], int(action.get("value", 0))
+                        )
+                    elif action_type in ["video_view", "video_play_actions"]:
+                        ad_metrics_map[ad_id]["views"] = max(
+                            ad_metrics_map[ad_id]["views"], int(action.get("value", 0))
                         )
 
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
@@ -654,6 +659,7 @@ class MetaAdsClient:
                         "likes": 0,
                         "shares": 0,
                         "saved": 0,
+                        "views": 0,
                     }
 
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
@@ -663,6 +669,7 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["likes"] += metrics["likes"]
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
+                ig_mapping[ig_id]["views"] += metrics["views"]
 
         return ig_mapping
 

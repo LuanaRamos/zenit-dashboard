@@ -85,6 +85,7 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
             update_data['paid_likes'] = metrics['likes']
             update_data['paid_shares'] = metrics.get('shares', 0)
             update_data['paid_saved'] = metrics.get('saved', 0)
+            update_data['paid_views'] = metrics.get('views', 0)
             
             if update_data['paid_impressions'] > 0:
                 update_data['paid_ctr'] = (update_data['paid_clicks'] / update_data['paid_impressions']) * 100

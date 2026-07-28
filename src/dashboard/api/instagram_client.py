@@ -137,8 +137,8 @@ class InstagramClient:
             media_product_type = item.get("media_product_type", "")
             if media_product_type == "REELS":
                 # Metricas validas para Reels na v22.0
-                # 'plays' foi depreciado — use ig_reels_video_view_total_time
-                metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time"
+                # 'plays' foi substituído por 'views'
+                metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
             else:
                 metrics = "reach,saved,shares,profile_activity,profile_visits,follows"
 
@@ -257,6 +257,7 @@ class InstagramClient:
                     ig_reels_video_view_total_time=float(
                         metrics_dict.get("ig_reels_video_view_total_time", 0)
                     ),
+                    organic_views=int(metrics_dict.get("views", 0)),
                     ig_reels_avg_watch_time=float(
                         metrics_dict.get("ig_reels_avg_watch_time", 0)
                     ),

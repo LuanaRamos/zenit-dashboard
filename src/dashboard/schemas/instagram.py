@@ -41,6 +41,7 @@ class InstagramMedia(BaseModel):
     # Métricas Orgânicas (variam por tipo)
     shares: int = Field(default=0)
     saved: int = Field(default=0)
+    organic_views: int = Field(default=0)
     ig_reels_video_view_total_time: float = Field(default=0.0)  # Ms to Seconds later
     ig_reels_avg_watch_time: float = Field(default=0.0)
     profile_activity: int = Field(default=0)
@@ -62,6 +63,7 @@ class InstagramMedia(BaseModel):
     )
     paid_shares: int = Field(default=0, description="Shares via Ads")
     paid_saved: int = Field(default=0, description="Saves via Ads")
+    paid_views: int = Field(default=0, description="Views via Ads (video_view)")
     organic_reach: int = Field(
         default=0, description="Alcance puramente orgânico (Total - Pago)"
     )
