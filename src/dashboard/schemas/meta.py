@@ -41,6 +41,7 @@ class CampaignInsight(BaseModel):
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
     link_clicks: int = Field(default=0)
+    other_clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
 
@@ -140,6 +141,9 @@ class CampaignInsight(BaseModel):
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
         parsed_data["link_clicks"] = link_clicks
+        clicks = max(parsed_data["clicks"], link_clicks)
+        parsed_data["clicks"] = clicks
+        parsed_data["other_clicks"] = max(0, clicks - link_clicks - profile_visits)
 
         # Calcular Custos
         spend = parsed_data["spend"]
@@ -187,6 +191,7 @@ class CreativePerformance(BaseModel):
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
     link_clicks: int = Field(default=0)
+    other_clicks: int = Field(default=0)
     leads: int = Field(default=0)
     whatsapp_starts: int = Field(default=0)
     instagram_follows: int = Field(default=0)
