@@ -664,5 +664,46 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
 
-        return ig_mapping
+    def get_instagram_paid_totals(
+        self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
+    ) -> dict[str, int]:
+        """
+        Busca os totais pagos consolidados da conta no Instagram (nível account),
+        garantindo alcance desduplicado e a inclusão de todos os dark posts.
+        """
+        insights_endpoint = f"{self.ad_account_id}/insights"
+        insights_params = {
+            "level": "account",
+            "fields": "reach,impressions,actions",
+            "breakdowns": "publisher_platform",
+        }
+        if time_range:
+            insights_params["time_range"] = json.dumps(time_range)
+        else:
+            insights_params["date_preset"] = date_preset
+
+        totals = {"reach": 0, "impressions": 0, "likes": 0, "shares": 0, "saved": 0}
+        
+        try:
+            data = self._make_request(insights_endpoint, insights_params)
+            for item in data.get("data", []):
+                if item.get("publisher_platform") == "instagram":
+                    totals["reach"] = int(item.get("reach", 0))
+                    totals["impressions"] = int(item.get("impressions", 0))
+                    
+                    for action in item.get("actions", []):
+                        action_type = action.get("action_type")
+                        val = int(action.get("value", 0))
+                        
+                        if action_type in ["post_reaction", "onsite_conversion.post_net_like"]:
+                            totals["likes"] = max(totals["likes"], val)
+                        elif action_type == "post":
+                            totals["shares"] = max(totals["shares"], val)
+                        elif action_type in ["onsite_conversion.post_save", "onsite_conversion.post_net_save"]:
+                            totals["saved"] = max(totals["saved"], val)
+                            
+            return totals
+        except MetaAPIError as e:
+            logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
+            return totals
 

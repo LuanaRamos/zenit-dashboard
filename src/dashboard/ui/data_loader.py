@@ -47,15 +47,8 @@ def fetch_instagram_ads_mapping_cached(date_preset: str, time_range: dict | None
 
 @st.cache_data(ttl=900)
 def fetch_instagram_paid_totals_cached(date_preset: str, time_range: dict | None, client_name: str) -> dict:
-    mapping = fetch_instagram_ads_mapping_cached(date_preset, time_range, client_name)
-    totals = {"reach": 0, "impressions": 0, "likes": 0, "shares": 0, "saved": 0}
-    for m in mapping.values():
-        totals["reach"] += m.get("reach", 0)
-        totals["impressions"] += m.get("impressions", 0)
-        totals["likes"] += m.get("likes", 0)
-        totals["shares"] += m.get("shares", 0)
-        totals["saved"] += m.get("saved", 0)
-    return totals
+    meta_client = get_api_client(client_name)
+    return meta_client.get_instagram_paid_totals(date_preset, time_range)
 
 @st.cache_data(ttl=900)
 def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: str) -> List[InstagramMedia]:
