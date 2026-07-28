@@ -28,6 +28,7 @@ def render_glass_table(
     link_label: str = "Ver",
     key: str = "glass_table",
     csv_filename: str = "tabela.csv",
+    hide_download: bool = False,
 ) -> None:
     """Renderiza a tabela custom (.glass-table) do design system: sem depender de nenhum
     widget nativo do Streamlit (nem st.dataframe, nem st.download_button). Ordenação por
@@ -103,8 +104,7 @@ def render_glass_table(
                 <tbody>{''.join(rows_html)}</tbody>
             </table>
         </div>
-        <a class="glass-download" download="{html_lib.escape(csv_filename)}"
-           href="data:text/csv;charset=utf-8;base64,{csv_b64}">⬇ Baixar CSV completo</a>
+        {"" if hide_download else f'<a class="glass-download" download="{html_lib.escape(csv_filename)}" href="data:text/csv;charset=utf-8;base64,{csv_b64}">⬇ Baixar CSV completo</a>'}
         <script>
             (function() {{
                 const table = document.getElementById("{key}");

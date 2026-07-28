@@ -129,10 +129,10 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         visualizacoes = "N/A" if tipo not in ["Reels", "Vídeo"] else m.organic_views
 
         data.append({
+            "ID": m.id,
             "Tipo": tipo,
             "Visualizações (Orgânico)": visualizacoes,
             "Alcance (Orgânico)": m.organic_reach,
-            "Alcance (Pago)": m.paid_reach,
             "Visitas ao Perfil (Org)": visitas,
             "Tempo Assistido": tempo_total,
             "Tempo Médio": tempo_medio,
@@ -141,6 +141,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Salvamentos (Orgânico)": m.saved_count,
             "Compartilhamentos (Orgânico)": m.shares_count,
             "Reposts (Orgânico)": m.reposts_count,
+            "Alcance (Pago)": m.paid_reach,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
             "Cliques de Saída (Pago)": m.paid_link_clicks,
@@ -148,7 +149,34 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         })
         
     df = pd.DataFrame(data)
-    render_glass_table(df, key="tbl_posts", csv_filename="posts.csv", link_col="Link", link_label="Ver no Instagram")
+    
+    # 1. Download Unificado
+    csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        label="⬇ Baixar CSV Unificado (Orgânico + Pago)",
+        data=csv_bytes,
+        file_name="posts_unificado.csv",
+        mime="text/csv",
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 2. Tabela Orgânica
+    st.markdown("#### Desempenho Orgânico Puro")
+    cols_org = ["ID", "Tipo", "Visualizações (Orgânico)", "Alcance (Orgânico)", "Visitas ao Perfil (Org)", "Tempo Assistido", "Tempo Médio", "Curtidas (Orgânico)", "Comentários (Orgânico)", "Salvamentos (Orgânico)", "Compartilhamentos (Orgânico)", "Reposts (Orgânico)", "Link"]
+    df_org = df[cols_org]
+    render_glass_table(df_org, key="tbl_posts_org", hide_download=True, link_col="Link", link_label="Ver no Instagram")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 3. Tabela Paga (apenas posts que receberam tráfego pago)
+    st.markdown("#### Desempenho Pago (Dark Posts / Impulsionados)")
+    cols_paid = ["ID", "Tipo", "Alcance (Pago)", "Curtidas (Pago)", "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", "Link"]
+    df_paid = df[df["Alcance (Pago)"] > 0][cols_paid]
+    
+    if not df_paid.empty:
+        render_glass_table(df_paid, key="tbl_posts_paid", hide_download=True, link_col="Link", link_label="Ver no Instagram")
+    else:
+        st.info("Nenhum post desta lista recebeu tráfego pago no período.")
 
 def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     """Renderiza destaques e os melhores comentários de cada post."""
