@@ -21,9 +21,17 @@ def _format_brl(value: float) -> str:
 def _format_int(value: float) -> str:
     return f"{int(round(value)):,}".replace(",", ".")
 
+def _format_float(value: float) -> str:
+    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def _format_percent(value: float) -> str:
+    return f"{value:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def render_glass_table(
     df: pd.DataFrame,
     currency_cols: list[str] = None,
+    float_cols: list[str] = None,
+    percent_cols: list[str] = None,
     link_col: str = None,
     link_label: str = "Ver",
     key: str = "glass_table",
@@ -35,6 +43,8 @@ def render_glass_table(
     clique no cabeçalho e download do CSV completo são feitos em HTML/JS puro, dentro do
     mesmo iframe isolado — 100% estilizável."""
     currency_cols = currency_cols or []
+    float_cols = float_cols or []
+    percent_cols = percent_cols or []
 
     if df.empty:
         return
@@ -57,12 +67,20 @@ def render_glass_table(
         for col in display_cols:
             val = row[col]
             if col in currency_cols:
-                raw = float(val)
+                raw = float(val) if pd.notna(val) else 0.0
                 display_val = _format_brl(raw)
                 sort_val = raw
+            elif col in percent_cols:
+                raw = float(val) if pd.notna(val) else 0.0
+                display_val = _format_percent(raw)
+                sort_val = raw
+            elif col in float_cols:
+                raw = float(val) if pd.notna(val) else 0.0
+                display_val = _format_float(raw)
+                sort_val = raw
             elif pd.api.types.is_number(val):
-                raw = float(val)
-                display_val = _format_int(val)
+                raw = float(val) if pd.notna(val) else 0.0
+                display_val = _format_int(raw)
                 sort_val = raw
             else:
                 display_val = html_lib.escape(str(val))

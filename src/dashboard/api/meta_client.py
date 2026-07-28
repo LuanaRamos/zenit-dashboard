@@ -545,7 +545,7 @@ class MetaAdsClient:
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "ad",
-            "fields": "ad_id,reach,impressions,clicks,actions,outbound_clicks",
+            "fields": "ad_id,spend,cpm,cpc,cpp,ctr,cost_per_action_type,cost_per_outbound_click,impressions,frequency,video_avg_time_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,action_values,website_purchase_roas,objective,optimization_goal,date_start,date_stop,reach,clicks,actions,outbound_clicks",
             "breakdowns": "publisher_platform",
             "limit": "1000",
         }
@@ -579,26 +579,81 @@ class MetaAdsClient:
                 continue
                 
             ad_id = item.get("ad_id")
-            if ad_id:
-                if ad_id not in ad_metrics_map:
-                    ad_metrics_map[ad_id] = {
-                        "reach": 0,
-                        "impressions": 0,
-                        "clicks": 0,
-                        "link_clicks": 0,
-                        "likes": 0,
-                        "shares": 0,
-                        "saved": 0,
-                        "views": 0,
-                    }
-                
-                ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
-                ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
-                ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
+                if ad_id:
+                    if ad_id not in ad_metrics_map:
+                        ad_metrics_map[ad_id] = {
+                            "reach": 0,
+                            "impressions": 0,
+                            "clicks": 0,
+                            "link_clicks": 0,
+                            "likes": 0,
+                            "shares": 0,
+                            "saved": 0,
+                            "comments": 0,
+                            "views": 0,
+                            "spend": 0.0,
+                            "cpm": 0.0,
+                            "cpc": 0.0,
+                            "cpp": 0.0,
+                            "ctr": 0.0,
+                            "cpa": 0.0,
+                            "cost_per_outbound_click": 0.0,
+                            "frequency": 0.0,
+                            "video_avg_time": 0.0,
+                            "video_p25": 0,
+                            "video_p50": 0,
+                            "video_p75": 0,
+                            "action_values": 0.0,
+                            "roas": 0.0,
+                            "objective": item.get("objective", ""),
+                            "optimization_goal": item.get("optimization_goal", ""),
+                            "date_start": item.get("date_start", ""),
+                            "date_stop": item.get("date_stop", ""),
+                        }
+                    
+                    ad_metrics_map[ad_id]["reach"] += int(item.get("reach", 0))
+                    ad_metrics_map[ad_id]["impressions"] += int(item.get("impressions", 0))
+                    ad_metrics_map[ad_id]["clicks"] += int(item.get("clicks", 0))
+                    ad_metrics_map[ad_id]["spend"] += float(item.get("spend", 0.0))
+                    ad_metrics_map[ad_id]["cpm"] = float(item.get("cpm", 0.0))
+                    ad_metrics_map[ad_id]["cpc"] = float(item.get("cpc", 0.0))
+                    ad_metrics_map[ad_id]["cpp"] = float(item.get("cpp", 0.0))
+                    ad_metrics_map[ad_id]["ctr"] = float(item.get("ctr", 0.0))
+                    ad_metrics_map[ad_id]["frequency"] = float(item.get("frequency", 0.0))
 
-                # Procura interações pagas (curtidas feitas no dark post) e link clicks
-                for action in item.get("actions", []):
-                    action_type = action.get("action_type")
+                    # Tratar cost per action type (CPA) -> Pega total ou post_engagement
+                    for cpa_item in item.get("cost_per_action_type", []):
+                        if cpa_item.get("action_type") in ["post_engagement", "post_interaction_gross"]:
+                            ad_metrics_map[ad_id]["cpa"] = float(cpa_item.get("value", 0.0))
+
+                    for cpo_item in item.get("cost_per_outbound_click", []):
+                        if cpo_item.get("action_type") == "outbound_click":
+                            ad_metrics_map[ad_id]["cost_per_outbound_click"] = float(cpo_item.get("value", 0.0))
+
+                    for v_avg in item.get("video_avg_time_watched_actions", []):
+                        if v_avg.get("action_type") == "video_view":
+                            ad_metrics_map[ad_id]["video_avg_time"] = float(v_avg.get("value", 0.0))
+                    for v_p25 in item.get("video_p25_watched_actions", []):
+                        if v_p25.get("action_type") == "video_view":
+                            ad_metrics_map[ad_id]["video_p25"] += int(v_p25.get("value", 0))
+                    for v_p50 in item.get("video_p50_watched_actions", []):
+                        if v_p50.get("action_type") == "video_view":
+                            ad_metrics_map[ad_id]["video_p50"] += int(v_p50.get("value", 0))
+                    for v_p75 in item.get("video_p75_watched_actions", []):
+                        if v_p75.get("action_type") == "video_view":
+                            ad_metrics_map[ad_id]["video_p75"] += int(v_p75.get("value", 0))
+
+                    # Retorno de conversões
+                    for act_val in item.get("action_values", []):
+                        if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
+                            ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
+                    for roas in item.get("website_purchase_roas", []):
+                        if roas.get("action_type") == "offsite_conversion.fb_pixel_purchase":
+                            ad_metrics_map[ad_id]["roas"] = float(roas.get("value", 0.0))
+
+                    # Procura interações pagas (curtidas feitas no dark post) e link clicks
+                    for action in item.get("actions", []):
+                        action_type = action.get("action_type")
                     if action_type == "link_click":
                         # Mantém clicks no criativo se precisar, mas a saída vai vir de outbound
                         ad_metrics_map[ad_id]["link_clicks"] += int(action.get("value", 0))
@@ -612,6 +667,10 @@ class MetaAdsClient:
                     elif action_type == "post":
                         ad_metrics_map[ad_id]["shares"] = max(
                             ad_metrics_map[ad_id]["shares"], int(action.get("value", 0))
+                        )
+                    elif action_type == "comment":
+                        ad_metrics_map[ad_id]["comments"] = max(
+                            ad_metrics_map[ad_id]["comments"], int(action.get("value", 0))
                         )
                     elif action_type in [
                         "onsite_conversion.post_save",
@@ -696,7 +755,26 @@ class MetaAdsClient:
                         "likes": 0,
                         "shares": 0,
                         "saved": 0,
+                        "comments": 0,
                         "views": 0,
+                        "spend": 0.0,
+                        "cpm": 0.0,
+                        "cpc": 0.0,
+                        "cpp": 0.0,
+                        "ctr": 0.0,
+                        "cpa": 0.0,
+                        "cost_per_outbound_click": 0.0,
+                        "frequency": 0.0,
+                        "video_avg_time": 0.0,
+                        "video_p25": 0,
+                        "video_p50": 0,
+                        "video_p75": 0,
+                        "action_values": 0.0,
+                        "roas": 0.0,
+                        "objective": "",
+                        "optimization_goal": "",
+                        "date_start": "",
+                        "date_stop": "",
                         "paid_destination": traffic_dest,
                     }
 
@@ -708,11 +786,38 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]
                 ig_mapping[ig_id]["clicks"] += metrics["clicks"]
-                ig_mapping[ig_id]["link_clicks"] += metrics.get("link_clicks", 0)
+                ig_mapping[ig_id]["link_clicks"] += metrics["link_clicks"]
                 ig_mapping[ig_id]["likes"] += metrics["likes"]
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
+                ig_mapping[ig_id]["comments"] += metrics.get("comments", 0)
                 ig_mapping[ig_id]["views"] += metrics["views"]
+                
+                ig_mapping[ig_id]["spend"] += metrics.get("spend", 0.0)
+                ig_mapping[ig_id]["cpm"] = max(ig_mapping[ig_id]["cpm"], metrics.get("cpm", 0.0))
+                ig_mapping[ig_id]["cpc"] = max(ig_mapping[ig_id]["cpc"], metrics.get("cpc", 0.0))
+                ig_mapping[ig_id]["cpp"] = max(ig_mapping[ig_id]["cpp"], metrics.get("cpp", 0.0))
+                ig_mapping[ig_id]["ctr"] = max(ig_mapping[ig_id]["ctr"], metrics.get("ctr", 0.0))
+                ig_mapping[ig_id]["frequency"] = max(ig_mapping[ig_id]["frequency"], metrics.get("frequency", 0.0))
+                ig_mapping[ig_id]["cpa"] = max(ig_mapping[ig_id]["cpa"], metrics.get("cpa", 0.0))
+                ig_mapping[ig_id]["cost_per_outbound_click"] = max(ig_mapping[ig_id]["cost_per_outbound_click"], metrics.get("cost_per_outbound_click", 0.0))
+                
+                ig_mapping[ig_id]["video_avg_time"] = max(ig_mapping[ig_id]["video_avg_time"], metrics.get("video_avg_time", 0.0))
+                ig_mapping[ig_id]["video_p25"] += metrics.get("video_p25", 0)
+                ig_mapping[ig_id]["video_p50"] += metrics.get("video_p50", 0)
+                ig_mapping[ig_id]["video_p75"] += metrics.get("video_p75", 0)
+                
+                ig_mapping[ig_id]["action_values"] += metrics.get("action_values", 0.0)
+                ig_mapping[ig_id]["roas"] = max(ig_mapping[ig_id]["roas"], metrics.get("roas", 0.0))
+                
+                if not ig_mapping[ig_id]["objective"]:
+                    ig_mapping[ig_id]["objective"] = metrics.get("objective", "")
+                if not ig_mapping[ig_id]["optimization_goal"]:
+                    ig_mapping[ig_id]["optimization_goal"] = metrics.get("optimization_goal", "")
+                if not ig_mapping[ig_id]["date_start"]:
+                    ig_mapping[ig_id]["date_start"] = metrics.get("date_start", "")
+                if not ig_mapping[ig_id]["date_stop"]:
+                    ig_mapping[ig_id]["date_stop"] = metrics.get("date_stop", "")
 
         return ig_mapping
 

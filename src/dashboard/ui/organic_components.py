@@ -146,6 +146,41 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
             "Cliques de Saída (Pago)": m.paid_link_clicks,
             "Destino do Tráfego (Pago)": m.paid_destination,
+            
+            # Custos
+            "Custo (R$)": m.paid_spend,
+            "CPM (R$)": m.paid_cpm,
+            "CPC (R$)": m.paid_cpc,
+            "CPP (R$)": m.paid_cpp,
+            "CTR (%)": m.paid_ctr,
+            "Custo por Engajamento (CPA) (R$)": m.paid_cpa,
+            "Custo por Clique de Saída (R$)": m.paid_cost_per_outbound_click,
+            
+            # Entrega
+            "Impressões (Pago)": m.paid_impressions,
+            "Frequência": m.paid_frequency,
+            
+            # Engajamento Pago Puro
+            "Comentários (Pago)": m.paid_comments,
+            "Salvamentos (Pago)": m.paid_saved,
+            "Compartilhamentos (Pago)": m.paid_shares,
+            
+            # Vídeo Pago
+            "Tempo Assistido Médio (Pago)": format_hhmmss(m.paid_video_avg_time * 1000),
+            "Vídeo 25% (Pago)": m.paid_video_p25,
+            "Vídeo 50% (Pago)": m.paid_video_p50,
+            "Vídeo 75% (Pago)": m.paid_video_p75,
+            
+            # Conversão
+            "Valor de Ação (R$)": m.paid_action_values,
+            "ROAS": m.paid_roas,
+            
+            # Contexto
+            "Objetivo (Pago)": m.paid_objective,
+            "Meta de Otimização (Pago)": m.paid_optimization_goal,
+            "Data Início (Pago)": m.paid_date_start,
+            "Data Fim (Pago)": m.paid_date_stop,
+            
             "Link": m.permalink
         })
         
@@ -171,11 +206,22 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     
     # 3. Tabela Paga (apenas posts que receberam tráfego pago)
     st.markdown("#### Desempenho Pago (Dark Posts / Impulsionados)")
-    cols_paid = ["ID", "Tipo", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Curtidas (Pago)", "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", "Link"]
+    cols_paid = [
+        "ID", "Tipo", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Impressões (Pago)", "Frequência", 
+        "Custo (R$)", "CPM (R$)", "CPC (R$)", "CPP (R$)", "CTR (%)", "Custo por Engajamento (CPA) (R$)", "Custo por Clique de Saída (R$)", 
+        "Curtidas (Pago)", "Comentários (Pago)", "Salvamentos (Pago)", "Compartilhamentos (Pago)", 
+        "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", 
+        "Tempo Assistido Médio (Pago)", "Vídeo 25% (Pago)", "Vídeo 50% (Pago)", "Vídeo 75% (Pago)", 
+        "Valor de Ação (R$)", "ROAS", "Objetivo (Pago)", "Meta de Otimização (Pago)", "Data Início (Pago)", "Data Fim (Pago)", 
+        "Link"
+    ]
     df_paid = df[df["Alcance (Pago)"] > 0][cols_paid]
     
     if not df_paid.empty:
-        render_glass_table(df_paid, key="tbl_posts_paid", hide_download=True, link_col="Link", link_label="Ver no Instagram")
+        curr_cols = ["Custo (R$)", "CPM (R$)", "CPC (R$)", "CPP (R$)", "Custo por Engajamento (CPA) (R$)", "Custo por Clique de Saída (R$)", "Valor de Ação (R$)"]
+        float_cols = ["Frequência"]
+        pct_cols = ["CTR (%)"]
+        render_glass_table(df_paid, key="tbl_posts_paid", currency_cols=curr_cols, float_cols=float_cols, percent_cols=pct_cols, hide_download=True, link_col="Link", link_label="Ver no Instagram")
     else:
         st.info("Nenhum post desta lista recebeu tráfego pago no período.")
 

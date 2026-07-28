@@ -27,6 +27,36 @@ class InstagramMedia(BaseModel):
     id: str
     caption: str = ""
     media_url: str | None = None
+    # Tráfego Pago & Dark Post mapping
+    paid_reach: int = 0
+    paid_impressions: int = 0
+    paid_clicks: int = 0
+    paid_link_clicks: int = 0
+    paid_other_clicks: int = 0
+    paid_likes: int = 0
+    paid_shares: int = 0
+    paid_saved: int = 0
+    paid_comments: int = 0
+    paid_views: int = 0
+    paid_destination: str | None = None
+    paid_spend: float = 0.0
+    paid_cpm: float = 0.0
+    paid_cpc: float = 0.0
+    paid_cpp: float = 0.0
+    paid_ctr: float = 0.0
+    paid_cpa: float = 0.0
+    paid_cost_per_outbound_click: float = 0.0
+    paid_frequency: float = 0.0
+    paid_video_avg_time: float = 0.0
+    paid_video_p25: int = 0
+    paid_video_p50: int = 0
+    paid_video_p75: int = 0
+    paid_roas: float = 0.0
+    paid_action_values: float = 0.0
+    paid_objective: str = ""
+    paid_optimization_goal: str = ""
+    paid_date_start: str = ""
+    paid_date_stop: str = ""
     thumbnail_url: str | None = None
     media_type: str = ""
     media_product_type: str = ""

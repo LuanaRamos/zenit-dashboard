@@ -77,16 +77,35 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
         if ig_id in ads_mapping:
             metrics = ads_mapping[ig_id]
             
-            update_data['paid_reach'] = metrics['reach']
-            update_data['paid_impressions'] = metrics['impressions']
-            update_data['paid_link_clicks'] = metrics.get('link_clicks', 0)
-            update_data['paid_clicks'] = max(metrics['clicks'], update_data['paid_link_clicks'])
+            update_data['paid_reach'] = metrics["reach"]
+            update_data['paid_impressions'] = metrics["impressions"]
+            update_data['paid_clicks'] = metrics["clicks"]
+            update_data['paid_link_clicks'] = metrics["link_clicks"]
             update_data['paid_other_clicks'] = max(0, update_data['paid_clicks'] - update_data['paid_link_clicks'])
-            update_data['paid_likes'] = metrics['likes']
-            update_data['paid_shares'] = metrics.get('shares', 0)
-            update_data['paid_saved'] = metrics.get('saved', 0)
-            update_data['paid_views'] = metrics.get('views', 0)
-            update_data['paid_destination'] = metrics.get('paid_destination', "N/A")
+            update_data['paid_likes'] = metrics["likes"]
+            update_data['paid_shares'] = metrics["shares"]
+            update_data['paid_saved'] = metrics["saved"]
+            update_data['paid_comments'] = metrics.get("comments", 0)
+            update_data['paid_views'] = metrics["views"]
+            update_data['paid_destination'] = metrics.get("paid_destination")
+            update_data['paid_spend'] = metrics.get("spend", 0.0)
+            update_data['paid_cpm'] = metrics.get("cpm", 0.0)
+            update_data['paid_cpc'] = metrics.get("cpc", 0.0)
+            update_data['paid_cpp'] = metrics.get("cpp", 0.0)
+            update_data['paid_ctr'] = metrics.get("ctr", 0.0)
+            update_data['paid_cpa'] = metrics.get("cpa", 0.0)
+            update_data['paid_cost_per_outbound_click'] = metrics.get("cost_per_outbound_click", 0.0)
+            update_data['paid_frequency'] = metrics.get("frequency", 0.0)
+            update_data['paid_video_avg_time'] = metrics.get("video_avg_time", 0.0)
+            update_data['paid_video_p25'] = metrics.get("video_p25", 0)
+            update_data['paid_video_p50'] = metrics.get("video_p50", 0)
+            update_data['paid_video_p75'] = metrics.get("video_p75", 0)
+            update_data['paid_action_values'] = metrics.get("action_values", 0.0)
+            update_data['paid_roas'] = metrics.get("roas", 0.0)
+            update_data['paid_objective'] = metrics.get("objective", "")
+            update_data['paid_optimization_goal'] = metrics.get("optimization_goal", "")
+            update_data['paid_date_start'] = metrics.get("date_start", "")
+            update_data['paid_date_stop'] = metrics.get("date_stop", "")
             
             if update_data['paid_impressions'] > 0:
                 update_data['paid_ctr'] = (update_data['paid_clicks'] / update_data['paid_impressions']) * 100
