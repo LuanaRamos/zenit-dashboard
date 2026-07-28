@@ -67,24 +67,44 @@ def render_glass_table(
         for col in display_cols:
             val = row[col]
             if col in currency_cols:
-                raw = float(val) if pd.notna(val) else 0.0
-                display_val = _format_brl(raw)
-                sort_val = raw
+                if pd.isna(val):
+                    display_val = "-"
+                    sort_val = -1.0
+                else:
+                    raw = float(val)
+                    display_val = _format_brl(raw)
+                    sort_val = raw
             elif col in percent_cols:
-                raw = float(val) if pd.notna(val) else 0.0
-                display_val = _format_percent(raw)
-                sort_val = raw
+                if pd.isna(val):
+                    display_val = "-"
+                    sort_val = -1.0
+                else:
+                    raw = float(val)
+                    display_val = _format_percent(raw)
+                    sort_val = raw
             elif col in float_cols:
-                raw = float(val) if pd.notna(val) else 0.0
-                display_val = _format_float(raw)
-                sort_val = raw
+                if pd.isna(val):
+                    display_val = "-"
+                    sort_val = -1.0
+                else:
+                    raw = float(val)
+                    display_val = _format_float(raw)
+                    sort_val = raw
             elif pd.api.types.is_number(val):
-                raw = float(val) if pd.notna(val) else 0.0
-                display_val = _format_int(raw)
-                sort_val = raw
+                if pd.isna(val):
+                    display_val = "-"
+                    sort_val = -1.0
+                else:
+                    raw = float(val)
+                    display_val = _format_int(raw)
+                    sort_val = raw
             else:
-                display_val = html_lib.escape(str(val))
-                sort_val = str(val).lower()
+                if pd.isna(val):
+                    display_val = "-"
+                    sort_val = ""
+                else:
+                    display_val = html_lib.escape(str(val))
+                    sort_val = str(val).lower()
             cells.append(f'<td data-sort="{html_lib.escape(str(sort_val))}">{display_val}</td>')
         if link_col:
             url = row.get(link_col)

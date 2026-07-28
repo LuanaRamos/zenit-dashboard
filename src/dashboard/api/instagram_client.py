@@ -141,12 +141,17 @@ class InstagramClient:
         for item in media_items_data:
             ig_id = item.get("id")
             media_product_type = item.get("media_product_type", "")
+            media_type = item.get("media_type", "")
             if media_product_type == "REELS":
                 # Metricas validas para Reels na v22.0
                 # 'plays' foi substituído por 'views'
                 metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
+            elif media_type == "VIDEO":
+                # Videos muito antigos não são reels e usam video_views
+                metrics = "reach,video_views,saved,shares,total_interactions"
             else:
-                metrics = "reach,views,saved,shares,total_interactions"
+                # Imagens e Carrosseis não possuem views/video_views
+                metrics = "reach,saved,shares,total_interactions"
 
             batch_requests.append(
                 {
@@ -177,7 +182,7 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        metrics = "total_interactions,views,reach,saved,shares"
+                        metrics = "total_interactions,reach,saved,shares"
                         fallback_requests.append({
                             "method": "GET",
                             "relative_url": f"/{ig_id}/insights?metric={metrics}",
@@ -263,7 +268,7 @@ class InstagramClient:
                     ig_reels_video_view_total_time=float(
                         metrics_dict.get("ig_reels_video_view_total_time", 0)
                     ),
-                    organic_views=int(metrics_dict.get("views", 0)),
+                    organic_views=int(metrics_dict.get("views", metrics_dict.get("video_views", 0))),
                     ig_reels_avg_watch_time=float(
                         metrics_dict.get("ig_reels_avg_watch_time", 0)
                     ),
