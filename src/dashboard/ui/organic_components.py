@@ -146,6 +146,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
             "Cliques de Saída (Pago)": m.paid_link_clicks,
             "Destino do Tráfego (Pago)": m.paid_destination,
+            "Qtd. Anúncios": m.paid_ad_count if m.paid_ad_count > 0 else None,
             
             # Custos
             "Custo (R$)": m.paid_spend,
@@ -207,7 +208,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     # 3. Tabela Paga (apenas posts que receberam tráfego pago)
     st.markdown("#### Desempenho Pago (Dark Posts / Impulsionados)")
     cols_paid = [
-        "ID", "Tipo", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Impressões (Pago)", "Frequência", 
+        "ID", "Tipo", "Qtd. Anúncios", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Impressões (Pago)", "Frequência", 
         "Custo (R$)", "CPM (R$)", "CPC (R$)", "CPP (R$)", "CTR (%)", "Custo por Engajamento (CPA) (R$)", "Custo por Clique de Saída (R$)", 
         "Curtidas (Pago)", "Comentários (Pago)", "Salvamentos (Pago)", "Compartilhamentos (Pago)", 
         "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", 
@@ -219,7 +220,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     
     if not df_paid.empty:
         curr_cols = ["Custo (R$)", "CPM (R$)", "CPC (R$)", "CPP (R$)", "Custo por Engajamento (CPA) (R$)", "Custo por Clique de Saída (R$)", "Valor de Ação (R$)"]
-        float_cols = ["Frequência"]
+        float_cols = ["Frequência", "ROAS"]
         pct_cols = ["CTR (%)"]
         render_glass_table(df_paid, key="tbl_posts_paid", currency_cols=curr_cols, float_cols=float_cols, percent_cols=pct_cols, hide_download=True, link_col="Link", link_label="Ver no Instagram")
     else:

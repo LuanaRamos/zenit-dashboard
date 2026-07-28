@@ -106,12 +106,7 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
             update_data['paid_optimization_goal'] = metrics.get("optimization_goal", "")
             update_data['paid_date_start'] = metrics.get("date_start", "")
             update_data['paid_date_stop'] = metrics.get("date_stop", "")
-            
-            if update_data['paid_impressions'] > 0:
-                update_data['paid_ctr'] = (update_data['paid_clicks'] / update_data['paid_impressions']) * 100
-                
-            if update_data['paid_reach'] > 0:
-                update_data['paid_frequency'] = update_data['paid_impressions'] / update_data['paid_reach']
+            update_data['paid_ad_count'] = metrics.get("ad_count", 1)
                 
             # A API Graph do Instagram (media/{id}/insights) já retorna APENAS o alcance orgânico
             # Métricas de anúncios NÃO estão inclusas nesse número, logo não devemos subtrair.

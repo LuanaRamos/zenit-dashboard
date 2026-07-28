@@ -57,6 +57,7 @@ class InstagramMedia(BaseModel):
     paid_optimization_goal: str = ""
     paid_date_start: str = ""
     paid_date_stop: str = ""
+    paid_ad_count: int = Field(default=0, description="Qtd de anúncios promovendo este post")
     thumbnail_url: str | None = None
     media_type: str = ""
     media_product_type: str = ""

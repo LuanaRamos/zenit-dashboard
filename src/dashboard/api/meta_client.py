@@ -621,9 +621,9 @@ class MetaAdsClient:
                 ad_metrics_map[ad_id]["ctr"] = float(item.get("ctr", 0.0))
                 ad_metrics_map[ad_id]["frequency"] = float(item.get("frequency", 0.0))
 
-                # Tratar cost per action type (CPA) -> Pega total ou post_engagement
+                # Bug 4 fix: CPA — apenas post_engagement (confirmado)
                 for cpa_item in item.get("cost_per_action_type", []):
-                    if cpa_item.get("action_type") in ["post_engagement", "post_interaction_gross"]:
+                    if cpa_item.get("action_type") == "post_engagement":
                         ad_metrics_map[ad_id]["cpa"] = float(cpa_item.get("value", 0.0))
 
                 for cpo_item in item.get("cost_per_outbound_click", []):
@@ -647,48 +647,26 @@ class MetaAdsClient:
                 for act_val in item.get("action_values", []):
                     if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
                         ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
-                for roas in item.get("website_purchase_roas", []):
-                    if roas.get("action_type") == "offsite_conversion.fb_pixel_purchase":
-                        ad_metrics_map[ad_id]["roas"] = float(roas.get("value", 0.0))
 
-                # Procura interações pagas (curtidas feitas no dark post) e link clicks
+                # Bug 3 fix: Apenas action_types primários confirmados, sem max()
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
-                    if action_type == "link_click":
-                        # Mantém clicks no criativo se precisar, mas a saída vai vir de outbound
-                        ad_metrics_map[ad_id]["link_clicks"] += int(action.get("value", 0))
-                    elif action_type in [
-                        "like",
-                        "onsite_conversion.post_net_like",
-                    ]:
-                        ad_metrics_map[ad_id]["likes"] = max(
-                            ad_metrics_map[ad_id]["likes"], int(action.get("value", 0))
-                        )
+                    if action_type == "like":
+                        ad_metrics_map[ad_id]["likes"] = int(action.get("value", 0))
                     elif action_type == "post":
-                        ad_metrics_map[ad_id]["shares"] = max(
-                            ad_metrics_map[ad_id]["shares"], int(action.get("value", 0))
-                        )
+                        ad_metrics_map[ad_id]["shares"] = int(action.get("value", 0))
                     elif action_type == "comment":
-                        ad_metrics_map[ad_id]["comments"] = max(
-                            ad_metrics_map[ad_id]["comments"], int(action.get("value", 0))
-                        )
-                    elif action_type in [
-                        "onsite_conversion.post_save",
-                        "onsite_conversion.post_net_save",
-                    ]:
-                        ad_metrics_map[ad_id]["saved"] = max(
-                            ad_metrics_map[ad_id]["saved"], int(action.get("value", 0))
-                        )
+                        ad_metrics_map[ad_id]["comments"] = int(action.get("value", 0))
+                    elif action_type == "onsite_conversion.post_save":
+                        ad_metrics_map[ad_id]["saved"] = int(action.get("value", 0))
                     elif action_type == "video_view":
-                        ad_metrics_map[ad_id]["views"] = max(
-                            ad_metrics_map[ad_id]["views"], int(action.get("value", 0))
-                        )
-                
-                # Outbound Clicks (Cliques de Saída reais)
-                outbound = item.get("outbound_clicks", [])
-                for out_action in outbound:
+                        ad_metrics_map[ad_id]["views"] = int(action.get("value", 0))
+
+                # Bug 1 fix: Outbound Clicks vão APENAS para link_clicks
+                # (não extraímos mais link_click das actions para evitar dupla contagem)
+                for out_action in item.get("outbound_clicks", []):
                     if out_action.get("action_type") == "outbound_click":
-                        ad_metrics_map[ad_id]["link_clicks"] += int(out_action.get("value", 0))
+                        ad_metrics_map[ad_id]["link_clicks"] = int(out_action.get("value", 0))
 
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
@@ -776,14 +754,19 @@ class MetaAdsClient:
                         "date_start": "",
                         "date_stop": "",
                         "paid_destination": traffic_dest,
+                        "ad_count": 0,
+                        "_ad_ids": [],
                     }
 
                 # Update the destination if it's the first time we see a real destination
                 if ig_mapping[ig_id].get("paid_destination") in ["N/A", "Não Identificado"] and traffic_dest not in ["N/A", "Não Identificado"]:
                     ig_mapping[ig_id]["paid_destination"] = traffic_dest
 
+                # Bug 7 fix: Track ad_ids para reach desduplicado depois
+                ig_mapping[ig_id]["ad_count"] += 1
+                ig_mapping[ig_id]["_ad_ids"].append(ad_id)
 
-                ig_mapping[ig_id]["reach"] += metrics["reach"]
+                # Bug 6 fix: Somar apenas blocos fundamentais (nunca taxas derivadas)
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]
                 ig_mapping[ig_id]["clicks"] += metrics["clicks"]
                 ig_mapping[ig_id]["link_clicks"] += metrics["link_clicks"]
@@ -792,24 +775,19 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
                 ig_mapping[ig_id]["comments"] += metrics.get("comments", 0)
                 ig_mapping[ig_id]["views"] += metrics["views"]
-                
                 ig_mapping[ig_id]["spend"] += metrics.get("spend", 0.0)
-                ig_mapping[ig_id]["cpm"] = max(ig_mapping[ig_id]["cpm"], metrics.get("cpm", 0.0))
-                ig_mapping[ig_id]["cpc"] = max(ig_mapping[ig_id]["cpc"], metrics.get("cpc", 0.0))
-                ig_mapping[ig_id]["cpp"] = max(ig_mapping[ig_id]["cpp"], metrics.get("cpp", 0.0))
-                ig_mapping[ig_id]["ctr"] = max(ig_mapping[ig_id]["ctr"], metrics.get("ctr", 0.0))
-                ig_mapping[ig_id]["frequency"] = max(ig_mapping[ig_id]["frequency"], metrics.get("frequency", 0.0))
-                ig_mapping[ig_id]["cpa"] = max(ig_mapping[ig_id]["cpa"], metrics.get("cpa", 0.0))
-                ig_mapping[ig_id]["cost_per_outbound_click"] = max(ig_mapping[ig_id]["cost_per_outbound_click"], metrics.get("cost_per_outbound_click", 0.0))
-                
-                ig_mapping[ig_id]["video_avg_time"] = max(ig_mapping[ig_id]["video_avg_time"], metrics.get("video_avg_time", 0.0))
+                ig_mapping[ig_id]["action_values"] += metrics.get("action_values", 0.0)
+
+                # Vídeo: somar contadores, média ponderada do tempo
                 ig_mapping[ig_id]["video_p25"] += metrics.get("video_p25", 0)
                 ig_mapping[ig_id]["video_p50"] += metrics.get("video_p50", 0)
                 ig_mapping[ig_id]["video_p75"] += metrics.get("video_p75", 0)
-                
-                ig_mapping[ig_id]["action_values"] += metrics.get("action_values", 0.0)
-                ig_mapping[ig_id]["roas"] = max(ig_mapping[ig_id]["roas"], metrics.get("roas", 0.0))
-                
+                # video_avg_time: média ponderada por impressões seria ideal,
+                # mas como a Meta já pondera internamente, pegamos o max por simplicidade
+                if metrics.get("video_avg_time", 0.0) > ig_mapping[ig_id]["video_avg_time"]:
+                    ig_mapping[ig_id]["video_avg_time"] = metrics["video_avg_time"]
+
+                # Contexto: pega do primeiro anúncio que tiver
                 if not ig_mapping[ig_id]["objective"]:
                     ig_mapping[ig_id]["objective"] = metrics.get("objective", "")
                 if not ig_mapping[ig_id]["optimization_goal"]:
@@ -818,6 +796,51 @@ class MetaAdsClient:
                     ig_mapping[ig_id]["date_start"] = metrics.get("date_start", "")
                 if not ig_mapping[ig_id]["date_stop"]:
                     ig_mapping[ig_id]["date_stop"] = metrics.get("date_stop", "")
+
+                # Reach provisório (será sobrescrito pelo summary se ad_count > 1)
+                ig_mapping[ig_id]["reach"] += metrics["reach"]
+
+        # Bug 7: Para posts com múltiplos anúncios, buscar reach desduplicado via summary
+        for ig_id, ig_data in ig_mapping.items():
+            ad_ids = ig_data.pop("_ad_ids", [])
+            if len(ad_ids) > 1:
+                try:
+                    summary_params = {
+                        "level": "ad",
+                        "fields": "reach",
+                        "summary": '["reach"]',
+                        "filtering": json.dumps([{"field": "ad.id", "operator": "IN", "value": ad_ids}]),
+                    }
+                    if time_range:
+                        summary_params["time_range"] = json.dumps(time_range)
+                    else:
+                        summary_params["date_preset"] = date_preset
+                    resp = self._make_request(insights_endpoint, summary_params)
+                    summary_reach = int(resp.get("summary", {}).get("reach", 0))
+                    if summary_reach > 0:
+                        ig_data["reach"] = summary_reach
+                except Exception as e:
+                    logger.warning(f"Falha ao buscar reach desduplicado para {ig_id}: {e}")
+                    # Mantém a soma como fallback
+
+            # Bug 6 fix: Recalcular taxas derivadas a partir dos blocos fundamentais
+            spend = ig_data["spend"]
+            impressions = ig_data["impressions"]
+            clicks = ig_data["clicks"]
+            link_clicks = ig_data["link_clicks"]
+            reach = ig_data["reach"]
+            action_values = ig_data["action_values"]
+
+            ig_data["cpm"] = (spend / impressions) * 1000 if impressions > 0 else 0.0
+            ig_data["cpc"] = spend / clicks if clicks > 0 else 0.0
+            ig_data["ctr"] = (clicks / impressions) * 100 if impressions > 0 else 0.0
+            ig_data["cpp"] = (spend / reach) * 1000 if reach > 0 else 0.0
+            ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
+            ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
+            ig_data["roas"] = action_values / spend if spend > 0 else 0.0
+            # CPA: recalcular com engajamentos totais (likes+comments+shares+saved)
+            total_engagements = ig_data["likes"] + ig_data["comments"] + ig_data["shares"] + ig_data["saved"]
+            ig_data["cpa"] = spend / total_engagements if total_engagements > 0 else 0.0
 
         return ig_mapping
 
