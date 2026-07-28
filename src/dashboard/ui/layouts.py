@@ -157,7 +157,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 st.stop()
 
         st.markdown("<div style='margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;'></div>", unsafe_allow_html=True)
-        st.caption("Atualizado via Meta Graph API v22.0")
+        st.caption("Atualizado via Meta Graph API v25.0")
 
         if st.button("🔄 Forçar Atualização", use_container_width=True):
             st.cache_data.clear()
