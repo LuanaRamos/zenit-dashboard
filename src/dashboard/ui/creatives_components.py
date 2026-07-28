@@ -356,22 +356,25 @@ def _render_creative_card(ad: dict) -> None:
         c3.metric("💬 WhatsApp", _fmt_int(wpp))
         # Linha 2
         c1.metric("🎯 Custo p/ Mens.", _fmt_brl(cpa) if cpa > 0 else "—")
-        c2.metric("👥 Seguidores", _fmt_int(instagram_follows) if instagram_follows > 0 else "—")
-        c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows) if instagram_follows > 0 else "—")
+        if instagram_follows > 0:
+            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
     elif objective_friendly in ["Tráfego", "Reconhecimento"]:
         cpc_link = gasto / link_clicks if link_clicks > 0 else 0.0
         ctr_link = (link_clicks / impressions * 100) if impressions > 0 else 0.0
         c3.metric("🎯 CPC (Link)", _fmt_brl(cpc_link) if cpc_link > 0 else "—")
         # Linha 2
         c1.metric("📈 CTR (Link)", f"{ctr_link:.2f}%" if ctr_link > 0 else "—")
-        c2.metric("👥 Seguidores", _fmt_int(instagram_follows) if instagram_follows > 0 else "—")
-        c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows) if instagram_follows > 0 else "—")
+        if instagram_follows > 0:
+            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
     else:
         c3.metric("📋 Leads", _fmt_int(leads))
         # Linha 2
         c1.metric("🎯 Custo p/ Lead", _fmt_brl(cpa) if cpa > 0 else "—")
-        c2.metric("👥 Seguidores", _fmt_int(instagram_follows) if instagram_follows > 0 else "—")
-        c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows) if instagram_follows > 0 else "—")
+        if instagram_follows > 0:
+            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
 
     # Linha 3 (Os 3 tipos de cliques separados, sem somar)
     c1.metric("🔗 Cliques no Link", _fmt_int(link_clicks))
