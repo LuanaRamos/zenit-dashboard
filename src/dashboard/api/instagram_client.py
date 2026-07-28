@@ -344,37 +344,74 @@ class InstagramClient:
 
         return stories_list
 
-    def get_account_insights(self) -> dict[str, int]:
+    def get_account_insights(self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None) -> dict[str, int]:
         """
-        Busca insights a nível de conta (Últimos 28 dias).
-        Métricas de cliques (website_clicks, email_contacts) foram depreciadas na API oficial,
-        mas mantemos a estrutura para puxar as visualizações de perfil reais.
+        Busca insights a nível de conta.
+        Burla o limite de 30 dias da Meta dividindo o período em chunks de até 30 dias
+        e somando os retornos.
         """
         import datetime
-        until = datetime.datetime.now()
-        since = until - datetime.timedelta(days=28)
+        from dateutil.relativedelta import relativedelta
         
-        # profile_views foi restaurada na v19.0 para nível de conta (period=day)
+        now = datetime.datetime.now()
+        if time_range:
+            since = datetime.datetime.strptime(time_range['since'], '%Y-%m-%d')
+            until = datetime.datetime.strptime(time_range['until'], '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+        elif date_preset == "maximum":
+            until = now
+            since = until - relativedelta(years=2) + datetime.timedelta(days=1)
+        elif date_preset == "last_90d":
+            until = now
+            since = until - datetime.timedelta(days=90)
+        else: # default 30d
+            until = now
+            since = until - datetime.timedelta(days=30)
+            
         endpoint = f"{self.instagram_account_id}/insights"
-        params = {
-            "metric": "reach,profile_views,website_clicks,profile_links_taps",
-            "metric_type": "total_value",
-            "period": "day",
-            "since": str(int(since.timestamp())),
-            "until": str(int(until.timestamp()))
+        metrics_list = "profile_links_taps,website_clicks,profile_views,reach,total_interactions,accounts_engaged,likes,comments,shares,saves"
+        
+        results = {
+            "profile_links_taps": 0, "website_clicks": 0, "profile_views": 0, "reach": 0,
+            "total_interactions": 0, "accounts_engaged": 0, "likes": 0, "comments": 0,
+            "shares": 0, "saves": 0, "follows_and_unfollows": 0
         }
         
-        results = {"reach": 0, "profile_views": 0, "website_clicks": 0, "profile_links_taps": 0}
-        
-        try:
-            data = self._make_request(endpoint, params)
-            insights = data.get("data", [])
-            for insight in insights:
-                name = insight.get("name")
-                total = insight.get("total_value", {}).get("value", 0)
-                results[name] = total
-        except Exception as e:
-            logger.warning(f"Erro ao buscar account insights: {e}")
+        current_since = since
+        while current_since < until:
+            # Chunk max 29 days to be safe
+            current_until = min(current_since + datetime.timedelta(days=29, hours=23, minutes=59, seconds=59), until)
+            
+            params_total = {
+                "metric": metrics_list,
+                "metric_type": "total_value",
+                "period": "day",
+                "since": str(int(current_since.timestamp())),
+                "until": str(int(current_until.timestamp()))
+            }
+            try:
+                data = self._make_request(endpoint, params_total)
+                for insight in data.get("data", []):
+                    name = insight.get("name")
+                    val = insight.get("total_value", {}).get("value", 0)
+                    results[name] = results.get(name, 0) + val
+            except Exception as e:
+                logger.warning(f"Erro account insights chunk (total_value) {current_since} a {current_until}: {e}")
+                
+            params_daily = {
+                "metric": "follows_and_unfollows",
+                "period": "day",
+                "since": str(int(current_since.timestamp())),
+                "until": str(int(current_until.timestamp()))
+            }
+            try:
+                data = self._make_request(endpoint, params_daily)
+                for insight in data.get("data", []):
+                    for val_data in insight.get("values", []):
+                        results["follows_and_unfollows"] += val_data.get("value", 0)
+            except Exception as e:
+                logger.warning(f"Erro account insights chunk (daily) {current_since} a {current_until}: {e}")
+                
+            current_since = current_until + datetime.timedelta(seconds=1)
             
         return results
 

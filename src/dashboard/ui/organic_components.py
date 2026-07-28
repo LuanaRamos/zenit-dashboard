@@ -18,19 +18,67 @@ def format_hhmmss(ms_val: float) -> str:
     else:
         return f"{s:02d}s"
 
-def render_account_insights_cards(insights: dict) -> None:
-    """Renderiza os KPIs de nível de conta (Visitas, Cliques, etc)."""
-    st.markdown("### 👁️ Visão Geral da Conta (Últimos 28 dias)")
-    cols = st.columns(4)
-    with cols[0]:
-        render_metric_card("Visitas ao Perfil", f"{insights.get('profile_views', 0):,}".replace(",", "."), "Vistas", "Total da conta")
-    with cols[1]:
-        render_metric_card("Toques no Link", f"{insights.get('profile_links_taps', 0):,}".replace(",", "."), "Cliques", "Bio")
-    with cols[2]:
-        render_metric_card("Cliques no Site", f"{insights.get('website_clicks', 0):,}".replace(",", "."), "Cliques", "Site")
-    with cols[3]:
-        render_metric_card("Alcance da Conta", f"{insights.get('reach', 0):,}".replace(",", "."), "Pessoas", "Total")
+def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
+    """Renderiza os KPIs de nível de conta com a 'Subtração Mágica' separando Orgânico e Pago."""
+    st.markdown("### 👁️ Visão Geral da Conta (Últimos 30 dias)")
+    
+    # Cálculos de Subtração Mágica (Total - Pago = Orgânico)
+    r_tot = insights.get('reach', 0)
+    r_paid = paid_totals.get('reach', 0)
+    r_org = max(0, r_tot - r_paid)
+    
+    likes_tot = insights.get('likes', 0)
+    likes_paid = paid_totals.get('likes', 0)
+    likes_org = max(0, likes_tot - likes_paid)
+    
+    shares_tot = insights.get('shares', 0)
+    shares_paid = paid_totals.get('shares', 0)
+    shares_org = max(0, shares_tot - shares_paid)
+    
+    saves_tot = insights.get('saves', 0)
+    saves_paid = paid_totals.get('saved', 0)
+    saves_org = max(0, saves_tot - saves_paid)
+    
+    int_tot = insights.get('total_interactions', 0)
+    int_paid = likes_paid + shares_paid + saves_paid # Aproximação baseada nas actions conhecidas
+    int_org = max(0, int_tot - int_paid)
+    
+    def fmt(val): return f"{int(val):,}".replace(",", ".")
+    def bkd(org, pd): return f"Org: {fmt(org)} | Pago: {fmt(pd)}"
+    
+    st.markdown("#### 🎯 Métricas Mistas (Orgânico + Ads)")
+    cols_mix = st.columns(4)
+    with cols_mix[0]:
+        render_metric_card("Alcance da Conta", fmt(r_tot), bkd(r_org, r_paid), "Pessoas alcançadas")
+    with cols_mix[1]:
+        render_metric_card("Total de Interações", fmt(int_tot), bkd(int_org, int_paid), "Soma de engajamento")
+    with cols_mix[2]:
+        render_metric_card("Curtidas", fmt(likes_tot), bkd(likes_org, likes_paid), "Curtidas em posts")
+    with cols_mix[3]:
+        render_metric_card("Compartilhamentos", fmt(shares_tot), bkd(shares_org, shares_paid), "Envios para amigos")
 
+    st.write("")
+    st.markdown("#### 👤 Exceções e Ações (100% Orgânico)")
+    cols_org = st.columns(4)
+    with cols_org[0]:
+        render_metric_card("Visitas ao Perfil", fmt(insights.get('profile_views', 0)), "Total", "Acessos à bio")
+    with cols_org[1]:
+        render_metric_card("Toques no Link", fmt(insights.get('profile_links_taps', 0)), "Total", "Cliques no link da bio")
+    with cols_org[2]:
+        render_metric_card("Cliques no Site", fmt(insights.get('website_clicks', 0)), "Total", "Cliques gerais")
+    with cols_org[3]:
+        render_metric_card("Contas Engajadas", fmt(insights.get('accounts_engaged', 0)), "Total", "Usuários únicos")
+        
+    st.write("")
+    cols_org2 = st.columns(4)
+    with cols_org2[0]:
+        render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total", "Respostas no perfil")
+    with cols_org2[1]:
+        render_metric_card("Salvamentos", fmt(saves_tot), bkd(saves_org, saves_paid), "Posts guardados")
+    with cols_org2[2]:
+        render_metric_card("Novos Seguidores", fmt(insights.get('follows_and_unfollows', 0)), "Total", "Saldo no período")
+    with cols_org2[3]:
+        st.empty() # Espaço vazio para alinhar
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Renderiza KPIs orgânicos vs pagos."""

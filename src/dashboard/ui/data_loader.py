@@ -41,6 +41,23 @@ def fetch_organic_leads_cached(date_preset: str, time_range: dict | None, client
     return client.get_total_organic_leads(date_preset, time_range)
 
 @st.cache_data(ttl=900)
+def fetch_instagram_ads_mapping_cached(date_preset: str, time_range: dict | None, client_name: str) -> dict:
+    meta_client = get_api_client(client_name)
+    return meta_client.get_ads_reach_mapping(date_preset, time_range)
+
+@st.cache_data(ttl=900)
+def fetch_instagram_paid_totals_cached(date_preset: str, time_range: dict | None, client_name: str) -> dict:
+    mapping = fetch_instagram_ads_mapping_cached(date_preset, time_range, client_name)
+    totals = {"reach": 0, "impressions": 0, "likes": 0, "shares": 0, "saved": 0}
+    for m in mapping.values():
+        totals["reach"] += m.get("reach", 0)
+        totals["impressions"] += m.get("impressions", 0)
+        totals["likes"] += m.get("likes", 0)
+        totals["shares"] += m.get("shares", 0)
+        totals["saved"] += m.get("saved", 0)
+    return totals
+
+@st.cache_data(ttl=900)
 def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: str) -> List[InstagramMedia]:
     ig_client = get_instagram_client(client_name)
     meta_client = get_api_client(client_name)
@@ -57,7 +74,8 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
         thirty_days_ago = int((datetime.datetime.now() - datetime.timedelta(days=30)).timestamp())
         media_list = ig_client.get_recent_media(limit=100, since_timestamp=thirty_days_ago)
     
-    ads_mapping = meta_client.get_ads_reach_mapping(date_preset, time_range)
+    ads_mapping = fetch_instagram_ads_mapping_cached(date_preset, time_range, client_name)
+    
     
     updated_media_list = []
     for media in media_list:
@@ -109,9 +127,9 @@ def fetch_account_demographics(client_name: str):
     return ig_client.get_account_demographics()
 
 @st.cache_data(ttl=3600)
-def fetch_account_insights_cached(client_name: str) -> dict:
+def fetch_account_insights_cached(client_name: str, date_preset: str = "last_30d", time_range: dict | None = None) -> dict:
     ig_client = get_instagram_client(client_name)
-    return ig_client.get_account_insights()
+    return ig_client.get_account_insights(date_preset, time_range)
 
 @st.cache_data(ttl=3600)
 def fetch_followers_history_cached(client_name: str) -> list:
