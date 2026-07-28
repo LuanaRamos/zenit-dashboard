@@ -121,13 +121,18 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         if filtro_tipo != "Todos" and tipo != filtro_tipo:
             continue
             
+        # Fallbacks (N/A) para métricas que não existem em certos formatos
+        visitas = "N/A" if tipo == "Reels" else m.profile_visits
+        tempo_total = format_hhmmss(m.ig_reels_video_view_total_time) if tipo == "Reels" else "N/A"
+        tempo_medio = format_hhmmss(m.ig_reels_avg_watch_time) if tipo == "Reels" else "N/A"
+        
         data.append({
             "Tipo": tipo,
             "Alcance (Orgânico)": m.organic_reach,
             "Alcance (Pago)": m.paid_reach,
-            "Visitas ao Perfil (Org)": m.profile_visits,
-            "Tempo Assistido": format_hhmmss(m.ig_reels_video_view_total_time),
-            "Tempo Médio": format_hhmmss(m.ig_reels_avg_watch_time),
+            "Visitas ao Perfil (Org)": visitas,
+            "Tempo Assistido": tempo_total,
+            "Tempo Médio": tempo_medio,
             "Curtidas (Orgânico)": m.like_count,
             "Curtidas (Pago)": m.paid_likes,
             "Cliques no Criativo (Pago)": m.paid_other_clicks,
