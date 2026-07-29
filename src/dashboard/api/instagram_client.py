@@ -366,13 +366,31 @@ class InstagramClient:
         from dateutil.relativedelta import relativedelta
         
         now = datetime.datetime.now()
+        
+        # Meta Graph API v25.0 limita alcance a 13 meses de histórico (aprox. 395 dias)
+        limit_date = now - relativedelta(months=13) + datetime.timedelta(days=1)
+        
+        is_partial = False
         if time_range:
             since = datetime.datetime.strptime(time_range['since'], '%Y-%m-%d')
             until = datetime.datetime.strptime(time_range['until'], '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+            
+            # Clamp historical request for insights since API will 400 on > 13 months
+            if until < limit_date:
+                # The entire requested range is outside the allowed historical window.
+                # Avoid freezing the UI with hundreds of 400 Client Error requests.
+                return {
+                    "profile_links_taps": 0, "website_clicks": 0, "profile_views": 0, "reach": 0,
+                    "total_interactions": 0, "accounts_engaged": 0, "likes": 0, "comments": 0,
+                    "shares": 0, "saves": 0, "follows_and_unfollows": 0,
+                    "_is_partial": True
+                }
+            if since < limit_date:
+                since = limit_date
+                is_partial = True
         elif date_preset == "maximum":
             until = now
-            # Meta Graph API v25.0 limita alcance a 13 meses de histórico (395 dias)
-            since = until - relativedelta(months=13) + datetime.timedelta(days=1)
+            since = limit_date
         elif date_preset == "last_90d":
             until = now
             since = until - datetime.timedelta(days=90)
@@ -388,6 +406,8 @@ class InstagramClient:
             "total_interactions": 0, "accounts_engaged": 0, "likes": 0, "comments": 0,
             "shares": 0, "saves": 0, "follows_and_unfollows": 0
         }
+        if is_partial:
+            results["_is_partial"] = True
         
         current_since = since
         while current_since < until:
@@ -410,19 +430,24 @@ class InstagramClient:
             except Exception as e:
                 logger.warning(f"Erro account insights chunk (total_value) {current_since} a {current_until}: {e}")
                 
-            params_daily = {
-                "metric": "follows_and_unfollows",
-                "period": "day",
-                "since": str(int(current_since.timestamp())),
-                "until": str(int(current_until.timestamp()))
-            }
-            try:
-                data = self._make_request(endpoint, params_daily)
-                for insight in data.get("data", []):
-                    for val_data in insight.get("values", []):
-                        results["follows_and_unfollows"] += val_data.get("value", 0)
-            except Exception as e:
-                logger.warning(f"Erro account insights chunk (daily) {current_since} a {current_until}: {e}")
+            # follows_and_unfollows only supports the last 30 days. Do not request if older, to prevent 400 Client Errors slowing down the loop.
+            limit_30d = now - datetime.timedelta(days=30)
+            if current_until >= limit_30d:
+                # If the chunk starts before 30 days, adjust it so the API doesn't complain
+                adjusted_since = max(current_since, limit_30d)
+                params_daily = {
+                    "metric": "follows_and_unfollows",
+                    "period": "day",
+                    "since": str(int(adjusted_since.timestamp())),
+                    "until": str(int(current_until.timestamp()))
+                }
+                try:
+                    data = self._make_request(endpoint, params_daily)
+                    for insight in data.get("data", []):
+                        for val_data in insight.get("values", []):
+                            results["follows_and_unfollows"] += val_data.get("value", 0)
+                except Exception as e:
+                    logger.warning(f"Erro account insights chunk (daily) {adjusted_since} a {current_until}: {e}")
                 
             current_since = current_until + datetime.timedelta(seconds=1)
             

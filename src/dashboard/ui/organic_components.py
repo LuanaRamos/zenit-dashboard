@@ -20,7 +20,9 @@ def format_hhmmss(ms_val: float) -> str:
 
 def render_account_insights_cards(insights: dict, paid_totals: dict, followers_history: list = None) -> None:
     """Renderiza os KPIs de nível de conta com a 'Subtração Mágica' separando Orgânico e Pago."""
-    st.markdown("### 👁️ Visão Geral da Conta (Últimos 30 dias)")
+    st.markdown("### 👁️ Visão Geral da Conta")
+    if insights.get("_is_partial"):
+        st.info("⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Os números abaixo refletem apenas o período disponível, mas o histórico completo dos seus posts individuais (abaixo) não possui essa restrição.")
     
     # Calcula novos seguidores dos últimos 30 dias a partir do histórico real da API
     new_followers_30d = 0
@@ -144,8 +146,19 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         
         visualizacoes = None if tipo not in ["Reels", "Vídeo"] else m.organic_views
 
+        # Format timestamp if possible
+        data_hora = m.timestamp
+        if data_hora and "T" in data_hora:
+            try:
+                # Basic ISO format parse
+                data_hora = data_hora.replace("+0000", "").replace(".000Z", "")
+                data_hora = data_hora.replace("T", " ")
+            except:
+                pass
+
         data.append({
             "ID": m.id,
+            "Data e Hora": data_hora,
             "Tipo": tipo,
             "Legenda (Texto)": m.caption,
             "Imagem (URL)": m.thumbnail_url if m.thumbnail_url else m.media_url,
@@ -216,7 +229,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     
     # 2. Tabela Instagram
     st.markdown("#### Desempenho no Instagram")
-    cols_org = ["ID", "Tipo", "Visualizações (Orgânico)", "Alcance (Instagram)", "Visitas ao Perfil", "Tempo Assistido", "Tempo Médio", "Curtidas (Instagram)", "Comentários (Instagram)", "Salvamentos (Instagram)", "Compartilhamentos (Instagram)", "Link"]
+    cols_org = ["ID", "Data e Hora", "Tipo", "Visualizações (Orgânico)", "Alcance (Instagram)", "Visitas ao Perfil", "Tempo Assistido", "Tempo Médio", "Curtidas (Instagram)", "Comentários (Instagram)", "Salvamentos (Instagram)", "Compartilhamentos (Instagram)", "Link"]
     df_org = df[cols_org]
     render_glass_table(df_org, key="tbl_posts_org", hide_download=True, link_col="Link", link_label="Ver no Instagram")
     
@@ -225,7 +238,7 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
     # 3. Tabela Paga (apenas posts que receberam tráfego pago)
     st.markdown("#### Desempenho Pago (Dark Posts / Impulsionados)")
     cols_paid = [
-        "ID", "Tipo", "Qtd. Anúncios", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Impressões (Pago)", "Frequência", 
+        "ID", "Data e Hora", "Tipo", "Qtd. Anúncios", "Destino do Tráfego (Pago)", "Alcance (Pago)", "Impressões (Pago)", "Frequência", 
         "Custo (R$)", "CPM (R$)", "CPC (R$)", "CPP (R$)", "CTR (%)", "Custo por Engajamento (CPA) (R$)", "Custo por Clique de Saída (R$)", 
         "Curtidas (Pago)", "Comentários (Pago)", "Salvamentos (Pago)", "Compartilhamentos (Pago)", 
         "Cliques no Criativo (Pago)", "Cliques de Saída (Pago)", 
@@ -364,6 +377,12 @@ def render_historic_top_comment(client_name: str) -> None:
         
         st.write("")
         df_comments = pd.DataFrame(all_comments)
+        
+        # Formatar Data e Hora para o CSV de comentários
+        if "timestamp" in df_comments.columns:
+            df_comments["Data e Hora"] = df_comments["timestamp"].str.replace("+0000", "", regex=False).str.replace(".000Z", "", regex=False).str.replace("T", " ", regex=False)
+            df_comments = df_comments.drop(columns=["timestamp"])
+            
         csv = df_comments.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Baixar todos os comentários (CSV)",
