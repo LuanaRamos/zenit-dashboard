@@ -380,7 +380,7 @@ class InstagramClient:
             since = until - datetime.timedelta(days=30)
             
         endpoint = f"{self.instagram_account_id}/insights"
-        metrics_list = "profile_links_taps,website_clicks,profile_views,total_interactions,likes,comments,shares,saves"
+        metrics_list = "reach,accounts_engaged,profile_links_taps,website_clicks,profile_views,total_interactions,likes,comments,shares,saves"
         
         results = {
             "profile_links_taps": 0, "website_clicks": 0, "profile_views": 0, "reach": 0,
@@ -424,39 +424,6 @@ class InstagramClient:
                 logger.warning(f"Erro account insights chunk (daily) {current_since} a {current_until}: {e}")
                 
             current_since = current_until + datetime.timedelta(seconds=1)
-            
-        # --- Busca de Métricas de Alcance e Engajamento ---
-        reach_val = 0
-        engaged_val = 0
-        
-        # Como o usuário pediu para remover a restrição de 28 dias, vamos usar period=day
-        # e somar os valores diários para bater com o timeframe selecionado.
-        current_since = since
-        while current_since < until:
-            current_until = min(current_since + datetime.timedelta(days=30), until)
-            try:
-                params_daily_reach = {
-                    "metric": "reach,accounts_engaged",
-                    "period": "day",
-                    "since": str(int(current_since.timestamp())),
-                    "until": str(int(current_until.timestamp()))
-                }
-                data_unique = self._make_request(endpoint, params_daily_reach)
-                for insight in data_unique.get("data", []):
-                    name = insight.get("name")
-                    for val_data in insight.get("values", []):
-                        if name == "reach":
-                            reach_val += val_data.get("value", 0)
-                        elif name == "accounts_engaged":
-                            engaged_val += val_data.get("value", 0)
-            except Exception as e:
-                logger.warning(f"Falha ao buscar reach/accounts_engaged (day) de {current_since} a {current_until}: {e}")
-                
-            current_since = current_until + datetime.timedelta(seconds=1)
-            
-        results["reach"] = reach_val
-        results["accounts_engaged"] = engaged_val
-        # --------------------------------------------------------
             
         return results
 
