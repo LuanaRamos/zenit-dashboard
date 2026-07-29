@@ -18,9 +18,14 @@ def format_hhmmss(ms_val: float) -> str:
     else:
         return f"{s:02d}s"
 
-def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
+def render_account_insights_cards(insights: dict, paid_totals: dict, followers_history: list = None) -> None:
     """Renderiza os KPIs de nível de conta com a 'Subtração Mágica' separando Orgânico e Pago."""
     st.markdown("### 👁️ Visão Geral da Conta (Últimos 30 dias)")
+    
+    # Calcula novos seguidores dos últimos 30 dias a partir do histórico real da API
+    new_followers_30d = 0
+    if followers_history:
+        new_followers_30d = sum(item.get("value", 0) for item in followers_history if item.get("value", 0) > 0)
     
     # 100% Números Reais (Soma para o Total, Separação no detalhe)
     r_ig = insights.get('reach', 0)
@@ -76,7 +81,12 @@ def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
     with cols_org2[1]:
         render_metric_card("Salvamentos", fmt(saves_ig), bkd(saves_ig, saves_paid), "Posts guardados")
     with cols_org2[2]:
-        render_metric_card("Novos Seguidores", fmt(insights.get('follows_and_unfollows', 0)), "Total", "Saldo no período")
+        render_metric_card(
+            "Novos Seguidores",
+            fmt(new_followers_30d),
+            "Total",
+            "⚠️ A Meta só permite consultar seguidores dos últimos 30 dias, independente do filtro."
+        )
     with cols_org2[3]:
         st.empty() # Espaço vazio para alinhar
 

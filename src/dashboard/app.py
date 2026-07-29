@@ -202,7 +202,7 @@ try:
                     with tab_geral:
                         st.write("")
                         from ui.organic_components import render_account_insights_cards
-                        render_account_insights_cards(account_insights, paid_totals)
+                        render_account_insights_cards(account_insights, paid_totals, followers_history)
                         
                         st.write("")
                         render_organic_metrics_cards(media_list)
