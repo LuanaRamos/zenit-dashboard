@@ -425,50 +425,35 @@ class InstagramClient:
                 
             current_since = current_until + datetime.timedelta(seconds=1)
             
-        # --- Busca de Métricas Únicas Desduplicadas (28 dias) ---
+        # --- Busca de Métricas de Alcance e Engajamento ---
         reach_val = 0
         engaged_val = 0
         
-        # 1. Tentamos reach e accounts_engaged clássicos
-        try:
-            params_unique = {
-                "metric": "reach,accounts_engaged",
-                "period": "days_28",
-                "since": str(int((until - datetime.timedelta(days=5)).timestamp())),
-                "until": str(int(until.timestamp()))
-            }
-            data_unique = self._make_request(endpoint, params_unique)
-            for insight in data_unique.get("data", []):
-                name = insight.get("name")
-                values = insight.get("values", [])
-                if values:
-                    # Pega o ponto de dado mais recente retornado
-                    latest_val = sorted(values, key=lambda x: x.get("end_time", ""))[-1]
-                    if name == "reach":
-                        reach_val = latest_val.get("value", 0)
-                    elif name == "accounts_engaged":
-                        engaged_val = latest_val.get("value", 0)
-        except Exception as e:
-            logger.warning(f"Falha ao buscar reach (pode ter sido descontinuado). Tentando fallback... {e}")
-            
-        # 2. Se reach falhou (API v25+), tentamos total_media_view_unique
-        if reach_val == 0:
+        # Como o usuário pediu para remover a restrição de 28 dias, vamos usar period=day
+        # e somar os valores diários para bater com o timeframe selecionado.
+        current_since = since
+        while current_since < until:
+            current_until = min(current_since + datetime.timedelta(days=30), until)
             try:
-                params_fallback = {
-                    "metric": "total_media_view_unique",
-                    "period": "days_28",
-                    "since": str(int((until - datetime.timedelta(days=5)).timestamp())),
-                    "until": str(int(until.timestamp()))
+                params_daily_reach = {
+                    "metric": "reach,accounts_engaged",
+                    "period": "day",
+                    "since": str(int(current_since.timestamp())),
+                    "until": str(int(current_until.timestamp()))
                 }
-                data_fallback = self._make_request(endpoint, params_fallback)
-                for insight in data_fallback.get("data", []):
-                    if insight.get("name") == "total_media_view_unique":
-                        values = insight.get("values", [])
-                        if values:
-                            reach_val = sorted(values, key=lambda x: x.get("end_time", ""))[-1].get("value", 0)
-            except Exception as e2:
-                logger.warning(f"Falha no fallback de reach: {e2}")
+                data_unique = self._make_request(endpoint, params_daily_reach)
+                for insight in data_unique.get("data", []):
+                    name = insight.get("name")
+                    for val_data in insight.get("values", []):
+                        if name == "reach":
+                            reach_val += val_data.get("value", 0)
+                        elif name == "accounts_engaged":
+                            engaged_val += val_data.get("value", 0)
+            except Exception as e:
+                logger.warning(f"Falha ao buscar reach/accounts_engaged (day) de {current_since} a {current_until}: {e}")
                 
+            current_since = current_until + datetime.timedelta(seconds=1)
+            
         results["reach"] = reach_val
         results["accounts_engaged"] = engaged_val
         # --------------------------------------------------------
