@@ -34,7 +34,7 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     # 100% Números Reais (Soma para o Total, Separação no detalhe)
     r_ig = insights.get('reach', 0)
     r_paid = paid_totals.get('reach', 0)
-    r_tot = r_ig + r_paid
+    # Risco de dupla contagem mitigado: reach_total removido
     
     likes_ig = insights.get('likes', 0)
     likes_paid = paid_totals.get('likes', 0)
@@ -56,14 +56,16 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     def bkd(ig, pd): return f"IG: {fmt(ig)} | Pago: {fmt(pd)}"
     
     st.markdown("#### 🎯 Métricas Totais")
-    cols_mix = st.columns(4)
+    cols_mix = st.columns(5)
     with cols_mix[0]:
-        render_metric_card("Alcance Total", fmt(r_tot), bkd(r_ig, r_paid), "Pessoas (Instagram vs Ads)")
+        render_metric_card("Alcance Orgânico", fmt(r_ig), "Pessoas (Max 13m)", "Alcance único no IG (Não somar com Pago)")
     with cols_mix[1]:
-        render_metric_card("Total de Interações", fmt(int_tot), bkd(int_ig, int_paid), "Engajamento (Instagram vs Ads)")
+        render_metric_card("Alcance Pago", fmt(r_paid), "Pessoas (Max 13m)", "Alcance único em Ads (Não somar com Orgânico)")
     with cols_mix[2]:
-        render_metric_card("Curtidas", fmt(likes_tot), bkd(likes_ig, likes_paid), "Curtidas (Instagram vs Ads)")
+        render_metric_card("Total de Interações", fmt(int_tot), bkd(int_ig, int_paid), "Engajamento (Instagram vs Ads)")
     with cols_mix[3]:
+        render_metric_card("Curtidas", fmt(likes_tot), bkd(likes_ig, likes_paid), "Curtidas (Instagram vs Ads)")
+    with cols_mix[4]:
         render_metric_card("Compartilhamentos", fmt(shares_tot), bkd(shares_ig, shares_paid), "Envios (Instagram vs Ads)")
 
     st.write("")
@@ -76,7 +78,7 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     with cols_org[2]:
         render_metric_card("Cliques no Site", fmt(insights.get('website_clicks', 0)), "Total", "Cliques gerais")
     with cols_org[3]:
-        render_metric_card("Contas Engajadas", fmt(insights.get('accounts_engaged', 0)), "Total", "Usuários únicos")
+        render_metric_card("Contas Engajadas", fmt(insights.get('accounts_engaged', 0)), "Total (Max 13m)", "Usuários únicos")
         
     st.write("")
     cols_org2 = st.columns(4)

@@ -371,7 +371,8 @@ class InstagramClient:
             until = datetime.datetime.strptime(time_range['until'], '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
         elif date_preset == "maximum":
             until = now
-            since = until - relativedelta(years=2) + datetime.timedelta(days=1)
+            # Meta Graph API v25.0 limita alcance a 13 meses de histórico (395 dias)
+            since = until - relativedelta(months=13) + datetime.timedelta(days=1)
         elif date_preset == "last_90d":
             until = now
             since = until - datetime.timedelta(days=90)
@@ -531,6 +532,7 @@ class InstagramClient:
         from schemas.instagram import AccountDemographics, InstagramDemographics
 
         endpoint = f"{self.instagram_account_id}/insights"
+        endpoint = f"{self.instagram_account_id}/insights"
         def _fetch_demographic(metric: str, timeframe: str = None) -> InstagramDemographics:
             age_gender = {}
             cities = {}
@@ -547,8 +549,6 @@ class InstagramClient:
                     "metric_type": "total_value"
                 }
                 
-                if timeframe:
-                    params["timeframe"] = timeframe
                 
                 try:
                     data = self._make_request(endpoint, params)

@@ -91,6 +91,10 @@ class MetaAdsClient:
 
         if time_range:
             params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+            until_dt = datetime.datetime.now()
+            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
         else:
             params["date_preset"] = date_preset
 
@@ -131,7 +135,7 @@ class MetaAdsClient:
         cities = {}
         countries = {}
 
-        breakdowns_list = ["age,gender", "country", "region"]
+        breakdowns_list = ["age,gender", "country", "audience_city"]
 
         for brk in breakdowns_list:
             params = {
@@ -142,6 +146,10 @@ class MetaAdsClient:
             }
             if time_range:
                 params["time_range"] = json.dumps(time_range)
+            elif date_preset == "maximum":
+                since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+                until_dt = datetime.datetime.now()
+                params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
             else:
                 params["date_preset"] = date_preset
 
@@ -161,9 +169,9 @@ class MetaAdsClient:
                             country = item.get("country", "Unknown")
                             if country != "Unknown":
                                 countries[country] = countries.get(country, 0) + val
-                        elif brk == "region":
+                        elif brk == "audience_city":
                             # 'region' no Meta Ads = estado/região (o mais próximo de cidade disponível)
-                            region = item.get("region", "Unknown")
+                            region = item.get("audience_city", "Unknown")
                             if region != "Unknown":
                                 cities[region] = cities.get(region, 0) + val
                                 
@@ -203,12 +211,16 @@ class MetaAdsClient:
         base_params: dict = {"level": "ad", "fields": "ad_id,impressions", "limit": "1000"}
         if time_range:
             base_params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+            until_dt = datetime.datetime.now()
+            base_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
         else:
             base_params["date_preset"] = date_preset
 
         audience_map: dict[str, dict] = {}
 
-        for brk in ["age,gender", "region", "country"]:
+        for brk in ["age,gender", "audience_city", "country"]:
             params = {**base_params, "breakdowns": brk}
             try:
                 while True:
@@ -230,8 +242,8 @@ class MetaAdsClient:
                                 audience_map[ad_id]["age_gender"][key] = (
                                     audience_map[ad_id]["age_gender"].get(key, 0) + impressions
                                 )
-                        elif brk == "region":
-                            region = item.get("region", "")
+                        elif brk == "audience_city":
+                            region = item.get("audience_city", "")
                             if region:
                                 audience_map[ad_id]["regions"][region] = (
                                     audience_map[ad_id]["regions"].get(region, 0) + impressions
@@ -268,6 +280,10 @@ class MetaAdsClient:
         }
         if time_range:
             params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+            until_dt = datetime.datetime.now()
+            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
         else:
             params["date_preset"] = date_preset
 
@@ -567,6 +583,10 @@ class MetaAdsClient:
         }
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+            until_dt = datetime.datetime.now()
+            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
         else:
             insights_params["date_preset"] = date_preset
 
@@ -846,6 +866,10 @@ class MetaAdsClient:
                     }
                     if time_range:
                         summary_params["time_range"] = json.dumps(time_range)
+                    elif date_preset == "maximum":
+                        since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+                        until_dt = datetime.datetime.now()
+                        summary_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
@@ -903,6 +927,10 @@ class MetaAdsClient:
         }
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
+            until_dt = datetime.datetime.now()
+            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
         else:
             insights_params["date_preset"] = date_preset
 
