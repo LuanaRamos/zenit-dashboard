@@ -126,6 +126,8 @@ def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]
         data.append({
             "ID": m.id,
             "Tipo": tipo,
+            "Legenda (Texto)": m.caption,
+            "Imagem (URL)": m.thumbnail_url if m.thumbnail_url else m.media_url,
             "Visualizações (Orgânico)": visualizacoes,
             "Alcance (Instagram)": m.reach,
             "Visitas ao Perfil": visitas,
