@@ -44,8 +44,8 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     shares_paid = paid_totals.get('shares', 0)
     shares_tot = shares_ig + shares_paid
     
-    saves_ig = insights.get('saves', 0)
-    saves_paid = paid_totals.get('saved', 0)
+    saves_ig = max(0, insights.get('saves', 0))
+    saves_paid = max(0, paid_totals.get('saved', 0))
     saves_tot = saves_ig + saves_paid
     
     int_ig = insights.get('total_interactions', 0)
@@ -83,7 +83,7 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     with cols_org2[0]:
         render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total", "Respostas no perfil")
     with cols_org2[1]:
-        render_metric_card("Salvamentos", fmt(saves_ig), bkd(saves_ig, saves_paid), "Posts guardados")
+        render_metric_card("Salvamentos", fmt(saves_tot), bkd(saves_ig, saves_paid), "Posts guardados")
     with cols_org2[2]:
         render_metric_card(
             "Novos Seguidores",
