@@ -25,7 +25,11 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     # Calcula novos seguidores dos últimos 30 dias a partir do histórico real da API
     new_followers_30d = 0
     if followers_history:
-        new_followers_30d = sum(item.get("value", 0) for item in followers_history if item.get("value", 0) > 0)
+        for item in followers_history:
+            # Suporta tanto o formato raw {"value": N} quanto o transformado {"Novos Seguidores": N}
+            val = item.get("Novos Seguidores") or item.get("value", 0)
+            if val and val > 0:
+                new_followers_30d += val
     
     # 100% Números Reais (Soma para o Total, Separação no detalhe)
     r_ig = insights.get('reach', 0)

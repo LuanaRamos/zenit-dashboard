@@ -892,14 +892,14 @@ class MetaAdsClient:
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> dict[str, int]:
         """
-        Busca os totais pagos consolidados da conta no Instagram (nível account),
-        garantindo alcance desduplicado e a inclusão de todos os dark posts.
+        Busca os totais pagos consolidados da conta (nível account).
+        Sem breakdown de plataforma para garantir que o alcance desduplicado
+        total seja capturado — a conta tem campanhas no Facebook e Instagram.
         """
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "account",
             "fields": "reach,impressions,clicks,actions,outbound_clicks",
-            "breakdowns": "publisher_platform",
         }
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
@@ -911,21 +911,20 @@ class MetaAdsClient:
         try:
             data = self._make_request(insights_endpoint, insights_params)
             for item in data.get("data", []):
-                if item.get("publisher_platform") == "instagram":
-                    totals["reach"] = int(item.get("reach", 0))
-                    totals["impressions"] = int(item.get("impressions", 0))
-                    
-                    actions = item.get("actions", [])
-                    for action in actions:
-                        action_type = action.get("action_type")
-                        val = int(action.get("value", 0))
-                        if action_type in ["like", "onsite_conversion.post_net_like"]:
-                            totals["likes"] = max(totals["likes"], val)
-                        elif action_type == "post":
-                            totals["shares"] = max(totals["shares"], val)
-                        elif action_type in ["onsite_conversion.post_save", "onsite_conversion.post_net_save"]:
-                            totals["saved"] = max(totals["saved"], val)
-                            
+                totals["reach"] += int(item.get("reach", 0))
+                totals["impressions"] += int(item.get("impressions", 0))
+                
+                actions = item.get("actions", [])
+                for action in actions:
+                    action_type = action.get("action_type")
+                    val = int(action.get("value", 0))
+                    if action_type in ["like", "onsite_conversion.post_net_like", "post_reaction"]:
+                        totals["likes"] = max(totals["likes"], val)
+                    elif action_type == "post":
+                        totals["shares"] = max(totals["shares"], val)
+                    elif action_type in ["onsite_conversion.post_save", "onsite_conversion.post_net_save"]:
+                        totals["saved"] = max(totals["saved"], val)
+                        
             return totals
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
