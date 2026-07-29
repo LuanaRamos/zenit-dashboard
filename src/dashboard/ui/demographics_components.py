@@ -149,6 +149,29 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
     _render_hbar_iframe(fig, chart_height)
 
 
+_STATE_MAP = {
+    "acre": "AC", "alagoas": "AL", "amapá": "AP", "amazonas": "AM", "bahia": "BA",
+    "ceará": "CE", "distrito federal": "DF", "federal district": "DF",
+    "espírito santo": "ES", "goiás": "GO", "maranhão": "MA", "mato grosso": "MT",
+    "mato grosso do sul": "MS", "minas gerais": "MG", "pará": "PA",
+    "paraíba": "PB", "paraná": "PR", "pernambuco": "PE", "piauí": "PI",
+    "rio de janeiro": "RJ", "rio de janeiro (state)": "RJ",
+    "rio grande do norte": "RN", "rio grande do sul": "RS",
+    "rondônia": "RO", "roraima": "RR", "santa catarina": "SC",
+    "são paulo": "SP", "são paulo (state)": "SP", "sao paulo (state)": "SP",
+    "sergipe": "SE", "tocantins": "TO"
+}
+
+def _format_city_name(raw: str) -> str:
+    if "," not in raw:
+        return raw
+    parts = [p.strip() for p in raw.split(",", 1)]
+    city = parts[0]
+    state_raw = parts[1].strip().lower()
+    sigla = _STATE_MAP.get(state_raw, parts[1])
+    return f"{city} - {sigla}"
+
+
 def render_top_locations(
     data: dict[str, int],
     title: str,
@@ -161,7 +184,7 @@ def render_top_locations(
         return
 
     sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:max_items]
-    names = [x[0] for x in sorted_items]
+    names = [_format_city_name(x[0]) for x in sorted_items]
     values = [x[1] for x in sorted_items]
 
     right_margin = max(70, max(len(f"{v:,}") for v in values) * 9)
@@ -195,7 +218,7 @@ def render_top_locations(
             tickfont=dict(size=12, color="#F1F5F9"),
             automargin=True,
         ),
-        margin=dict(l=70, r=right_margin, t=36, b=10),
+        margin=dict(r=right_margin, t=36, b=10, l=10),
         height=chart_height,
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
