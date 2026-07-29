@@ -132,13 +132,16 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 end_date = st.date_input(
                     "Data Final",
                     value=max_date,
-                    min_value=start_date, # Garantir que não selecione antes da inicial
+                    min_value=min_date, # Usar a data mínima global para destravar o seletor de ano
                     max_value=max_date,
                     format="DD/MM/YYYY",
                 )
 
             if start_date and end_date:
-                if start_date <= end_date:
+                if start_date > end_date:
+                    st.error("⚠️ A Data Inicial não pode ser maior que a Data Final.")
+                    st.stop()
+                else:
                     delta = end_date - start_date
                     # Meta API restricts custom time_range to ~37 months (approx 1125 days).
                     if delta.days > 1125:
