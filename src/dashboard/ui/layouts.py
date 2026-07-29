@@ -152,9 +152,6 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                             "since": start_date.strftime("%Y-%m-%d"),
                             "until": end_date.strftime("%Y-%m-%d"),
                         }
-                else:
-                    st.warning("A data inicial não pode ser maior que a data final.")
-                    st.stop()
             else:
                 st.warning("Selecione a data inicial e final.")
                 st.stop()
