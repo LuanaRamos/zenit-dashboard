@@ -41,10 +41,11 @@ def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
     def fmt(val): return f"{int(val):,}".replace(",", ".")
     def bkd(ig, pd): return f"IG: {fmt(ig)} | Pago: {fmt(pd)}"
     
-    st.markdown("#### 🎯 Métricas Totais (Cuidado com sobreposição)")
+    st.markdown("#### 🎯 Métricas Totais")
+    st.markdown("<p style='font-size: 0.85rem; color: #8B949E; margin-top: -10px; margin-bottom: 20px;'>💡 <b>Nota de Desduplicação:</b> O <i>Alcance</i> e <i>Contas Engajadas</i> exibem a janela oficial restrita de <b>28 dias</b> da Meta para garantir CPFs únicos (sem inflação). As demais métricas somam o período completo.</p>", unsafe_allow_html=True)
     cols_mix = st.columns(4)
     with cols_mix[0]:
-        render_metric_card("Alcance", fmt(r_ig), bkd(r_ig, r_paid), "Pessoas (Instagram vs Ads)")
+        render_metric_card("Alcance (28d)", fmt(r_ig), bkd(r_ig, r_paid), "Pessoas Únicas (Instagram vs Ads)")
     with cols_mix[1]:
         render_metric_card("Total de Interações", fmt(int_ig), bkd(int_ig, int_paid), "Engajamento (Instagram vs Ads)")
     with cols_mix[2]:
@@ -62,7 +63,7 @@ def render_account_insights_cards(insights: dict, paid_totals: dict) -> None:
     with cols_org[2]:
         render_metric_card("Cliques no Site", fmt(insights.get('website_clicks', 0)), "Total", "Cliques gerais")
     with cols_org[3]:
-        render_metric_card("Contas Engajadas", fmt(insights.get('accounts_engaged', 0)), "Total", "Usuários únicos")
+        render_metric_card("Contas Engajadas (28d)", fmt(insights.get('accounts_engaged', 0)), "Total", "Usuários únicos")
         
     st.write("")
     cols_org2 = st.columns(4)

@@ -380,7 +380,7 @@ class InstagramClient:
             since = until - datetime.timedelta(days=30)
             
         endpoint = f"{self.instagram_account_id}/insights"
-        metrics_list = "profile_links_taps,website_clicks,profile_views,reach,total_interactions,accounts_engaged,likes,comments,shares,saves"
+        metrics_list = "profile_links_taps,website_clicks,profile_views,total_interactions,likes,comments,shares,saves"
         
         results = {
             "profile_links_taps": 0, "website_clicks": 0, "profile_views": 0, "reach": 0,
@@ -424,6 +424,54 @@ class InstagramClient:
                 logger.warning(f"Erro account insights chunk (daily) {current_since} a {current_until}: {e}")
                 
             current_since = current_until + datetime.timedelta(seconds=1)
+            
+        # --- Busca de Métricas Únicas Desduplicadas (28 dias) ---
+        reach_val = 0
+        engaged_val = 0
+        
+        # 1. Tentamos reach e accounts_engaged clássicos
+        try:
+            params_unique = {
+                "metric": "reach,accounts_engaged",
+                "period": "days_28",
+                "since": str(int((until - datetime.timedelta(days=5)).timestamp())),
+                "until": str(int(until.timestamp()))
+            }
+            data_unique = self._make_request(endpoint, params_unique)
+            for insight in data_unique.get("data", []):
+                name = insight.get("name")
+                values = insight.get("values", [])
+                if values:
+                    # Pega o ponto de dado mais recente retornado
+                    latest_val = sorted(values, key=lambda x: x.get("end_time", ""))[-1]
+                    if name == "reach":
+                        reach_val = latest_val.get("value", 0)
+                    elif name == "accounts_engaged":
+                        engaged_val = latest_val.get("value", 0)
+        except Exception as e:
+            logger.warning(f"Falha ao buscar reach (pode ter sido descontinuado). Tentando fallback... {e}")
+            
+        # 2. Se reach falhou (API v25+), tentamos total_media_view_unique
+        if reach_val == 0:
+            try:
+                params_fallback = {
+                    "metric": "total_media_view_unique",
+                    "period": "days_28",
+                    "since": str(int((until - datetime.timedelta(days=5)).timestamp())),
+                    "until": str(int(until.timestamp()))
+                }
+                data_fallback = self._make_request(endpoint, params_fallback)
+                for insight in data_fallback.get("data", []):
+                    if insight.get("name") == "total_media_view_unique":
+                        values = insight.get("values", [])
+                        if values:
+                            reach_val = sorted(values, key=lambda x: x.get("end_time", ""))[-1].get("value", 0)
+            except Exception as e2:
+                logger.warning(f"Falha no fallback de reach: {e2}")
+                
+        results["reach"] = reach_val
+        results["accounts_engaged"] = engaged_val
+        # --------------------------------------------------------
             
         return results
 
