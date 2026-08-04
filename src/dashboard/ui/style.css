@@ -109,7 +109,7 @@
 .glass-download {
     display: inline-flex; align-items: center; gap: 6px;
     margin-top: 10px; padding: 5px 14px; font-size: 0.8rem;
-    color: #111317; background: linear-gradient(90deg, var(--primary), #dfff5a, var(--primary));
+    color: #111317; background: linear-gradient(90deg, var(--primary), #FFD54F, var(--primary));
     background-size: 240% 100%;
     border: 1px solid var(--primary); border-radius: 8px;
     text-decoration: none; cursor: pointer; transition: .22s;
