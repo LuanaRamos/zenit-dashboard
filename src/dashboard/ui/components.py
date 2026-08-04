@@ -272,7 +272,7 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         labels=labels, 
         values=values, 
         marker=dict(
-            colors=["#ccff00", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
+            colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
             line=dict(color='rgba(0,0,0,0)', width=0)
         ),
         textinfo='none',
@@ -290,7 +290,7 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         height=400,  # Aumenta a altura interna do Plotly
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
-            bordercolor="#ccff00",
+            bordercolor="#FFB300",
             font=dict(family="Montserrat", size=13, color="#FFFFFF"),
         )
     )
@@ -309,7 +309,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             y=chart_data["Custo"],
             width=0.15,
             marker=dict(
-                color='#ccff00',
+                color='#FFB300',
                 line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
                 cornerradius="50%"
             ),

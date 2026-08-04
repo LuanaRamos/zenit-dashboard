@@ -3,6 +3,13 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 
 
+import base64
+from pathlib import Path
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
 def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     """
     Configura e renderiza a barra lateral de navegação e filtros.
@@ -10,12 +17,19 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     """
     with st.sidebar:
         # Zenit Logo styling (Gold and Dark)
+        logo_path = Path(__file__).parent.parent / "assets" / "zenit_logo.png"
+        if logo_path.exists():
+            logo_base64 = get_base64_image(logo_path)
+            logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="width: 32px; height: 32px; border-radius: 6px; box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3); object-fit: contain;">'
+        else:
+            logo_html = '<div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #FFB300, #FF6F00); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>'
+
         st.markdown(
-            """
+            f"""
             <div style="padding: 10px 0 24px 0; text-align: left; display: flex; align-items: center; gap: 12px;">
-                <div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #ccff00, #abd600); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>
+                {logo_html}
                 <h2 style="margin:0; font-size: 1.4rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
-                    <span style="color: #ffffff;">Zenit</span><span style="color: #ccff00;">Analytics</span>
+                    <span style="color: #ffffff;">Zenit</span><span style="color: #FFB300;">Analytics</span>
                 </h2>
             </div>
             """,
@@ -83,7 +97,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "background": "rgba(255, 179, 0, 0.08)",
                     "border": "1px solid rgba(255, 179, 0, 0.15)",
                     "box-shadow": "none",
-                    "color": "#ccff00",
+                    "color": "#FFB300",
                     "font-weight": "600"
                 },
             }
@@ -92,7 +106,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         # Override icon color when selected to Zenit Gold
         st.markdown("""
         <style>
-        .nav-item .active i { color: #ccff00 !important; }
+        .nav-item .active i { color: #FFB300 !important; }
         </style>
         """, unsafe_allow_html=True)
 

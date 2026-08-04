@@ -5,10 +5,16 @@ from pathlib import Path
 import sentry_sdk
 import streamlit as st
 
+try:
+    from PIL import Image
+    _icon = Image.open(Path(__file__).parent / "assets" / "zenit_logo.png")
+except Exception:
+    _icon = "📈"
+
 # Configuração da página DEVE ser a primeira chamada do Streamlit
 st.set_page_config(
     page_title="Zenit Analytics",
-    page_icon="📈",
+    page_icon=_icon,
     layout="wide",
     initial_sidebar_state="expanded",
 )
