@@ -71,7 +71,7 @@ def _status_badge(status: str) -> str:
 
 _GENDER_PT = {"male": "Masculino", "female": "Feminino", "unknown": "Indefinido"}
 _AGE_ORDER = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
-_COLORS = {"Masculino": "#2A85FF", "Feminino": "#FF2A85", "Indefinido": "#8B949E"}
+_COLORS = {"Masculino": "#2A85FF", "Feminino": "#FF2A85", "Indefinido": "#c4c9ac"}
 
 
 def _render_real_audience(ad: dict) -> None:
@@ -337,7 +337,7 @@ def _render_creative_card(ad: dict) -> None:
     traffic_dest = ad.get("traffic_destination", "Não Identificado")
 
     st.markdown(
-        f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #8B949E;'>"
+        f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #c4c9ac;'>"
         f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span><br>"
         f"🔗 Destino: <span style='color: #F1F5F9;'>{traffic_dest}</span>"
         f"</div>",

@@ -319,20 +319,20 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{curtidas}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">&#10084; Curtidas</div>
+            <div style="font-size: 0.7rem; color: #c4c9ac;">&#10084; Curtidas</div>
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{comentarios}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">&#128172; Coment.</div>
+            <div style="font-size: 0.7rem; color: #c4c9ac;">&#128172; Coment.</div>
         </div>
         <div style="text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #E2E8F0;">{compartilhamentos}</div>
-            <div style="font-size: 0.7rem; color: #8B949E;">&#128260; Comp.</div>
+            <div style="font-size: 0.7rem; color: #c4c9ac;">&#128260; Comp.</div>
         </div>
     </div>
     <div style="margin-bottom: 15px;">
-        <div style="color: #FFB300; font-size: 1.2rem; font-weight: bold;">Alcance (Instagram): {alcance_org}</div>
-        <div style="font-size: 0.8rem; color: #8B949E;">Alcance Pago (Ads): {alcance_pago}</div>
+        <div style="color: #ccff00; font-size: 1.2rem; font-weight: bold;">Alcance (Instagram): {alcance_org}</div>
+        <div style="font-size: 0.8rem; color: #c4c9ac;">Alcance Pago (Ads): {alcance_pago}</div>
     </div>"""
             
             c = best_comments[i] if i < len(best_comments) else None
@@ -340,9 +340,9 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
                 text = c.get("text", "")
                 username = c.get("username", "Usuário")
                 likes = c.get("like_count", 0)
-                html += f"""<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #FFB300; margin-top: 10px;">
+                html += f"""<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: left; font-size: 0.85rem; border-left: 3px solid #ccff00; margin-top: 10px;">
         <div style="color: #E2E8F0; margin-bottom: 4px;">"{text}"</div>
-        <div style="color: #8B949E; font-size: 0.75rem;"><strong>@{username}</strong> &bull; {likes} curtidas</div>
+        <div style="color: #c4c9ac; font-size: 0.75rem;"><strong>@{username}</strong> &bull; {likes} curtidas</div>
     </div>"""
             html += "</div>"
             st.markdown(html, unsafe_allow_html=True)
@@ -367,9 +367,9 @@ def render_historic_top_comment(client_name: str) -> None:
         username = best.get("username", "Usuário")
         likes = best.get("like_count", 0)
         
-        html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
+        html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #ccff00; background: rgba(204,255,0,0.05); border-radius: 8px; margin-bottom: 20px;">
     <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">"{text}"</div>
-    <div style="color: #8B949E; font-size: 0.9rem;">
+    <div style="color: #c4c9ac; font-size: 0.9rem;">
         <strong>@{username}</strong> • 🏆 {int(likes):,} curtidas
     </div>
 </div>""".replace(",", ".")
@@ -421,8 +421,8 @@ def render_followers_timeline(history_data: list) -> None:
     st.markdown(f"""
     <div class="metric-card" style="margin-bottom: 20px;">
         <div class="metric-label">Maior Pico (Últimos 30d)</div>
-        <div class="metric-value" style="color: #FFB300;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #8B949E;">Seguidores</span></div>
-        <div style="font-size: 0.8rem; color: #8B949E; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
+        <div class="metric-value" style="color: #ccff00;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #c4c9ac;">Seguidores</span></div>
+        <div style="font-size: 0.8rem; color: #c4c9ac; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -431,14 +431,14 @@ def render_followers_timeline(history_data: list) -> None:
         df, 
         x="Data", 
         y="Novos Seguidores",
-        color_discrete_sequence=["#FFB300"]
+        color_discrete_sequence=["#ccff00"]
     )
     
     fig.update_traces(
         line_shape='spline',
         mode='lines+markers',
         fill='tozeroy',
-        marker=dict(size=6, color="#FFB300", line=dict(width=1, color="white")),
+        marker=dict(size=6, color="#ccff00", line=dict(width=1, color="white")),
         hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>"
     )
     

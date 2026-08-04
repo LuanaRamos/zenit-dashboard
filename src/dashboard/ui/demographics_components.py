@@ -25,7 +25,7 @@ _AGE_ORDER = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
 _COLOR_GENDER = {
     "Masculino": "#2A85FF",
     "Feminino":  "#FF2A85",
-    "Indefinido": "#8B949E",
+    "Indefinido": "#c4c9ac",
 }
 
 
@@ -272,7 +272,7 @@ def render_demographics_dashboard(demo: AccountDemographics) -> None:
     )
     st.markdown(
         "<div style='background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);"
-        "border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:0.83rem;color:#8B949E;'>"
+        "border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:0.83rem;color:#c4c9ac;'>"
         "⚠️ <b>Nota:</b> A Meta fornece dados de <i>Seguidores</i> como retrato atual (lifetime). "
         "Para <i>Engajados</i> e <i>Alcançados</i>, o timeframe disponível na API é o mês corrente. "
         "Esses dados <b>não são afetados</b> pelo filtro de período da barra lateral."

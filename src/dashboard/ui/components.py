@@ -179,7 +179,7 @@ def render_glass_table(
 
 def render_metric_card(label: str, value: str, subtext: str = None, help_text: str = None) -> None:
     sub_html = f"<div style='color: #FFFFFF; font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;'>{subtext}</div>" if subtext else ""
-    help_html = f"<div style='font-size: 0.75rem; color: #8B949E; font-weight: 400;'>{help_text}</div>" if help_text else ""
+    help_html = f"<div style='font-size: 0.75rem; color: #c4c9ac; font-weight: 400;'>{help_text}</div>" if help_text else ""
     
     html = (
         '<div class="glass-card kpi-card">'
@@ -272,7 +272,7 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         labels=labels, 
         values=values, 
         marker=dict(
-            colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
+            colors=["#ccff00", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
             line=dict(color='rgba(0,0,0,0)', width=0)
         ),
         textinfo='none',
@@ -283,14 +283,14 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         separators=",.",
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
-        font={"color": "#8B949E", "family": "Inter, sans-serif"}, 
+        font={"color": "#c4c9ac", "family": "Inter, sans-serif"}, 
         margin={"l": 0, "r": 0, "t": 10, "b": 60},  # Margem bottom bem maior para a legenda caber
         showlegend=True,
         legend={"orientation": "h", "y": -0.25, "font": {"size": 11, "color": "#F1F5F9"}}, 
         height=400,  # Aumenta a altura interna do Plotly
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
-            bordercolor="#FFB300",
+            bordercolor="#ccff00",
             font=dict(family="Montserrat", size=13, color="#FFFFFF"),
         )
     )
@@ -309,7 +309,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             y=chart_data["Custo"],
             width=0.15,
             marker=dict(
-                color='#FFB300',
+                color='#ccff00',
                 line=dict(color='rgba(255, 179, 0, 0.8)', width=0),
                 cornerradius="50%"
             ),
@@ -323,8 +323,8 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             separators=",.",
             plot_bgcolor="rgba(0,0,0,0)", 
             paper_bgcolor="rgba(0,0,0,0)", 
-            xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#8B949E", tickfont=dict(size=10, family="Inter")), 
-            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#8B949E", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
+            xaxis=dict(showgrid=False, zeroline=False, showline=False, color="#c4c9ac", tickfont=dict(size=10, family="Inter")), 
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)", gridwidth=1, zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", rangemode="tozero", color="#c4c9ac", tickprefix="R$ ", tickfont=dict(size=10, family="Inter")), 
             margin=dict(l=0, r=0, t=10, b=40), # Espaço embaixo para a label X
             height=400, 
             hovermode="x unified",

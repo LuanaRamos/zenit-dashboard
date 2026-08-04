@@ -13,9 +13,9 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         st.markdown(
             """
             <div style="padding: 10px 0 24px 0; text-align: left; display: flex; align-items: center; gap: 12px;">
-                <div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #FFB300, #FF6F00); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>
+                <div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #ccff00, #abd600); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>
                 <h2 style="margin:0; font-size: 1.4rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
-                    <span style="color: #ffffff;">Zenit</span><span style="color: #FFB300;">Analytics</span>
+                    <span style="color: #ffffff;">Zenit</span><span style="color: #ccff00;">Analytics</span>
                 </h2>
             </div>
             """,
@@ -36,7 +36,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         if st.session_state["selected_client_name"] not in client_names:
             st.session_state["selected_client_name"] = client_names[0]
 
-        st.markdown("<h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>", unsafe_allow_html=True)
         
         def on_client_change():
             # Limpa o cache ao trocar de cliente
@@ -53,7 +53,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         
         selected_client = next(c for c in clients if c.name == selected_client_name)
 
-        st.markdown("<br><h4 style='color: #8B949E; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
+        st.markdown("<br><h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
         selected_module = option_menu(
             menu_title=None,
             options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
@@ -65,7 +65,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "padding": "0!important", 
                     "background-color": "transparent",
                 },
-                "icon": {"color": "#8B949E", "font-size": "16px"},
+                "icon": {"color": "#c4c9ac", "font-size": "16px"},
                 "nav-link": {
                     "font-size": "14px",
                     "text-align": "left",
@@ -74,7 +74,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "border-radius": "6px",
                     "padding": "10px 14px",
                     "border": "1px solid transparent",
-                    "color": "#8B949E",
+                    "color": "#c4c9ac",
                     "font-family": "Inter, sans-serif",
                     "font-weight": "500",
                     "transition": "all 0.2s ease",
@@ -83,7 +83,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "background": "rgba(255, 179, 0, 0.08)",
                     "border": "1px solid rgba(255, 179, 0, 0.15)",
                     "box-shadow": "none",
-                    "color": "#FFB300",
+                    "color": "#ccff00",
                     "font-weight": "600"
                 },
             }
@@ -92,12 +92,12 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         # Override icon color when selected to Zenit Gold
         st.markdown("""
         <style>
-        .nav-item .active i { color: #FFB300 !important; }
+        .nav-item .active i { color: #ccff00 !important; }
         </style>
         """, unsafe_allow_html=True)
 
         # Filtro de Tempo Global
-        st.markdown("<br><h4 style='color: #8B949E; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filters</h4>", unsafe_allow_html=True)
+        st.markdown("<br><h4 style='color: #c4c9ac; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filters</h4>", unsafe_allow_html=True)
         periodo_selecionado = st.selectbox(
             "Período de Análise",
             [
