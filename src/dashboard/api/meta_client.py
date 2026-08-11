@@ -17,7 +17,8 @@ class MetaAdsClient:
     Responsável por fazer o fetch de insights das campanhas e páginas.
     """
 
-    BASE_URL = "https://graph.facebook.com/v25.0"
+    API_VERSION = "v26.0"
+    BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
     def __init__(self, client_config) -> None:
         self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
@@ -570,8 +571,8 @@ class MetaAdsClient:
         para cálculo do tráfego pago vs orgânico. Alta performance: Sem N+1 queries.
 
         Returns:
-            Dict[str, Dict[str, int]]: Mapa com a chave sendo o 'effective_instagram_story_id' e o
-                                       valor sendo a soma de reach, impressions e clicks.
+            Dict[str, Dict[str, int]]: Mapa por ID de mídia do Instagram com
+            alcance, impressões, cliques e demais métricas pagas.
         """
         # Passo 1: Buscar insights de todos os ads na conta de uma vez
         insights_endpoint = f"{self.ad_account_id}/insights"
@@ -714,7 +715,7 @@ class MetaAdsClient:
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
         ads_params = {
-            "fields": "id,creative{effective_instagram_story_id,effective_instagram_media_id,source_instagram_media_id,call_to_action_type}",
+            "fields": "id,creative{effective_instagram_media_id,source_instagram_media_id,call_to_action_type}",
             "limit": "1000",
         }
 
@@ -741,12 +742,11 @@ class MetaAdsClient:
             creative = ad.get("creative", {})
 
             # 1. source_instagram_media_id = Post original que deu origem ao anúncio (prioridade máxima)
-            # 2. effective_instagram_media_id = Feed, Reels, Carousel (Ads nativos)
-            # 3. effective_instagram_story_id = Stories
+            # O campo legado específico de Story foi removido. Na v26, todos os
+            # formatos usam source_instagram_media_id/effective_instagram_media_id.
             ig_id = (
                 creative.get("source_instagram_media_id")
                 or creative.get("effective_instagram_media_id")
-                or creative.get("effective_instagram_story_id")
             )
 
             # Se esse anúncio está atrelado a um post do IG e possui métricas registradas
@@ -853,15 +853,16 @@ class MetaAdsClient:
                 # Reach provisório (será sobrescrito pelo summary se ad_count > 1)
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
 
-        # Bug 7: Para posts com múltiplos anúncios, buscar reach desduplicado via summary
+        # Para posts com múltiplos anúncios, agrega no nível da conta e mantém
+        # somente o placement Instagram, evitando misturar alcance do Facebook.
         for ig_id, ig_data in ig_mapping.items():
             ad_ids = ig_data.pop("_ad_ids", [])
             if len(ad_ids) > 1:
                 try:
                     summary_params = {
-                        "level": "ad",
+                        "level": "account",
                         "fields": "reach",
-                        "summary": '["reach"]',
+                        "breakdowns": "publisher_platform",
                         "filtering": json.dumps([{"field": "ad.id", "operator": "IN", "value": ad_ids}]),
                     }
                     if time_range:
@@ -873,7 +874,11 @@ class MetaAdsClient:
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
-                    summary_reach = int(resp.get("summary", {}).get("reach", 0))
+                    summary_reach = sum(
+                        int(row.get("reach", 0))
+                        for row in resp.get("data", [])
+                        if row.get("publisher_platform") == "instagram"
+                    )
                     if summary_reach > 0:
                         ig_data["reach"] = summary_reach
                 except Exception as e:
@@ -916,14 +921,13 @@ class MetaAdsClient:
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> dict[str, int]:
         """
-        Busca os totais pagos consolidados da conta (nível account).
-        Sem breakdown de plataforma para garantir que o alcance desduplicado
-        total seja capturado — a conta tem campanhas no Facebook e Instagram.
+        Busca os totais pagos do Instagram, sem incorporar placements do Facebook.
         """
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "account",
             "fields": "reach,impressions,clicks,actions,outbound_clicks",
+            "breakdowns": "publisher_platform",
         }
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
@@ -939,6 +943,8 @@ class MetaAdsClient:
         try:
             data = self._make_request(insights_endpoint, insights_params)
             for item in data.get("data", []):
+                if item.get("publisher_platform") != "instagram":
+                    continue
                 totals["reach"] += int(item.get("reach", 0))
                 totals["impressions"] += int(item.get("impressions", 0))
                 
@@ -957,4 +963,3 @@ class MetaAdsClient:
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
             return totals
-
