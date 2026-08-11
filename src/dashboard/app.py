@@ -192,6 +192,11 @@ try:
                 st.markdown(
                     "Veja o impacto real das suas publicações, separando o alcance orgânico do pago."
                 )
+                if date_preset == "maximum":
+                    st.info(
+                        "A Meta mantém Insights detalhados de publicações por até 2 anos. "
+                        "Publicações mais antigas ainda podem aparecer, mas sem todas as métricas."
+                    )
 
                 try:
                     with st.spinner(f"Cruzando dados do Instagram e anúncios para {selected_client.name}..."):
