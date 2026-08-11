@@ -19,10 +19,12 @@ def format_hhmmss(ms_val: float) -> str:
         return f"{s:02d}s"
 
 def render_account_insights_cards(insights: dict, paid_totals: dict, followers_history: list = None) -> None:
-    """Renderiza os KPIs de nível de conta com a 'Subtração Mágica' separando Orgânico e Pago."""
+    """Renderiza KPIs sem apresentar métricas mistas como se fossem orgânicas."""
     st.markdown("### 👁️ Visão Geral da Conta")
     if insights.get("_is_partial"):
-        st.info("⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Os números abaixo refletem apenas o período disponível, mas o histórico completo dos seus posts individuais (abaixo) não possui essa restrição.")
+        st.info("⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos.")
+    if insights.get("_is_segmented"):
+        st.info("ℹ️ Em períodos maiores que 30 dias, alcance e contas engajadas são somas de janelas. A mesma pessoa pode aparecer em mais de uma janela.")
     
     # Calcula novos seguidores dos últimos 30 dias a partir do histórico real da API
     new_followers_30d = 0
@@ -33,42 +35,38 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
             if val and val > 0:
                 new_followers_30d += val
     
-    # 100% Números Reais (Soma para o Total, Separação no detalhe)
+    # O alcance de conta inclui anúncios. Não é matematicamente seguro subtrair
+    # o reach pago porque as audiências podem se sobrepor. As demais métricas
+    # de conta também não são apresentadas como um total orgânico.
     r_ig = insights.get('reach', 0)
     r_paid = paid_totals.get('reach', 0)
-    # Risco de dupla contagem mitigado: reach_total removido
     
     likes_ig = insights.get('likes', 0)
     likes_paid = paid_totals.get('likes', 0)
-    likes_tot = likes_ig + likes_paid
     
     shares_ig = insights.get('shares', 0)
     shares_paid = paid_totals.get('shares', 0)
-    shares_tot = shares_ig + shares_paid
     
     saves_ig = max(0, insights.get('saves', 0))
     saves_paid = max(0, paid_totals.get('saved', 0))
-    saves_tot = saves_ig + saves_paid
     
     int_ig = insights.get('total_interactions', 0)
-    int_paid = likes_paid + shares_paid + saves_paid # Aproximação
-    int_tot = int_ig + int_paid
     
     def fmt(val): return f"{int(val):,}".replace(",", ".")
-    def bkd(ig, pd): return f"IG: {fmt(ig)} | Pago: {fmt(pd)}"
+    def paid_context(paid): return f"Pago no Instagram: {fmt(paid)} (já pode estar incluído no total)"
     
     st.markdown("#### 🎯 Métricas Totais")
     cols_mix = st.columns(5)
     with cols_mix[0]:
-        render_metric_card("Alcance Orgânico", fmt(r_ig), "Pessoas (Max 13m)", "Alcance único no IG (Não somar com Pago)")
+        render_metric_card("Alcance da Conta", fmt(r_ig), "Inclui anúncios", "Total informado pelo Instagram; não subtrair o pago")
     with cols_mix[1]:
-        render_metric_card("Alcance Pago", fmt(r_paid), "Pessoas (Max 13m)", "Alcance único em Ads (Não somar com Orgânico)")
+        render_metric_card("Alcance Pago no Instagram", fmt(r_paid), "Ads do Instagram", "Não inclui placements do Facebook")
     with cols_mix[2]:
-        render_metric_card("Total de Interações", fmt(int_tot), bkd(int_ig, int_paid), "Engajamento (Instagram vs Ads)")
+        render_metric_card("Total de Interações", fmt(int_ig), "Total da conta", "Não é usado como total orgânico")
     with cols_mix[3]:
-        render_metric_card("Curtidas", fmt(likes_tot), bkd(likes_ig, likes_paid), "Curtidas (Instagram vs Ads)")
+        render_metric_card("Curtidas", fmt(likes_ig), paid_context(likes_paid), "Não é usado como total orgânico")
     with cols_mix[4]:
-        render_metric_card("Compartilhamentos", fmt(shares_tot), bkd(shares_ig, shares_paid), "Envios (Instagram vs Ads)")
+        render_metric_card("Compartilhamentos", fmt(shares_ig), paid_context(shares_paid), "Não é usado como total orgânico")
 
     st.write("")
     st.markdown("#### 👤 Ações Registradas no Perfil")
@@ -85,9 +83,9 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
     st.write("")
     cols_org2 = st.columns(4)
     with cols_org2[0]:
-        render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total", "Respostas no perfil")
+        render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total da conta", "Não é usado como total orgânico")
     with cols_org2[1]:
-        render_metric_card("Salvamentos", fmt(saves_tot), bkd(saves_ig, saves_paid), "Posts guardados")
+        render_metric_card("Salvamentos", fmt(saves_ig), paid_context(saves_paid), "Total da conta")
     with cols_org2[2]:
         render_metric_card(
             "Novos Seguidores",
@@ -99,20 +97,27 @@ def render_account_insights_cards(insights: dict, paid_totals: dict, followers_h
         st.empty() # Espaço vazio para alinhar
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
-    """Renderiza KPIs orgânicos vs pagos."""
-    st.markdown("### 📊 Alcance: Orgânico vs Ads")
+    """Renderiza somas por publicação, deixando explícita a não deduplicação."""
+    st.markdown("### 📊 Publicações: Orgânico vs Ads")
     
     total_ig_reach = sum(m.reach for m in media_list)
     total_paid_reach = sum(m.paid_reach for m in media_list)
-    total_engagement = sum(m.like_count + m.comments_count + m.paid_likes for m in media_list)
+    total_engagement = sum(
+        m.total_interactions
+        + m.paid_likes
+        + m.paid_comments
+        + m.paid_shares
+        + m.paid_saved
+        for m in media_list
+    )
     
     cols = st.columns(3)
     with cols[0]:
-        render_metric_card("Alcance Instagram", f"{int(total_ig_reach):,}".replace(",", "."), "Pessoas", "Alcance do post")
+        render_metric_card("Soma do Alcance Orgânico", f"{int(total_ig_reach):,}".replace(",", "."), "Não deduplicado", "A mesma pessoa pode aparecer em mais de um post")
     with cols[1]:
-        render_metric_card("Alcance Pago", f"{int(total_paid_reach):,}".replace(",", "."), "Pessoas", "Impulsionamentos")
+        render_metric_card("Soma do Alcance Pago", f"{int(total_paid_reach):,}".replace(",", "."), "Não deduplicado", "Somente placements do Instagram")
     with cols[2]:
-        render_metric_card("Engajamento Total", f"{int(total_engagement):,}".replace(",", "."), "Interações", "Curtidas, comentários")
+        render_metric_card("Interações nas Publicações", f"{int(total_engagement):,}".replace(",", "."), "Orgânico + pago", "Curtidas, comentários, compartilhamentos e salvamentos")
 
 def render_posts_table(media_list: List[InstagramMedia], stories_list: List[Any]) -> None:
     """Renderiza tabela de posts."""
