@@ -128,12 +128,15 @@ PaidMediaMetrics nunca é copiado para OrganicMediaMetrics. VisibleMediaCounters
 
 #### InstagramMediaReport
 
-- items: lista de mídia e métricas;
-- organic: ScopedMetricGroup de comments, likes, views e total_interactions;
-- media_insights: ScopedMetricGroup de reach, saved, shares e watch time;
+- items: lista de mídia; cada item contém identity e três grupos tipados independentes;
+- organic por item: ScopedMetricGroup de comments, likes, views e total_interactions;
+- media_insights por item: ScopedMetricGroup de reach, saved, shares e watch time;
+- visible_counters por item: ScopedMetricGroup separado para contadores públicos do objeto;
 - meta: DatasetMeta comum;
 - publication_selection: período de seleção;
 - measurement_note: snapshot/lifetime e possível atraso.
+
+O relatório não fabrica um agregado top-level desses grupos. A comparação com Ads é construída depois, no loader, por `identity.id`, sem copiar valores pagos para o item orgânico.
 
 #### InstagramAccountReport
 
