@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class InstagramInsights(BaseModel):
     model_config = ConfigDict(frozen=True)
     reach: int = Field(
-        default=0, description="Alcance Orgânico + Pago puxado do Insights"
+        default=0, description="Alcance retornado pelos Insights do Instagram"
     )
 
 
@@ -15,7 +15,7 @@ class InstagramStory(BaseModel):
     permalink: str = ""
     timestamp: str = ""
     caption: str = ""
-    reach: int = Field(default=0, description="Alcance total da Graph API (Story)")
+    reach: int = Field(default=0, description="Alcance orgânico do Story")
     exits: int = Field(default=0, description="Saídas do Story")
     replies: int = Field(default=0, description="Respostas (Replies)")
     taps_forward: int = Field(default=0, description="Toques para avançar")
@@ -66,18 +66,19 @@ class InstagramMedia(BaseModel):
     permalink: str = ""
     timestamp: str = ""
     reach: int = Field(
-        default=0, description="Alcance total da Graph API (Orgânico + Pago)"
+        default=0, description="Alcance orgânico retornado por Media Insights"
     )
 
     # Métricas Orgânicas (variam por tipo)
     shares: int = Field(default=0)
     saved: int = Field(default=0)
+    total_interactions: int = Field(default=0)
     organic_views: int = Field(default=0)
     ig_reels_video_view_total_time: float = Field(default=0.0)  # Ms to Seconds later
     ig_reels_avg_watch_time: float = Field(default=0.0)
-    profile_activity: int = Field(default=0)
-    profile_visits: int = Field(default=0)
-    follows: int = Field(default=0)
+    profile_activity: int | None = Field(default=None)
+    profile_visits: int | None = Field(default=None)
+    follows: int | None = Field(default=None)
 
 
 

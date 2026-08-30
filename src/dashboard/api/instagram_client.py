@@ -17,9 +17,9 @@ class InstagramClient:
     Responsável por fazer o fetch de publicações orgânicas e seus insights.
     """
 
-    # URL base para requests normais (versionada)
-    BASE_URL = "https://graph.facebook.com/v25.0"
-    # URL para Batch Requests (SEM versão — exigência da Graph API)
+    API_VERSION = "v26.0"
+    BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
+    # O Batch API recebe a versão em cada relative_url.
     BATCH_URL = "https://graph.facebook.com"
 
     def __init__(self, client_config) -> None:
@@ -143,21 +143,21 @@ class InstagramClient:
             media_product_type = item.get("media_product_type", "")
             media_type = item.get("media_type", "")
             if media_product_type == "REELS":
-                # Metricas validas para Reels na v22.0
-                # 'plays' foi substituído por 'views'
-                metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
+                metrics = (
+                    "reach,saved,shares,likes,comments,total_interactions,"
+                    "ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
+                )
             elif media_type == "VIDEO":
-                # Videos muito antigos não são reels e usam video_views
-                metrics = "reach,video_views,saved,shares,total_interactions"
+                # Na v26, views substitui as métricas legadas de reprodução.
+                metrics = "reach,views,saved,shares,likes,comments,total_interactions"
             else:
-                # Imagens e Carrosseis não possuem views/video_views
-                metrics = "reach,saved,shares,total_interactions"
+                metrics = "reach,saved,shares,likes,comments,total_interactions"
 
             batch_requests.append(
                 {
                     "method": "GET",
-                    # Barra inicial obrigatória na relative_url do Batch API
-                    "relative_url": f"/{ig_id}/insights?metric={metrics}",
+                    # A versão explícita evita depender da versão padrão do app.
+                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
                 }
             )
 
@@ -182,10 +182,10 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        metrics = "total_interactions,reach,saved,shares"
+                        metrics = "total_interactions,reach,saved,shares,likes,comments"
                         fallback_requests.append({
                             "method": "GET",
-                            "relative_url": f"/{ig_id}/insights?metric={metrics}",
+                            "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
                         })
                         fallback_indices.append(req_idx)
                         
@@ -211,7 +211,7 @@ class InstagramClient:
                                 # Ultra fallback: try just reach
                                 ultra_fallback_requests.append({
                                     "method": "GET",
-                                    "relative_url": f"/{ig_id}/insights?metric=reach",
+                                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric=reach",
                                 })
                                 ultra_fallback_indices.append(req_idx)
                                 
@@ -260,11 +260,16 @@ class InstagramClient:
                     media_product_type=item.get("media_product_type", ""),
                     permalink=item.get("permalink", ""),
                     timestamp=item.get("timestamp", ""),
-                    like_count=int(item.get("like_count", 0)),
-                    comments_count=int(item.get("comments_count", 0)),
+                    # Insights de mídia é a fonte orgânica. Os contadores do objeto
+                    # ficam apenas como fallback para mídia sem Insights disponível.
+                    like_count=int(metrics_dict.get("likes", item.get("like_count", 0))),
+                    comments_count=int(
+                        metrics_dict.get("comments", item.get("comments_count", 0))
+                    ),
                     reach=int(metrics_dict.get("reach", 0)),
                     shares=int(metrics_dict.get("shares", 0)),
                     saved=int(metrics_dict.get("saved", 0)),
+                    total_interactions=int(metrics_dict.get("total_interactions", 0)),
                     ig_reels_video_view_total_time=float(
                         metrics_dict.get("ig_reels_video_view_total_time", 0)
                     ),
@@ -272,9 +277,9 @@ class InstagramClient:
                     ig_reels_avg_watch_time=float(
                         metrics_dict.get("ig_reels_avg_watch_time", 0)
                     ),
-                    profile_activity=int(metrics_dict.get("profile_activity", 0)),
-                    profile_visits=int(metrics_dict.get("profile_visits", 0)),
-                    follows=int(metrics_dict.get("follows", 0)),
+                    profile_activity=metrics_dict.get("profile_activity"),
+                    profile_visits=metrics_dict.get("profile_visits"),
+                    follows=metrics_dict.get("follows"),
                 )
                 media_list.append(media)
             except Exception as e:
@@ -304,7 +309,10 @@ class InstagramClient:
             ig_id = item.get("id")
             metrics = "reach,exits,replies,taps_forward,taps_back"
             batch_requests.append(
-                {"method": "GET", "relative_url": f"/{ig_id}/insights?metric={metrics}"}
+                {
+                    "method": "GET",
+                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
+                }
             )
 
         insights_map = {}
@@ -312,7 +320,7 @@ class InstagramClient:
             chunk = batch_requests[i : i + 50]
             try:
                 batch_res = self.session.post(
-                    self.BATCH_URL,  # Batch API não usa versão na URL base
+                    self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
                     timeout=20, verify=False,
                 )
@@ -367,7 +375,7 @@ class InstagramClient:
         
         now = datetime.datetime.now()
         
-        # Meta Graph API v25.0 limita alcance a 13 meses de histórico (aprox. 395 dias)
+        # A Graph API v26 limita estas métricas de conta a cerca de 13 meses.
         limit_date = now - relativedelta(months=13) + datetime.timedelta(days=1)
         
         is_partial = False
@@ -408,9 +416,12 @@ class InstagramClient:
         }
         if is_partial:
             results["_is_partial"] = True
+
+        chunk_count = 0
         
         current_since = since
         while current_since < until:
+            chunk_count += 1
             # Chunk max 29 days to be safe
             current_until = min(current_since + datetime.timedelta(days=29, hours=23, minutes=59, seconds=59), until)
             
@@ -450,6 +461,11 @@ class InstagramClient:
                     logger.warning(f"Erro account insights chunk (daily) {adjusted_since} a {current_until}: {e}")
                 
             current_since = current_until + datetime.timedelta(seconds=1)
+
+        # Reach e contas engajadas são métricas únicas apenas dentro de cada janela.
+        # Quando há mais de uma janela, a soma pode repetir a mesma pessoa.
+        if chunk_count > 1:
+            results["_is_segmented"] = True
             
         return results
 
@@ -495,7 +511,13 @@ class InstagramClient:
         batch_requests = []
         for ig_id in media_ids:
             batch_requests.append(
-                {"method": "GET", "relative_url": f"/{ig_id}/comments?fields=id,text,like_count,username,timestamp&limit=50"}
+                {
+                    "method": "GET",
+                    "relative_url": (
+                        f"/{self.API_VERSION}/{ig_id}/comments"
+                        "?fields=id,text,like_count,username,timestamp&limit=50"
+                    ),
+                }
             )
         
         try:
@@ -621,5 +643,4 @@ class InstagramClient:
             engaged=engaged_demo,
             reached=reached_demo,
         )
-
 
