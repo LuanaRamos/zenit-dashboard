@@ -3,6 +3,59 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict, Field
 
 
+CANONICAL_MESSAGING_ACTION = "onsite_conversion.messaging_conversation_started_7d"
+LEGACY_MESSAGING_ACTION = "onsite_conversion.messaging_conversation_started"
+
+
+def _action_values(actions: list[dict[str, Any]] | None) -> dict[str, int]:
+    """Index Ads action rows without merging different action types."""
+    values: dict[str, int] = {}
+    for action in actions or []:
+        action_type = action.get("action_type")
+        if not action_type:
+            continue
+        values[action_type] = values.get(action_type, 0) + int(action.get("value") or 0)
+    return values
+
+
+def parse_paid_actions(actions: list[dict[str, Any]] | None) -> dict[str, int | None]:
+    """Normalize only the canonical Ads actions used by both paid views."""
+    values = _action_values(actions)
+    site_leads = values.get("offsite_conversion.fb_pixel_lead")
+    native_leads = values.get("leadgen")
+
+    # `lead` is Meta's aggregate. Its presence, including an explicit zero, wins
+    # over source subtypes so the same conversion is never counted twice.
+    leads = values["lead"] if "lead" in values else (site_leads or 0) + (native_leads or 0)
+
+    # The 7d event is canonical for this dashboard. Accept the one exact legacy
+    # event only when the canonical row is absent; prefix variants are ignored.
+    if CANONICAL_MESSAGING_ACTION in values:
+        messaging_conversations = values[CANONICAL_MESSAGING_ACTION]
+    else:
+        messaging_conversations = values.get(LEGACY_MESSAGING_ACTION, 0)
+
+    return {
+        "leads": leads,
+        "site_leads": site_leads,
+        "native_leads": native_leads,
+        "messaging_conversations": messaging_conversations,
+        "link_clicks_action": values.get("link_click", 0),
+        "instagram_follows": values.get("instagram_follows", 0),
+        "profile_visits": values.get("profile_visit", 0)
+        + values.get("instagram_profile_views", 0),
+        "post_reactions": values.get("post_reaction", 0),
+        "post_shares": values.get("post", 0),
+        "post_saves": values.get("onsite_conversion.post_save", 0),
+        "post_comments": values.get("comment", 0),
+    }
+
+
+def parse_outbound_clicks(rows: list[dict[str, Any]] | None) -> int:
+    """Read outbound clicks without treating link clicks as an alias."""
+    return _action_values(rows).get("outbound_click", 0)
+
+
 class CampaignInsight(BaseModel):
     """
     Representa as métricas de performance de uma campanha no Meta Ads.
@@ -41,6 +94,8 @@ class CampaignInsight(BaseModel):
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
     link_clicks: int = Field(default=0)
+    inline_link_clicks: int = Field(default=0)
+    outbound_clicks: int = Field(default=0)
     other_clicks: int = Field(default=0)
     cpc: float = Field(default=0.0)
     cpm: float = Field(default=0.0)
@@ -52,8 +107,8 @@ class CampaignInsight(BaseModel):
 
     # Métricas Específicas Dinâmicas
     leads: int = Field(default=0)
-    site_leads: int = Field(default=0)
-    native_leads: int = Field(default=0)
+    site_leads: int | None = Field(default=None)
+    native_leads: int | None = Field(default=None)
     cpl: float = Field(default=0.0)
 
     whatsapp_starts: int = Field(
@@ -75,7 +130,7 @@ class CampaignInsight(BaseModel):
     def objective_friendly(self) -> str:
         """Retorna o nome do objetivo traduzido e amigável para a UI, baseado no comportamento real da campanha."""
         if self.whatsapp_starts > 0 or self.objective == "MESSAGES":
-            return "Mensagens (WhatsApp/Direct)"
+            return "Mensagens"
         if self.profile_visits > 0 or self.instagram_follows > 0:
             return "Visitas ao Perfil / Seguidores"
         if self.objective == "OUTCOME_ENGAGEMENT":
@@ -106,71 +161,40 @@ class CampaignInsight(BaseModel):
 
         # Analisar o array de 'actions' para buscar eventos específicos
         actions = data.get("actions") or []
+        action_metrics = parse_paid_actions(actions)
+        site_leads = action_metrics["site_leads"]
+        native_leads = action_metrics["native_leads"]
+        leads = action_metrics["leads"]
+        whatsapp_starts = action_metrics["messaging_conversations"]
+        instagram_follows = action_metrics["instagram_follows"]
+        profile_visits = action_metrics["profile_visits"]
+        inline_link_clicks = int(data.get("inline_link_clicks") or 0) if "inline_link_clicks" in data else action_metrics["link_clicks_action"]
+        outbound_clicks = parse_outbound_clicks(data.get("outbound_clicks"))
 
-        site_leads = 0
-        native_leads = 0
-        whatsapp_starts = 0
-        instagram_follows = 0
-        profile_visits = 0
-        link_clicks = 0
-        other_clicks = 0
-
-        post_reactions = 0
-        post_shares = 0
-        post_saves = 0
-        post_comments = 0
-
-        for action in actions:
-            act_type = action.get("action_type", "")
-            val = int(action.get("value", 0))
-
-            if act_type == "link_click":
-                link_clicks += val
-            elif act_type == "lead":
-                site_leads += val
-            elif act_type == "leadgen":
-                native_leads += val
-            elif act_type.startswith("onsite_conversion.messaging_conversation_started"):
-                whatsapp_starts += val
-            elif act_type == "instagram_follows":
-                instagram_follows += val
-            elif act_type in [
-                "profile_visit",
-                "instagram_profile_views"
-            ]:
-                profile_visits += val
-            elif act_type == "post_interaction_gross":
-                other_clicks += val
-            elif act_type == "post_reaction":
-                post_reactions += val
-            elif act_type == "post":
-                post_shares += val
-            elif act_type == "onsite_conversion.post_save":
-                post_saves += val
-            elif act_type == "comment":
-                post_comments += val
+        post_reactions = action_metrics["post_reactions"]
+        post_shares = action_metrics["post_shares"]
+        post_saves = action_metrics["post_saves"]
+        post_comments = action_metrics["post_comments"]
 
         # Fallback para instagram_follows caso a Meta retorne apenas na raiz
         if instagram_follows == 0:
             instagram_follows = int(data.get("instagram_follows", 0))
 
-        leads = site_leads + native_leads
         parsed_data["leads"] = leads
         parsed_data["site_leads"] = site_leads
         parsed_data["native_leads"] = native_leads
         parsed_data["whatsapp_starts"] = whatsapp_starts
         parsed_data["instagram_follows"] = instagram_follows
         parsed_data["profile_visits"] = profile_visits
-        parsed_data["link_clicks"] = link_clicks
-        parsed_data["other_clicks"] = other_clicks
+        parsed_data["link_clicks"] = inline_link_clicks
+        parsed_data["inline_link_clicks"] = inline_link_clicks
+        parsed_data["outbound_clicks"] = outbound_clicks
+        parsed_data["other_clicks"] = max(0, parsed_data["clicks"] - inline_link_clicks)
         parsed_data["post_reactions"] = post_reactions
         parsed_data["post_shares"] = post_shares
         parsed_data["post_saves"] = post_saves
         parsed_data["post_comments"] = post_comments
         
-        clicks = link_clicks + profile_visits + other_clicks
-        parsed_data["clicks"] = clicks
-
         # Calcular Custos
         spend = parsed_data["spend"]
         if leads > 0:
@@ -217,6 +241,8 @@ class CreativePerformance(BaseModel):
     impressions: int = Field(default=0)
     clicks: int = Field(default=0)
     link_clicks: int = Field(default=0)
+    inline_link_clicks: int = Field(default=0)
+    outbound_clicks: int = Field(default=0)
     other_clicks: int = Field(default=0)
     
     post_reactions: int = Field(default=0)
@@ -247,7 +273,7 @@ class CreativePerformance(BaseModel):
     @property
     def objective_friendly(self) -> str:
         if self.whatsapp_starts > 0 or self.objective == "MESSAGES":
-            return "Mensagens (WhatsApp/Direct)"
+            return "Mensagens"
         if self.objective == "OUTCOME_ENGAGEMENT":
             return "Mensagens / Engajamento"
         if self.objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS"]:
@@ -265,4 +291,3 @@ class CatalogData(BaseModel):
     roas: float = Field(default=0.0)
     spend: float = Field(default=0.0)
     purchases: int = Field(default=0)
-

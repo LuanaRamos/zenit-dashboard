@@ -1,265 +1,211 @@
+"""Zenit Analytics: fontes pagas e orgânicas separadas desde o carregamento."""
+
 import logging
+import os
 import sys
 from pathlib import Path
 
 import sentry_sdk
 import streamlit as st
 
-try:
-    from PIL import Image
-    _icon = Image.open(Path(__file__).parent / "assets" / "zenit_logo.png")
-except Exception:
-    _icon = "📈"
+DASHBOARD_DIR = Path(__file__).resolve().parent
+if str(DASHBOARD_DIR) not in sys.path:
+    sys.path.insert(0, str(DASHBOARD_DIR))
 
-# Configuração da página DEVE ser a primeira chamada do Streamlit
-st.set_page_config(
-    page_title="Zenit Analytics",
-    page_icon=_icon,
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+logger = logging.getLogger(__name__)
 
-try:
-    import os
-    sentry_dsn = os.getenv("SENTRY_DSN")
 
-    def filter_sentry_events(event, hint):
-        if "exc_info" in hint:
-            exc_type, exc_value, tb = hint["exc_info"]
-            if isinstance(exc_value, TypeError) and "Timer.run() takes 1 positional argument but 2" in str(exc_value):
-                return None
-        return event
-
-    if sentry_dsn:
+def configure_page():
+    icon = DASHBOARD_DIR / "assets" / "zenit_logo.png"
+    st.set_page_config(
+        page_title="Zenit Analytics",
+        page_icon=str(icon) if icon.exists() else "📈",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    css = DASHBOARD_DIR / "ui" / "style.css"
+    if css.exists():
+        st.markdown(
+            f"<style>{css.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True
+        )
+    if os.getenv("SENTRY_DSN"):
         sentry_sdk.init(
-            dsn=sentry_dsn,
-            environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
-            release=os.getenv("SENTRY_RELEASE", "unknown"),
+            dsn=os.environ["SENTRY_DSN"],
+            environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+            release=os.getenv("SENTRY_RELEASE", "0.1.0"),
             traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
-            enable_tracing=True,
-            before_send=filter_sentry_events
         )
 
-    from streamlit_option_menu import option_menu
-    from core.config import settings
 
-    # Adiciona o diretório dashboard ao path para permitir imports absolutos internos
-    sys.path.append(str(Path(__file__).parent))
+def report_error(message, error):
+    logger.error(message, exc_info=error)
+    sentry_sdk.capture_exception(error)
+    st.error(message)
 
-    from api.exceptions import InstagramAPIError, MetaAPIError  # noqa: E402
-    from ui.components import (  # noqa: E402
+
+def render_ads_page(date_preset, time_range, client):
+    from ui.components import (
         render_general_campaigns,
         render_metric_cards,
         render_objective_pie_chart,
         render_profile_campaigns,
         render_whatsapp_campaigns,
+        render_whatsapp_cost_chart,
     )
-    from ui.data_loader import fetch_active_stories, fetch_campaigns_v8, fetch_organic_v12, fetch_account_demographics  # noqa: E402
-    from ui.layouts import render_sidebar  # noqa: E402
-    from ui.organic_components import render_organic_metrics_cards, render_posts_table, render_top_posts_and_comments, render_historic_top_comment  # noqa: E402
+    from ui.data_loader import fetch_campaigns_v8
 
-    # Configuração do Logging
-    logging.basicConfig(level=logging.INFO)  # noqa: E402
+    st.title("Desempenho dos anúncios")
+    st.markdown(f"Resultados pagos de **{client.name}**.")
+    st.caption(
+        "Fonte: Meta Ads · Campanhas e posicionamentos da conta de anúncios no período selecionado."
+    )
+    with st.spinner("Carregando anúncios..."):
+        campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
+    if not campaigns:
+        st.info("Nenhum resultado de anúncios disponível para este período.")
+        return
 
-    def load_css():
-        css_path = Path(__file__).parent / "ui" / "style.css"
-        if css_path.exists():
-            with open(css_path, "r", encoding="utf-8") as f:
-                st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    # Seleção explícita evita buscar público/criativos em cada visita ao resumo.
+    section = st.radio(
+        "Análise de anúncios",
+        ["Visão geral", "Público dos anúncios", "Criativos"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key=f"ads_section_{client.name}",
+    )
+    if section == "Público dos anúncios":
+        from ui.demographics_components import render_demographics_tab
 
-    def main() -> None:  # noqa: C901
-        try:
-            # Aplica o CSS global do Zenit
-            load_css()
-            
-            # Inicializa variáveis no session state caso necessário (Best Practice Streamlit)
-            if "data_loaded" not in st.session_state:
-                st.session_state["data_loaded"] = False
+        render_demographics_tab(date_preset, time_range, client.name)
+        return
+    if section == "Criativos":
+        from ui.creatives_components import render_creatives_tab
 
-            selected_module, date_preset, time_range, selected_client = render_sidebar()
+        render_creatives_tab(date_preset, time_range, client.name)
+        return
 
-            if selected_module == "Visão Geral (Ads)":
-                st.title("Resumo de Campanhas")
-                st.markdown(
-                    f"Acompanhe o retorno sobre investimento (ROI) da conta **{selected_client.name}**."
-                )
-                st.info("ℹ️ Métricas calibradas: removemos duplicidades da Meta para garantir 100% de precisão real.")
+    total_spend = sum(c.spend for c in campaigns)
+    total_leads = sum(c.leads for c in campaigns)
+    total_messages = sum(c.whatsapp_starts for c in campaigns)
+    leads_spend = sum(
+        c.spend
+        for c in campaigns
+        if c.leads > 0 or c.objective in {"OUTCOME_LEADS", "LEAD_GENERATION"}
+    )
+    messages_spend = sum(
+        c.spend for c in campaigns if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
+    )
+    cpl = leads_spend / total_leads if total_leads else None
+    cost_per_message = messages_spend / total_messages if total_messages else None
+    render_metric_cards(total_spend, total_leads, cpl, total_messages, cost_per_message)
 
-                try:
-                    # Tenta carregar os dados (isso usa Cache, não fará 10 requisições seguidas)
-                    with st.spinner(f"Buscando dados das campanhas de {selected_client.name}..."):
-                        campaigns = fetch_campaigns_v8(date_preset, time_range, selected_client.name)
+    messages = [
+        c for c in campaigns if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
+    ]
+    profile = [
+        c
+        for c in campaigns
+        if c not in messages and (c.instagram_follows > 0 or c.profile_visits > 0)
+    ]
+    other = [c for c in campaigns if c not in messages and c not in profile]
+    chart1, chart2 = st.columns(2)
+    with chart1:
+        render_objective_pie_chart(campaigns)
+    with chart2:
+        render_whatsapp_cost_chart(messages)
+    render_whatsapp_campaigns(messages)
+    render_profile_campaigns(profile)
+    render_general_campaigns(other)
 
-                    if not campaigns:
-                        st.warning(
-                            "Não localizamos campanhas ativas neste período. Acesse o Gerenciador de Anúncios da Meta para ativar suas campanhas e visualizar o retorno aqui."
-                        )
-                        return
 
-                    tab_overview, tab_demographics, tab_creatives, tab_catalog = st.tabs([
-                        "📊 Visão Geral", 
-                        "👥 Público (Demografia)", 
-                        "🎨 Laboratório de Criativos", 
-                        "🛍️ Catálogo & E-commerce"
-                    ])
+def render_organic_page(date_preset, time_range, client):
+    from ui import data_loader
+    from ui.organic_components import (
+        render_organic_metrics_cards,
+        render_posts_table,
+        render_top_posts_and_comments,
+    )
 
-                    with tab_overview:
-                        from ui.data_loader import fetch_organic_leads_cached
-                        organic_leads = fetch_organic_leads_cached(date_preset, time_range, selected_client.name)
-                        
-                        total_spend = sum(c.spend for c in campaigns)
-                        total_leads = sum(c.leads for c in campaigns)
-                        total_wpp = sum(c.whatsapp_starts for c in campaigns)
-                        
-                        leads_spend = sum(c.spend for c in campaigns if c.leads > 0 or c.objective_friendly == "Cadastros")
-                        wpp_spend = sum(c.spend for c in campaigns if c.whatsapp_starts > 0 or c.objective_friendly == "Mensagens (WhatsApp/Direct)")
-                        
-                        cpl = leads_spend / total_leads if total_leads > 0 else 0.0
-                        cpw = wpp_spend / total_wpp if total_wpp > 0 else 0.0
+    st.title("Conteúdo orgânico do Instagram")
+    st.markdown(f"Resultados orgânicos de **{client.name}**.")
+    st.caption(
+        "O filtro seleciona a data de publicação. Os Insights mostram os resultados acumulados "
+        "dessas publicações até a consulta, não somente as interações ocorridas no período."
+    )
+    with st.spinner("Carregando publicações orgânicas..."):
+        media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
+    if not media:
+        st.info("Nenhuma publicação encontrada no período selecionado.")
+        return
 
-                        # Renderiza a UI
-                        # --- BENTO GRID: Topo (Métricas) ---
-                        st.write("")
-                        render_metric_cards(total_spend, total_leads, cpl, total_wpp, cpw, organic_leads)
-                        st.write("")
+    render_organic_metrics_cards(media)
+    render_posts_table(media)
+    render_top_posts_and_comments(media)
 
-                        # Filtragem inteligente por Objetivo ODAX, Legacy ou presença de métricas fortes
-                        whatsapp_campaigns = [
-                            c
-                            for c in campaigns
-                            if c.objective in ["OUTCOME_ENGAGEMENT", "MESSAGES"]
-                            or c.whatsapp_starts > 0
-                        ]
-                        profile_campaigns = [
-                            c
-                            for c in campaigns
-                            if c.objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS"]
-                            or c.instagram_follows > 0
-                            or c.profile_visits > 0
-                        ]
+    with st.expander("Comparativo com anúncios do Instagram", expanded=False):
+        st.caption(
+            "Consulta opcional de anúncios vinculados às publicações acima. "
+            "Os resultados pagos não entram nos indicadores orgânicos."
+        )
+        if st.checkbox("Carregar comparação com Ads", key=f"compare_ads_{client.name}"):
+            try:
+                from ui.organic_components import render_paid_comparison
 
-                        # As demais que não caíram nos filtros primários
-                        general_campaigns = [
-                            c
-                            for c in campaigns
-                            if c not in whatsapp_campaigns and c not in profile_campaigns
-                        ]
-
-                        # --- BENTO GRID: Gráficos ---
-                        from ui.components import render_whatsapp_cost_chart
-                        
-                        charts_c1, charts_c2 = st.columns([1, 1])
-                        with charts_c1:
-                            render_objective_pie_chart(campaigns)
-                        with charts_c2:
-                            render_whatsapp_cost_chart(whatsapp_campaigns)
-                        
-                        st.write("")
-
-                        # --- BENTO GRID: Tabelas (Uma abaixo da outra) ---
-                        render_whatsapp_campaigns(whatsapp_campaigns)
-                        st.write("")
-                        
-                        render_profile_campaigns(profile_campaigns)
-                        st.write("")
-                        
-                        render_general_campaigns(general_campaigns)
-
-                    with tab_demographics:
-                        from ui.demographics_components import render_demographics_tab
-                        render_demographics_tab(date_preset, time_range, selected_client.name)
-
-                    with tab_creatives:
-                        from ui.creatives_components import render_creatives_tab
-                        render_creatives_tab(date_preset, time_range, selected_client.name)
-
-                    with tab_catalog:
-                        from ui.catalog_components import render_catalog_tab
-                        render_catalog_tab(selected_client.name)
-
-                    st.session_state["data_loaded"] = True
-
-                except MetaAPIError as e:
-                    sentry_sdk.capture_exception(e)
-                    st.error(f"Não foi possível conectar à Meta: {str(e)}")
-                except Exception as e:
-                    sentry_sdk.capture_exception(e)
-                    st.error("Ocorreu um erro ao carregar o painel. Detalhes técnicos abaixo:")
-                    st.exception(e)
-
-            elif selected_module == "Orgânico (Instagram)":
-                st.title("📱 Desempenho no Instagram")
-                st.markdown(
-                    "Veja o impacto real das suas publicações, separando o alcance orgânico do pago."
-                )
-                if date_preset == "maximum":
-                    st.info(
-                        "A Meta mantém Insights detalhados de publicações por até 2 anos. "
-                        "Publicações mais antigas ainda podem aparecer, mas sem todas as métricas."
+                with st.spinner("Carregando comparação..."):
+                    compared = data_loader.enrich_media_with_ads(
+                        media, date_preset, time_range, client.name
                     )
+                render_paid_comparison(compared)
+            except Exception as error:
+                sentry_sdk.capture_exception(error)
+                st.warning(
+                    "Comparativo pago indisponível no momento. Os resultados orgânicos acima continuam disponíveis."
+                )
 
-                try:
-                    with st.spinner(f"Cruzando dados do Instagram e anúncios para {selected_client.name}..."):
-                        media_list = fetch_organic_v12(date_preset, time_range, selected_client.name)
-                        stories_list = fetch_active_stories(selected_client.name)
-                        account_demographics = fetch_account_demographics(selected_client.name)
-                        from ui.data_loader import fetch_account_insights_cached, fetch_followers_history_cached, fetch_instagram_paid_totals_cached
-                        account_insights = fetch_account_insights_cached(selected_client.name, date_preset, time_range)
-                        followers_history = fetch_followers_history_cached(selected_client.name)
-                        paid_totals = fetch_instagram_paid_totals_cached(date_preset, time_range, selected_client.name)
+    with st.expander("Público e contexto do perfil", expanded=False):
+        st.caption(
+            "Composição do público do perfil. Não representa atribuição de seguidores ao orgânico."
+        )
+        if st.checkbox(
+            "Carregar público do perfil", key=f"profile_audience_{client.name}"
+        ):
+            try:
+                from ui.demographics_components import render_demographics_dashboard
 
-                    tab_geral, tab_demografico = st.tabs(["📊 Desempenho", "👥 Demografia (Público)"])
+                demographics = data_loader.fetch_account_demographics(client.name)
+                render_demographics_dashboard(demographics)
+            except Exception as error:
+                sentry_sdk.capture_exception(error)
+                st.warning("Dados de público indisponíveis no momento.")
 
-                    with tab_geral:
-                        st.write("")
-                        from ui.organic_components import render_account_insights_cards
-                        render_account_insights_cards(account_insights, paid_totals, followers_history)
-                        
-                        st.write("")
-                        render_organic_metrics_cards(media_list)
+    with st.expander("Comentários do perfil", expanded=False):
+        st.caption(
+            "Histórico do perfil, independente do filtro de publicação e sem atribuição orgânica confirmada."
+        )
+        if st.checkbox(
+            "Carregar histórico de comentários", key=f"profile_comments_{client.name}"
+        ):
+            from ui.organic_components import render_historic_top_comment
 
-                        st.write("")
-                        render_historic_top_comment(selected_client.name)
+            render_historic_top_comment(client.name)
 
-                        st.write("")
-                        render_posts_table(media_list, stories_list)
 
-                        st.write("")
-                        render_top_posts_and_comments(media_list)
-
-                    with tab_demografico:
-                        from ui.organic_components import render_followers_timeline
-                        render_followers_timeline(followers_history)
-                        st.write("")
-                        
-                        from ui.demographics_components import render_demographics_dashboard
-                        render_demographics_dashboard(account_demographics)
-
-                except InstagramAPIError as e:
-                    sentry_sdk.capture_exception(e)
-                    st.warning("A conexão com o Instagram está instável no momento. Mostrando dados em cache ou parciais.")
-                except MetaAPIError as e:
-                    sentry_sdk.capture_exception(e)
-                    st.error("Falha ao tentar cruzar dados com os anúncios do Facebook.")
-                    st.exception(e)
-                except Exception as e:
-                    sentry_sdk.capture_exception(e)
-                    st.error("Ocorreu um erro inesperado. Detalhes técnicos abaixo:")
-                    st.exception(e)
-
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            st.error("Ocorreu uma instabilidade inesperada na conexão. Nossa equipe já foi notificada via Sentry.")
-
-    if __name__ == "__main__":
-        main()
-
-except Exception as e:
-    import traceback
-    import sentry_sdk
+def main():
+    configure_page()
     try:
-        sentry_sdk.capture_exception(e)
-    except:
-        pass
-    st.error("⚠️ Ooops! Ocorreu um problema ao carregar o sistema.")
-    st.info("Nossa equipe de suporte técnico (Antigravity) já foi notificada silenciosamente. Isso geralmente se resolve em alguns minutos com um simples recarregamento de página. Por favor, recarregue a página.")
+        from ui.layouts import render_sidebar
+
+        module, date_preset, time_range, client = render_sidebar()
+        if module == "Visão Geral (Ads)":
+            render_ads_page(date_preset, time_range, client)
+        else:
+            render_organic_page(date_preset, time_range, client)
+    except Exception as error:
+        report_error(
+            "Não foi possível carregar esta área. Verifique a configuração da conta e tente novamente.",
+            error,
+        )
+
+
+if __name__ == "__main__":
+    main()

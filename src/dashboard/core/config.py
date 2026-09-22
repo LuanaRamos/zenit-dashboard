@@ -44,7 +44,7 @@ class Settings(BaseSettings):
         try:
             raw_list = json.loads(self.clients_json)
             return [ClientConfig(**c) for c in raw_list]
-        except Exception as e:
+        except Exception:
             return []
 
 

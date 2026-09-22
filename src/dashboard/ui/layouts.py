@@ -1,14 +1,17 @@
 import datetime
 import streamlit as st
 from streamlit_option_menu import option_menu
+from core.config import ClientConfig
 
 
 import base64
 from pathlib import Path
 
+
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
+
 
 def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     """
@@ -37,6 +40,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         )
 
         from core.config import settings
+
         clients = settings.get_clients()
         if not clients:
             st.error("⚠️ Nenhum cliente configurado no sistema (CLIENTS_JSON).")
@@ -45,16 +49,19 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         client_names = [c.name for c in clients]
         if "selected_client_name" not in st.session_state:
             st.session_state["selected_client_name"] = client_names[0]
-        
+
         # Garante que o cliente salvo na sessao ainda existe na config
         if st.session_state["selected_client_name"] not in client_names:
             st.session_state["selected_client_name"] = client_names[0]
 
-        st.markdown("<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>", unsafe_allow_html=True)
-        
+        st.markdown(
+            "<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>",
+            unsafe_allow_html=True,
+        )
+
         def on_client_change():
-            # Limpa o cache ao trocar de cliente
-            st.cache_data.clear()
+            # Os caches já usam client_name como chave; não invalidar outras contas.
+            st.session_state["data_loaded"] = False
 
         selected_client_name = st.selectbox(
             "Selecione o Cliente",
@@ -64,10 +71,13 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             label_visibility="collapsed",
             on_change=on_client_change,
         )
-        
+
         selected_client = next(c for c in clients if c.name == selected_client_name)
 
-        st.markdown("<br><h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Main Menu</h4>", unsafe_allow_html=True)
+        st.markdown(
+            "<br><h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Navegação</h4>",
+            unsafe_allow_html=True,
+        )
         selected_module = option_menu(
             menu_title=None,
             options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
@@ -76,7 +86,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             default_index=0,
             styles={
                 "container": {
-                    "padding": "0!important", 
+                    "padding": "0!important",
                     "background-color": "transparent",
                 },
                 "icon": {"color": "#c4c9ac", "font-size": "16px"},
@@ -98,35 +108,50 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "border": "1px solid rgba(255, 179, 0, 0.15)",
                     "box-shadow": "none",
                     "color": "#FFB300",
-                    "font-weight": "600"
+                    "font-weight": "600",
                 },
-            }
+            },
         )
-        
+
         # Override icon color when selected to Zenit Gold
-        st.markdown("""
+        st.markdown(
+            """
         <style>
         .nav-item .active i { color: #FFB300 !important; }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # Filtro de Tempo Global
-        st.markdown("<br><h4 style='color: #c4c9ac; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filters</h4>", unsafe_allow_html=True)
+        st.markdown(
+            "<br><h4 style='color: #c4c9ac; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filtros</h4>",
+            unsafe_allow_html=True,
+        )
         periodo_selecionado = st.selectbox(
             "Período de Análise",
             [
                 "Últimos 30 Dias",
-                "Desde o início (Sempre)",
+                "Histórico disponível",
                 "Personalizado",
             ],
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
+        if selected_module == "Orgânico (Instagram)":
+            st.caption(
+                "Período de publicação dos conteúdos. No comparativo, Ads usa datas de veiculação."
+            )
 
         date_preset = "last_30d"
         time_range = None
 
-        if "Desde o início" in periodo_selecionado:
+        if periodo_selecionado == "Histórico disponível":
             date_preset = "maximum"
+            ads_start = datetime.date.today() - datetime.timedelta(days=395)
+            st.caption(
+                f"Histórico de Ads consultado: {ads_start:%d/%m/%Y} a "
+                f"{datetime.date.today():%d/%m/%Y}."
+            )
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
 
@@ -146,7 +171,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 end_date = st.date_input(
                     "Data Final",
                     value=max_date,
-                    min_value=min_date, # Usar a data mínima global para destravar o seletor de ano
+                    min_value=min_date,  # Usar a data mínima global para destravar o seletor de ano
                     max_value=max_date,
                     format="DD/MM/YYYY",
                 )
@@ -159,7 +184,9 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     delta = end_date - start_date
                     # Meta API restricts custom time_range to ~37 months (approx 1125 days).
                     if delta.days > 1125:
-                        st.warning("⚠️ A API da Meta permite um intervalo personalizado máximo de 37 meses (aprox. 3 anos). Para ver todo o histórico, selecione 'Desde o início' no filtro acima.")
+                        st.warning(
+                            "⚠️ A API da Meta permite um intervalo personalizado máximo de 37 meses (aprox. 3 anos). Para ver todo o histórico, selecione 'Histórico disponível' no filtro acima."
+                        )
                         st.stop()
                     else:
                         time_range = {
@@ -170,8 +197,15 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 st.warning("Selecione a data inicial e final.")
                 st.stop()
 
-        st.markdown("<div style='margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;'></div>", unsafe_allow_html=True)
-        st.caption("Atualizado via Meta Graph API v26.0")
+        st.markdown(
+            "<div style='margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;'></div>",
+            unsafe_allow_html=True,
+        )
+        version_file = Path(__file__).resolve().parents[3] / "VERSION"
+        if version_file.exists():
+            st.caption(
+                f"Zenit Analytics · v{version_file.read_text(encoding='utf-8').strip()}"
+            )
 
         if st.button("🔄 Forçar Atualização", use_container_width=True):
             st.cache_data.clear()

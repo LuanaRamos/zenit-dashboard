@@ -51,49 +51,67 @@ def fetch_instagram_paid_totals_cached(date_preset: str, time_range: dict | None
     return meta_client.get_instagram_paid_totals(date_preset, time_range)
 
 @st.cache_data(ttl=900)
-def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: str) -> List[InstagramMedia]:
+def fetch_organic_media(
+    date_preset: str, time_range: dict | None, client_name: str
+) -> List[InstagramMedia]:
+    """Fetch Media Insights without constructing or querying a paid Ads client."""
     ig_client = get_instagram_client(client_name)
-    meta_client = get_api_client(client_name)
-    
+
     if time_range:
         since_dt = datetime.datetime.strptime(time_range['since'], '%Y-%m-%d')
         until_dt = datetime.datetime.strptime(time_range['until'], '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
         since_timestamp = int(since_dt.timestamp())
         until_timestamp = int(until_dt.timestamp())
-        media_list = ig_client.get_recent_media(limit=100, since_timestamp=since_timestamp, until_timestamp=until_timestamp)
+        return ig_client.get_recent_media(
+            limit=100,
+            since_timestamp=since_timestamp,
+            until_timestamp=until_timestamp,
+        )
     elif date_preset == 'maximum':
-        media_list = ig_client.get_recent_media(limit=100)
-    else:
-        thirty_days_ago = int((datetime.datetime.now() - datetime.timedelta(days=30)).timestamp())
-        media_list = ig_client.get_recent_media(limit=100, since_timestamp=thirty_days_ago)
-    
+        return ig_client.get_recent_media(limit=100)
+
+    days = 90 if date_preset == "last_90d" else 30
+    since_timestamp = int(
+        (datetime.datetime.now() - datetime.timedelta(days=days)).timestamp()
+    )
+    return ig_client.get_recent_media(limit=100, since_timestamp=since_timestamp)
+
+
+@st.cache_data(ttl=900)
+def enrich_media_with_ads(
+    media_list: List[InstagramMedia],
+    date_preset: str,
+    time_range: dict | None,
+    client_name: str,
+) -> List[InstagramMedia]:
+    """Attach a separate paid comparison to already-fetched organic media."""
     ads_mapping = fetch_instagram_ads_mapping_cached(date_preset, time_range, client_name)
-    
-    
+
     updated_media_list = []
     for media in media_list:
         ig_id = media.id
         update_data = {}
         if ig_id in ads_mapping:
             metrics = ads_mapping[ig_id]
-            
-            update_data['paid_reach'] = metrics["reach"]
-            update_data['paid_impressions'] = metrics["impressions"]
-            update_data['paid_clicks'] = metrics["clicks"]
-            update_data['paid_link_clicks'] = metrics["link_clicks"]
+
+            update_data['paid_reach'] = metrics.get("reach", 0)
+            update_data['paid_impressions'] = metrics.get("impressions", 0)
+            update_data['paid_clicks'] = metrics.get("clicks", 0)
+            update_data['paid_link_clicks'] = metrics.get("link_clicks", 0)
             update_data['paid_other_clicks'] = max(0, update_data['paid_clicks'] - update_data['paid_link_clicks'])
-            update_data['paid_likes'] = metrics["likes"]
-            update_data['paid_shares'] = metrics["shares"]
-            update_data['paid_saved'] = metrics["saved"]
+            update_data['paid_likes'] = metrics.get("likes")
+            update_data['paid_reactions'] = metrics.get("reactions")
+            update_data['paid_shares'] = metrics.get("shares", 0)
+            update_data['paid_saved'] = metrics.get("saved", 0)
             update_data['paid_comments'] = metrics.get("comments", 0)
-            update_data['paid_views'] = metrics["views"]
+            update_data['paid_views'] = metrics.get("views", 0)
             update_data['paid_destination'] = metrics.get("paid_destination")
             update_data['paid_spend'] = metrics.get("spend", 0.0)
             update_data['paid_cpm'] = metrics.get("cpm", 0.0)
             update_data['paid_cpc'] = metrics.get("cpc", 0.0)
             update_data['paid_cpp'] = metrics.get("cpp", 0.0)
             update_data['paid_ctr'] = metrics.get("ctr", 0.0)
-            update_data['paid_cpa'] = metrics.get("cpa", 0.0)
+            update_data['paid_cpa'] = metrics.get("cpa")
             update_data['paid_cost_per_outbound_click'] = metrics.get("cost_per_outbound_click", 0.0)
             update_data['paid_frequency'] = metrics.get("frequency", 0.0)
             update_data['paid_video_avg_time'] = metrics.get("video_avg_time", 0.0)
@@ -107,13 +125,18 @@ def fetch_organic_v12(date_preset: str, time_range: dict | None, client_name: st
             update_data['paid_date_start'] = metrics.get("date_start", "")
             update_data['paid_date_stop'] = metrics.get("date_stop", "")
             update_data['paid_ad_count'] = metrics.get("ad_count", 1)
-                
-            # A API Graph do Instagram (media/{id}/insights) já retorna APENAS o alcance orgânico
-            # Métricas de anúncios NÃO estão inclusas nesse número, logo não devemos subtrair.
-            
+
         updated_media_list.append(media.model_copy(update=update_data))
-        
+
     return updated_media_list
+
+
+@st.cache_data(ttl=900)
+def fetch_organic_v12(
+    date_preset: str, time_range: dict | None, client_name: str
+) -> List[InstagramMedia]:
+    """Compatibility wrapper for callers that still use the old function name."""
+    return fetch_organic_media(date_preset, time_range, client_name)
 
 @st.cache_data(ttl=900)
 def fetch_active_stories(client_name: str) -> list:

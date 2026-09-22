@@ -6,7 +6,12 @@ from typing import Any
 import requests
 from api.exceptions import InstagramAPIError
 from core.config import settings
-from schemas.instagram import InstagramMedia, InstagramStory
+from schemas.instagram import (
+    AccountDemographics,
+    InstagramDemographics,
+    InstagramMedia,
+    InstagramStory,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,7 @@ class InstagramClient:
             "fields": "instagram_business_account"
         }
         try:
-            response = self.session.get(url, params=params, timeout=10, verify=False)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             if "instagram_business_account" in data:
@@ -64,15 +69,15 @@ class InstagramClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = self.session.get(url, params=params, timeout=10, verify=False)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
-            error_data = e.response.json() if e.response else {}
+            error_data = e.response.json() if e.response is not None else {}
             error_msg = error_data.get("error", {}).get("message", str(e))
             logger.error(f"Erro na API do Instagram: {error_msg}")
 
-            if e.response and e.response.status_code == 401:
+            if e.response is not None and e.response.status_code == 401:
                 raise InstagramAPIError(
                     "Token de Acesso do Instagram Inválido ou Expirado. Por favor, gere um novo token e atualize as configurações (Erro 401)."
                 )
@@ -117,22 +122,17 @@ class InstagramClient:
         media_items_data = []
 
         while True:
-            try:
-                data = self._make_request(endpoint, params)
-                page_data = data.get("data", [])
-                if not page_data:
-                    break
+            data = self._make_request(endpoint, params)
+            page_data = data.get("data", [])
+            if not page_data:
+                break
 
-                media_items_data.extend(page_data)
+            media_items_data.extend(page_data)
 
-                paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    params["after"] = paging["cursors"]["after"]
-                else:
-                    break
-            except Exception as e:
-                logger.warning(f"Erro durante a paginação do Instagram: {e}")
-                sentry_sdk.capture_exception(e)
+            paging = data.get("paging", {})
+            if "cursors" in paging and "after" in paging["cursors"]:
+                params["after"] = paging["cursors"]["after"]
+            else:
                 break
 
         # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
@@ -151,7 +151,9 @@ class InstagramClient:
                 # Na v26, views substitui as métricas legadas de reprodução.
                 metrics = "reach,views,saved,shares,likes,comments,total_interactions"
             else:
-                metrics = "reach,saved,shares,likes,comments,total_interactions"
+                metrics = (
+                    "reach,views,saved,shares,likes,comments,total_interactions"
+                )
 
             batch_requests.append(
                 {
@@ -167,7 +169,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 
@@ -182,7 +184,9 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        metrics = "total_interactions,reach,saved,shares,likes,comments"
+                        metrics = (
+                            "total_interactions,reach,views,saved,shares,likes,comments"
+                        )
                         fallback_requests.append({
                             "method": "GET",
                             "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
@@ -193,7 +197,7 @@ class InstagramClient:
                     fallback_res = self.session.post(
                         self.BATCH_URL,
                         data={"access_token": self.token, "batch": json.dumps(fallback_requests)},
-                        timeout=20, verify=False,
+                        timeout=20,
                     )
                     
                     ultra_fallback_requests = []
@@ -219,7 +223,7 @@ class InstagramClient:
                         ultra_res = self.session.post(
                             self.BATCH_URL,
                             data={"access_token": self.token, "batch": json.dumps(ultra_fallback_requests)},
-                            timeout=20, verify=False,
+                            timeout=20,
                         )
                         if ultra_res.status_code == 200:
                             for j, ultra_item in enumerate(ultra_res.json()):
@@ -260,22 +264,20 @@ class InstagramClient:
                     media_product_type=item.get("media_product_type", ""),
                     permalink=item.get("permalink", ""),
                     timestamp=item.get("timestamp", ""),
-                    # Insights de mídia é a fonte orgânica. Os contadores do objeto
-                    # ficam apenas como fallback para mídia sem Insights disponível.
-                    like_count=int(metrics_dict.get("likes", item.get("like_count", 0))),
-                    comments_count=int(
-                        metrics_dict.get("comments", item.get("comments_count", 0))
+                    like_count=metrics_dict.get("likes"),
+                    comments_count=metrics_dict.get("comments"),
+                    visible_like_count=item.get("like_count"),
+                    visible_comments_count=item.get("comments_count"),
+                    reach=metrics_dict.get("reach"),
+                    shares=metrics_dict.get("shares"),
+                    saved=metrics_dict.get("saved"),
+                    total_interactions=metrics_dict.get("total_interactions"),
+                    ig_reels_video_view_total_time=metrics_dict.get(
+                        "ig_reels_video_view_total_time"
                     ),
-                    reach=int(metrics_dict.get("reach", 0)),
-                    shares=int(metrics_dict.get("shares", 0)),
-                    saved=int(metrics_dict.get("saved", 0)),
-                    total_interactions=int(metrics_dict.get("total_interactions", 0)),
-                    ig_reels_video_view_total_time=float(
-                        metrics_dict.get("ig_reels_video_view_total_time", 0)
-                    ),
-                    organic_views=int(metrics_dict.get("views", metrics_dict.get("video_views", 0))),
-                    ig_reels_avg_watch_time=float(
-                        metrics_dict.get("ig_reels_avg_watch_time", 0)
+                    organic_views=metrics_dict.get("views"),
+                    ig_reels_avg_watch_time=metrics_dict.get(
+                        "ig_reels_avg_watch_time"
                     ),
                     profile_activity=metrics_dict.get("profile_activity"),
                     profile_visits=metrics_dict.get("profile_visits"),
@@ -322,7 +324,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
@@ -505,7 +507,8 @@ class InstagramClient:
 
     def get_all_comments_for_account(self, media_ids: list[str]) -> list[dict[str, Any]]:
         """Busca todos os comentários dados uma lista de media_ids (Sem limite, usa chunks de 50 no Batch)"""
-        if not media_ids: return []
+        if not media_ids:
+            return []
         
         all_comments = []
         batch_requests = []
@@ -526,7 +529,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 for response_item in batch_res.json():
@@ -576,8 +579,6 @@ class InstagramClient:
         Busca os dados demográficos (Idade, Gênero, Cidades, Países) dos Seguidores
         e do Público Engajado (Últimos 30 dias).
         """
-        from schemas.instagram import AccountDemographics, InstagramDemographics
-
         endpoint = f"{self.instagram_account_id}/insights"
         endpoint = f"{self.instagram_account_id}/insights"
         def _fetch_demographic(metric: str, timeframe: str = None) -> InstagramDemographics:
@@ -643,4 +644,3 @@ class InstagramClient:
             engaged=engaged_demo,
             reached=reached_demo,
         )
-
