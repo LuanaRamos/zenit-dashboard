@@ -103,7 +103,7 @@ def fetch_account_profile_cached(client_name: str) -> dict:
         }
 
 
-@st.cache_data(ttl=900)
+@st.cache_resource(ttl=900)
 def fetch_organic_media(
     date_preset: str, time_range: dict | None, client_name: str
 ) -> List[InstagramMedia]:
@@ -134,7 +134,7 @@ def fetch_organic_media(
     return ig_client.get_recent_media(limit=100, since_timestamp=since_timestamp)
 
 
-@st.cache_data(ttl=900)
+@st.cache_resource(ttl=900)
 def enrich_media_with_ads(
     media_list: List[InstagramMedia],
     date_preset: str,
@@ -252,7 +252,7 @@ def fetch_all_historic_comments(
         return []
 
 
-@st.cache_data(ttl=3600)
+@st.cache_resource(ttl=3600)
 def fetch_account_demographics(client_name: str):
     try:
         ig_client = get_instagram_client(client_name)
