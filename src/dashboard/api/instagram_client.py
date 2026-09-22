@@ -6,7 +6,12 @@ from typing import Any
 import requests
 from api.exceptions import InstagramAPIError
 from core.config import settings
-from schemas.instagram import InstagramMedia, InstagramStory
+from schemas.instagram import (
+    AccountDemographics,
+    InstagramDemographics,
+    InstagramMedia,
+    InstagramStory,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +22,9 @@ class InstagramClient:
     Responsável por fazer o fetch de publicações orgânicas e seus insights.
     """
 
-    # URL base para requests normais (versionada)
-    BASE_URL = "https://graph.facebook.com/v25.0"
-    # URL para Batch Requests (SEM versão — exigência da Graph API)
+    API_VERSION = "v26.0"
+    BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
+    # O Batch API recebe a versão em cada relative_url.
     BATCH_URL = "https://graph.facebook.com"
 
     def __init__(self, client_config) -> None:
@@ -36,7 +41,7 @@ class InstagramClient:
             "fields": "instagram_business_account"
         }
         try:
-            response = self.session.get(url, params=params, timeout=10, verify=False)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             if "instagram_business_account" in data:
@@ -64,15 +69,15 @@ class InstagramClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = self.session.get(url, params=params, timeout=10, verify=False)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
-            error_data = e.response.json() if e.response else {}
+            error_data = e.response.json() if e.response is not None else {}
             error_msg = error_data.get("error", {}).get("message", str(e))
             logger.error(f"Erro na API do Instagram: {error_msg}")
 
-            if e.response and e.response.status_code == 401:
+            if e.response is not None and e.response.status_code == 401:
                 raise InstagramAPIError(
                     "Token de Acesso do Instagram Inválido ou Expirado. Por favor, gere um novo token e atualize as configurações (Erro 401)."
                 )
@@ -117,22 +122,17 @@ class InstagramClient:
         media_items_data = []
 
         while True:
-            try:
-                data = self._make_request(endpoint, params)
-                page_data = data.get("data", [])
-                if not page_data:
-                    break
+            data = self._make_request(endpoint, params)
+            page_data = data.get("data", [])
+            if not page_data:
+                break
 
-                media_items_data.extend(page_data)
+            media_items_data.extend(page_data)
 
-                paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    params["after"] = paging["cursors"]["after"]
-                else:
-                    break
-            except Exception as e:
-                logger.warning(f"Erro durante a paginação do Instagram: {e}")
-                sentry_sdk.capture_exception(e)
+            paging = data.get("paging", {})
+            if "cursors" in paging and "after" in paging["cursors"]:
+                params["after"] = paging["cursors"]["after"]
+            else:
                 break
 
         # Batch Request para puxar Insights sem N+1 queries (Regra da skill Caching Expert)
@@ -143,21 +143,23 @@ class InstagramClient:
             media_product_type = item.get("media_product_type", "")
             media_type = item.get("media_type", "")
             if media_product_type == "REELS":
-                # Metricas validas para Reels na v22.0
-                # 'plays' foi substituído por 'views'
-                metrics = "reach,saved,shares,total_interactions,ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
+                metrics = (
+                    "reach,saved,shares,likes,comments,total_interactions,"
+                    "ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
+                )
             elif media_type == "VIDEO":
-                # Videos muito antigos não são reels e usam video_views
-                metrics = "reach,video_views,saved,shares,total_interactions"
+                # Na v26, views substitui as métricas legadas de reprodução.
+                metrics = "reach,views,saved,shares,likes,comments,total_interactions"
             else:
-                # Imagens e Carrosseis não possuem views/video_views
-                metrics = "reach,saved,shares,total_interactions"
+                metrics = (
+                    "reach,views,saved,shares,likes,comments,total_interactions"
+                )
 
             batch_requests.append(
                 {
                     "method": "GET",
-                    # Barra inicial obrigatória na relative_url do Batch API
-                    "relative_url": f"/{ig_id}/insights?metric={metrics}",
+                    # A versão explícita evita depender da versão padrão do app.
+                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
                 }
             )
 
@@ -167,7 +169,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 
@@ -182,10 +184,12 @@ class InstagramClient:
                         body = json.loads(response_item.get("body", "{}"))
                         insights_map[ig_id] = body.get("data", [])
                     else:
-                        metrics = "total_interactions,reach,saved,shares"
+                        metrics = (
+                            "total_interactions,reach,views,saved,shares,likes,comments"
+                        )
                         fallback_requests.append({
                             "method": "GET",
-                            "relative_url": f"/{ig_id}/insights?metric={metrics}",
+                            "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
                         })
                         fallback_indices.append(req_idx)
                         
@@ -193,7 +197,7 @@ class InstagramClient:
                     fallback_res = self.session.post(
                         self.BATCH_URL,
                         data={"access_token": self.token, "batch": json.dumps(fallback_requests)},
-                        timeout=20, verify=False,
+                        timeout=20,
                     )
                     
                     ultra_fallback_requests = []
@@ -211,7 +215,7 @@ class InstagramClient:
                                 # Ultra fallback: try just reach
                                 ultra_fallback_requests.append({
                                     "method": "GET",
-                                    "relative_url": f"/{ig_id}/insights?metric=reach",
+                                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric=reach",
                                 })
                                 ultra_fallback_indices.append(req_idx)
                                 
@@ -219,7 +223,7 @@ class InstagramClient:
                         ultra_res = self.session.post(
                             self.BATCH_URL,
                             data={"access_token": self.token, "batch": json.dumps(ultra_fallback_requests)},
-                            timeout=20, verify=False,
+                            timeout=20,
                         )
                         if ultra_res.status_code == 200:
                             for j, ultra_item in enumerate(ultra_res.json()):
@@ -260,21 +264,24 @@ class InstagramClient:
                     media_product_type=item.get("media_product_type", ""),
                     permalink=item.get("permalink", ""),
                     timestamp=item.get("timestamp", ""),
-                    like_count=int(item.get("like_count", 0)),
-                    comments_count=int(item.get("comments_count", 0)),
-                    reach=int(metrics_dict.get("reach", 0)),
-                    shares=int(metrics_dict.get("shares", 0)),
-                    saved=int(metrics_dict.get("saved", 0)),
-                    ig_reels_video_view_total_time=float(
-                        metrics_dict.get("ig_reels_video_view_total_time", 0)
+                    like_count=metrics_dict.get("likes"),
+                    comments_count=metrics_dict.get("comments"),
+                    visible_like_count=item.get("like_count"),
+                    visible_comments_count=item.get("comments_count"),
+                    reach=metrics_dict.get("reach"),
+                    shares=metrics_dict.get("shares"),
+                    saved=metrics_dict.get("saved"),
+                    total_interactions=metrics_dict.get("total_interactions"),
+                    ig_reels_video_view_total_time=metrics_dict.get(
+                        "ig_reels_video_view_total_time"
                     ),
-                    organic_views=int(metrics_dict.get("views", metrics_dict.get("video_views", 0))),
-                    ig_reels_avg_watch_time=float(
-                        metrics_dict.get("ig_reels_avg_watch_time", 0)
+                    organic_views=metrics_dict.get("views"),
+                    ig_reels_avg_watch_time=metrics_dict.get(
+                        "ig_reels_avg_watch_time"
                     ),
-                    profile_activity=int(metrics_dict.get("profile_activity", 0)),
-                    profile_visits=int(metrics_dict.get("profile_visits", 0)),
-                    follows=int(metrics_dict.get("follows", 0)),
+                    profile_activity=metrics_dict.get("profile_activity"),
+                    profile_visits=metrics_dict.get("profile_visits"),
+                    follows=metrics_dict.get("follows"),
                 )
                 media_list.append(media)
             except Exception as e:
@@ -304,7 +311,10 @@ class InstagramClient:
             ig_id = item.get("id")
             metrics = "reach,exits,replies,taps_forward,taps_back"
             batch_requests.append(
-                {"method": "GET", "relative_url": f"/{ig_id}/insights?metric={metrics}"}
+                {
+                    "method": "GET",
+                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
+                }
             )
 
         insights_map = {}
@@ -312,9 +322,9 @@ class InstagramClient:
             chunk = batch_requests[i : i + 50]
             try:
                 batch_res = self.session.post(
-                    self.BATCH_URL,  # Batch API não usa versão na URL base
+                    self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 for j, response_item in enumerate(batch_res.json()):
@@ -367,7 +377,7 @@ class InstagramClient:
         
         now = datetime.datetime.now()
         
-        # Meta Graph API v25.0 limita alcance a 13 meses de histórico (aprox. 395 dias)
+        # A Graph API v26 limita estas métricas de conta a cerca de 13 meses.
         limit_date = now - relativedelta(months=13) + datetime.timedelta(days=1)
         
         is_partial = False
@@ -408,9 +418,12 @@ class InstagramClient:
         }
         if is_partial:
             results["_is_partial"] = True
+
+        chunk_count = 0
         
         current_since = since
         while current_since < until:
+            chunk_count += 1
             # Chunk max 29 days to be safe
             current_until = min(current_since + datetime.timedelta(days=29, hours=23, minutes=59, seconds=59), until)
             
@@ -450,6 +463,11 @@ class InstagramClient:
                     logger.warning(f"Erro account insights chunk (daily) {adjusted_since} a {current_until}: {e}")
                 
             current_since = current_until + datetime.timedelta(seconds=1)
+
+        # Reach e contas engajadas são métricas únicas apenas dentro de cada janela.
+        # Quando há mais de uma janela, a soma pode repetir a mesma pessoa.
+        if chunk_count > 1:
+            results["_is_segmented"] = True
             
         return results
 
@@ -489,13 +507,20 @@ class InstagramClient:
 
     def get_all_comments_for_account(self, media_ids: list[str]) -> list[dict[str, Any]]:
         """Busca todos os comentários dados uma lista de media_ids (Sem limite, usa chunks de 50 no Batch)"""
-        if not media_ids: return []
+        if not media_ids:
+            return []
         
         all_comments = []
         batch_requests = []
         for ig_id in media_ids:
             batch_requests.append(
-                {"method": "GET", "relative_url": f"/{ig_id}/comments?fields=id,text,like_count,username,timestamp&limit=50"}
+                {
+                    "method": "GET",
+                    "relative_url": (
+                        f"/{self.API_VERSION}/{ig_id}/comments"
+                        "?fields=id,text,like_count,username,timestamp&limit=50"
+                    ),
+                }
             )
         
         try:
@@ -504,7 +529,7 @@ class InstagramClient:
                 batch_res = self.session.post(
                     self.BATCH_URL,
                     data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20, verify=False,
+                    timeout=20,
                 )
                 batch_res.raise_for_status()
                 for response_item in batch_res.json():
@@ -554,8 +579,6 @@ class InstagramClient:
         Busca os dados demográficos (Idade, Gênero, Cidades, Países) dos Seguidores
         e do Público Engajado (Últimos 30 dias).
         """
-        from schemas.instagram import AccountDemographics, InstagramDemographics
-
         endpoint = f"{self.instagram_account_id}/insights"
         endpoint = f"{self.instagram_account_id}/insights"
         def _fetch_demographic(metric: str, timeframe: str = None) -> InstagramDemographics:
@@ -621,5 +644,3 @@ class InstagramClient:
             engaged=engaged_demo,
             reached=reached_demo,
         )
-
-

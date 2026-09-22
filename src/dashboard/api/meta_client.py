@@ -7,7 +7,8 @@ from typing import Any
 import requests
 from api.exceptions import MetaAPIError
 from core.config import settings
-from schemas.meta import CampaignInsight
+from schemas.instagram import InstagramDemographics
+from schemas.meta import CampaignInsight, parse_outbound_clicks, parse_paid_actions
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ class MetaAdsClient:
     Responsável por fazer o fetch de insights das campanhas e páginas.
     """
 
-    BASE_URL = "https://graph.facebook.com/v25.0"
+    API_VERSION = "v26.0"
+    BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
     def __init__(self, client_config) -> None:
         self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
@@ -41,20 +43,20 @@ class MetaAdsClient:
         url = f"{self.BASE_URL}/{endpoint}"
 
         try:
-            response = self.session.get(url, params=params, timeout=10, verify=False)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             return response.json()  # type: ignore
         except requests.exceptions.HTTPError as e:
-            raw_text = e.response.text if e.response else "No response body"
+            raw_text = e.response.text if e.response is not None else "No response body"
             try:
-                error_data = e.response.json() if e.response else {}
+                error_data = e.response.json() if e.response is not None else {}
                 error_msg = error_data.get("error", {}).get("message", f"{str(e)} | Corpo: {raw_text}")
             except Exception:
                 error_msg = f"{str(e)} | Corpo: {raw_text}"
 
             logger.error(f"Erro na API da Meta: {error_msg}")
 
-            if e.response and e.response.status_code == 401:
+            if e.response is not None and e.response.status_code == 401:
                 raise MetaAPIError(
                     "Token de Acesso Inválido ou Expirado. Por favor, gere um novo token da Meta e atualize o painel de configurações/variáveis de ambiente (Erro 401)."
                 )
@@ -85,7 +87,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,cpc,cpm,actions",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,cpc,cpm,actions",
             "limit": "1000",
         }
 
@@ -127,8 +129,6 @@ class MetaAdsClient:
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> "InstagramDemographics":
         """Busca insights demográficos (Idade, Gênero, Cidades, Países) para Ads"""
-        from schemas.instagram import InstagramDemographics
-        
         endpoint = f"{self.ad_account_id}/insights"
         
         age_gender = {}
@@ -371,24 +371,11 @@ class MetaAdsClient:
             if not ad_id:
                 continue
 
-            leads = 0
-            whatsapp = 0
-            instagram_follows = 0
-            profile_visits = 0
-            link_clicks = 0
-            for action in item.get("actions", []):
-                act_type = action.get("action_type", "")
-                val = int(action.get("value", 0))
-                if act_type == "link_click":
-                    link_clicks += val
-                if act_type in ["lead", "leadgen"]:
-                    leads += val
-                if act_type.startswith("onsite_conversion.messaging_conversation_started"):
-                    whatsapp += val
-                if act_type == "instagram_follows":
-                    instagram_follows += val
-                if act_type in ["profile_visit", "instagram_profile_views"]:
-                    profile_visits += val
+            action_metrics = parse_paid_actions(item.get("actions"))
+            leads = action_metrics["leads"]
+            whatsapp = action_metrics["messaging_conversations"]
+            instagram_follows = action_metrics["instagram_follows"]
+            profile_visits = action_metrics["profile_visits"]
                     
             if instagram_follows == 0:
                 instagram_follows = int(item.get("instagram_follows", 0))
@@ -396,7 +383,7 @@ class MetaAdsClient:
             spend = float(item.get("spend", 0.0))
             
             # Recuperando as interações grossas (Likes, Saves, Comments, Shares, etc) da veia da Meta
-            post_interaction_gross = 0
+            _post_interaction_gross = 0
             post_reactions = 0
             post_shares = 0
             post_saves = 0
@@ -406,7 +393,7 @@ class MetaAdsClient:
                 act_type = action.get("action_type")
                 val = int(action.get("value", 0))
                 if act_type == "post_interaction_gross":
-                    post_interaction_gross = val
+                    _post_interaction_gross = val
                 elif act_type == "post_reaction":
                     post_reactions = val
                 elif act_type == "post":
@@ -419,6 +406,7 @@ class MetaAdsClient:
             # Clicks nativos da API, em vez de somar manualmente
             clicks = int(item.get("clicks", 0))
             inline_link_clicks = int(item.get("inline_link_clicks", 0))
+            outbound_clicks = parse_outbound_clicks(item.get("outbound_clicks"))
             
             # Recriando "other_clicks" como a diferenca, se precisar
             other_clicks = max(0, clicks - inline_link_clicks)
@@ -444,7 +432,7 @@ class MetaAdsClient:
             elif cta_type == "":
                 traffic_dest = "Não Identificado"
             else:
-                traffic_dest = f"Site Externo"
+                traffic_dest = "Site Externo"
 
             results.append(CreativePerformance(
                 ad_id=ad_id,
@@ -456,7 +444,9 @@ class MetaAdsClient:
                 spend=spend,
                 impressions=int(item.get("impressions", 0)),
                 clicks=clicks,
-                link_clicks=link_clicks,
+                link_clicks=inline_link_clicks,
+                inline_link_clicks=inline_link_clicks,
+                outbound_clicks=outbound_clicks,
                 other_clicks=other_clicks,
                 post_reactions=post_reactions,
                 post_shares=post_shares,
@@ -488,7 +478,6 @@ class MetaAdsClient:
 
     def check_catalog_assets(self) -> list[Any]:
         """Busca catálogos vinculados à conta de anúncios"""
-        endpoint = f"{self.ad_account_id}/owned_product_catalogs"
         try:
             params = {"fields": "id,name,product_count"}
             data = self._make_request(f"{self.ad_account_id}/product_catalogs", params)
@@ -570,8 +559,8 @@ class MetaAdsClient:
         para cálculo do tráfego pago vs orgânico. Alta performance: Sem N+1 queries.
 
         Returns:
-            Dict[str, Dict[str, int]]: Mapa com a chave sendo o 'effective_instagram_story_id' e o
-                                       valor sendo a soma de reach, impressions e clicks.
+            Dict[str, Dict[str, int]]: Mapa por ID de mídia do Instagram com
+            alcance, impressões, cliques e demais métricas pagas.
         """
         # Passo 1: Buscar insights de todos os ads na conta de uma vez
         insights_endpoint = f"{self.ad_account_id}/insights"
@@ -606,7 +595,7 @@ class MetaAdsClient:
                 f"Erro ao buscar insights de anúncios (Organic mapping): {e}"
             )
             sentry_sdk.capture_exception(e)
-            return {}
+            raise
 
         # Mapeia ad_id -> métricas
         ad_metrics_map = {}
@@ -622,7 +611,8 @@ class MetaAdsClient:
                         "impressions": 0,
                         "clicks": 0,
                         "link_clicks": 0,
-                        "likes": 0,
+                        "likes": None,
+                        "reactions": None,
                         "shares": 0,
                         "saved": 0,
                         "comments": 0,
@@ -684,18 +674,14 @@ class MetaAdsClient:
                     if act_val.get("action_type") == "offsite_conversion.fb_pixel_purchase":
                         ad_metrics_map[ad_id]["action_values"] += float(act_val.get("value", 0.0))
 
-                # Bug 3 fix: Apenas action_types primários confirmados
-                like_priority = {"onsite_conversion.post_net_like": 3, "like": 2, "post_reaction": 1}
-                current_like_prio = 0
-                
                 for action in item.get("actions", []):
                     action_type = action.get("action_type")
                     val = int(action.get("value", 0))
                     
-                    if action_type in like_priority:
-                        if like_priority[action_type] > current_like_prio:
-                            ad_metrics_map[ad_id]["likes"] = val
-                            current_like_prio = like_priority[action_type]
+                    if action_type == "onsite_conversion.post_net_like":
+                        ad_metrics_map[ad_id]["likes"] = val
+                    elif action_type == "post_reaction":
+                        ad_metrics_map[ad_id]["reactions"] = val
                     elif action_type == "post":
                         ad_metrics_map[ad_id]["shares"] = val
                     elif action_type == "comment":
@@ -714,7 +700,7 @@ class MetaAdsClient:
         # Passo 2: Buscar a ligação entre o Ad e o Instagram Post (Feed, Reels, Stories)
         ads_endpoint = f"{self.ad_account_id}/ads"
         ads_params = {
-            "fields": "id,creative{effective_instagram_story_id,effective_instagram_media_id,source_instagram_media_id,call_to_action_type}",
+            "fields": "id,creative{effective_instagram_media_id,source_instagram_media_id,call_to_action_type}",
             "limit": "1000",
         }
 
@@ -732,7 +718,7 @@ class MetaAdsClient:
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar lista de anúncios (Organic mapping): {e}")
             sentry_sdk.capture_exception(e)
-            return {}
+            raise
 
         # Passo 3: Agrupar as métricas baseadas no Instagram Post ID
         ig_mapping = {}
@@ -741,12 +727,11 @@ class MetaAdsClient:
             creative = ad.get("creative", {})
 
             # 1. source_instagram_media_id = Post original que deu origem ao anúncio (prioridade máxima)
-            # 2. effective_instagram_media_id = Feed, Reels, Carousel (Ads nativos)
-            # 3. effective_instagram_story_id = Stories
+            # O campo legado específico de Story foi removido. Na v26, todos os
+            # formatos usam source_instagram_media_id/effective_instagram_media_id.
             ig_id = (
                 creative.get("source_instagram_media_id")
                 or creative.get("effective_instagram_media_id")
-                or creative.get("effective_instagram_story_id")
             )
 
             # Se esse anúncio está atrelado a um post do IG e possui métricas registradas
@@ -765,7 +750,7 @@ class MetaAdsClient:
                 elif cta_type == "":
                     traffic_dest = "N/A"
                 else:
-                    traffic_dest = f"Site Externo"
+                    traffic_dest = "Site Externo"
 
                 if ig_id not in ig_mapping:
                     ig_mapping[ig_id] = {
@@ -773,7 +758,8 @@ class MetaAdsClient:
                         "impressions": 0,
                         "clicks": 0,
                         "link_clicks": 0,
-                        "likes": 0,
+                        "likes": None,
+                        "reactions": None,
                         "shares": 0,
                         "saved": 0,
                         "comments": 0,
@@ -813,7 +799,15 @@ class MetaAdsClient:
                 ig_mapping[ig_id]["impressions"] += metrics["impressions"]
                 ig_mapping[ig_id]["clicks"] += metrics["clicks"]
                 ig_mapping[ig_id]["link_clicks"] += metrics["link_clicks"]
-                ig_mapping[ig_id]["likes"] += metrics["likes"]
+                if metrics["likes"] is not None:
+                    ig_mapping[ig_id]["likes"] = (
+                        (ig_mapping[ig_id]["likes"] or 0) + metrics["likes"]
+                    )
+                if metrics["reactions"] is not None:
+                    ig_mapping[ig_id]["reactions"] = (
+                        (ig_mapping[ig_id]["reactions"] or 0)
+                        + metrics["reactions"]
+                    )
                 ig_mapping[ig_id]["shares"] += metrics["shares"]
                 ig_mapping[ig_id]["saved"] += metrics["saved"]
                 ig_mapping[ig_id]["comments"] += metrics.get("comments", 0)
@@ -853,15 +847,16 @@ class MetaAdsClient:
                 # Reach provisório (será sobrescrito pelo summary se ad_count > 1)
                 ig_mapping[ig_id]["reach"] += metrics["reach"]
 
-        # Bug 7: Para posts com múltiplos anúncios, buscar reach desduplicado via summary
+        # Para posts com múltiplos anúncios, agrega no nível da conta e mantém
+        # somente o placement Instagram, evitando misturar alcance do Facebook.
         for ig_id, ig_data in ig_mapping.items():
             ad_ids = ig_data.pop("_ad_ids", [])
             if len(ad_ids) > 1:
                 try:
                     summary_params = {
-                        "level": "ad",
+                        "level": "account",
                         "fields": "reach",
-                        "summary": '["reach"]',
+                        "breakdowns": "publisher_platform",
                         "filtering": json.dumps([{"field": "ad.id", "operator": "IN", "value": ad_ids}]),
                     }
                     if time_range:
@@ -873,7 +868,11 @@ class MetaAdsClient:
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
-                    summary_reach = int(resp.get("summary", {}).get("reach", 0))
+                    summary_reach = sum(
+                        int(row.get("reach", 0))
+                        for row in resp.get("data", [])
+                        if row.get("publisher_platform") == "instagram"
+                    )
                     if summary_reach > 0:
                         ig_data["reach"] = summary_reach
                 except Exception as e:
@@ -906,9 +905,20 @@ class MetaAdsClient:
                 ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
                 ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
                 ig_data["roas"] = action_values / spend if spend > 0 else 0.0
-                # CPA: recalcular com engajamentos totais
-                total_engagements = ig_data["likes"] + ig_data["comments"] + ig_data["shares"] + ig_data["saved"]
-                ig_data["cpa"] = spend / total_engagements if total_engagements > 0 else 0.0
+                # This derived cost is unavailable when the canonical net-like
+                # action is absent; reactions are deliberately not a substitute.
+                if ig_data["likes"] is None:
+                    ig_data["cpa"] = None
+                else:
+                    total_engagements = (
+                        ig_data["likes"]
+                        + ig_data["comments"]
+                        + ig_data["shares"]
+                        + ig_data["saved"]
+                    )
+                    ig_data["cpa"] = (
+                        spend / total_engagements if total_engagements > 0 else None
+                    )
 
         return ig_mapping
 
@@ -916,14 +926,13 @@ class MetaAdsClient:
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> dict[str, int]:
         """
-        Busca os totais pagos consolidados da conta (nível account).
-        Sem breakdown de plataforma para garantir que o alcance desduplicado
-        total seja capturado — a conta tem campanhas no Facebook e Instagram.
+        Busca os totais pagos do Instagram, sem incorporar placements do Facebook.
         """
         insights_endpoint = f"{self.ad_account_id}/insights"
         insights_params = {
             "level": "account",
             "fields": "reach,impressions,clicks,actions,outbound_clicks",
+            "breakdowns": "publisher_platform",
         }
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
@@ -939,6 +948,8 @@ class MetaAdsClient:
         try:
             data = self._make_request(insights_endpoint, insights_params)
             for item in data.get("data", []):
+                if item.get("publisher_platform") != "instagram":
+                    continue
                 totals["reach"] += int(item.get("reach", 0))
                 totals["impressions"] += int(item.get("impressions", 0))
                 
@@ -956,5 +967,4 @@ class MetaAdsClient:
             return totals
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
-            return totals
-
+            raise

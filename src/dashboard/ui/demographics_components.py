@@ -262,8 +262,8 @@ def _render_full_demo_section(demo: InstagramDemographics, label: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def render_demographics_dashboard(demo: AccountDemographics) -> None:
-    """Renderiza a aba completa de Dados Demográficos para o Instagram Orgânico."""
-    st.markdown("### Perfil da Audiência (Orgânico — Instagram)")
+    """Renderiza dados demográficos da conta, sem atribuição orgânica."""
+    st.markdown("### Audiência da conta no Instagram")
     st.markdown(
         "<p style='color:#94A3B8;margin-bottom:8px;'>"
         "Quem são as pessoas que te seguem, interagem e são alcançadas pelo seu conteúdo."

@@ -1,4 +1,5 @@
 """Laboratório de Criativos — renderiza anúncios com métricas, público REAL atraído e agendamento."""
+
 from __future__ import annotations
 
 import plotly.express as px
@@ -8,7 +9,9 @@ import pandas as pd
 
 
 @st.cache_data(ttl=3600)
-def fetch_creatives(date_preset: str, time_range: dict | None, client_name: str) -> list[dict]:
+def fetch_creatives(
+    date_preset: str, time_range: dict | None, client_name: str
+) -> list[dict]:
     """
     Busca performance + público REAL entregue por anúncio.
     Usa 2 chamadas paralelas à API:
@@ -16,6 +19,7 @@ def fetch_creatives(date_preset: str, time_range: dict | None, client_name: str)
     2. get_creative_real_audience → quem de fato viu o anúncio (age/gender/region/country)
     """
     from ui.data_loader import get_api_client
+
     client = get_api_client(client_name)
 
     creatives = client.get_creative_performance(date_preset, time_range)
@@ -49,6 +53,7 @@ def _parse_dt(dt_str: str | None) -> str:
         return "—"
     try:
         from datetime import datetime
+
         dt = datetime.fromisoformat(dt_str)
         return dt.strftime("%d/%m/%Y %H:%M")
     except Exception:
@@ -57,9 +62,9 @@ def _parse_dt(dt_str: str | None) -> str:
 
 def _status_badge(status: str) -> str:
     colors = {
-        "ACTIVE":   ("#16a34a", "#dcfce7", "● Ativo"),
-        "PAUSED":   ("#d97706", "#fef3c7", "⏸ Pausado"),
-        "DELETED":  ("#dc2626", "#fee2e2", "✕ Deletado"),
+        "ACTIVE": ("#16a34a", "#dcfce7", "● Ativo"),
+        "PAUSED": ("#d97706", "#fef3c7", "⏸ Pausado"),
+        "DELETED": ("#dc2626", "#fee2e2", "✕ Deletado"),
         "ARCHIVED": ("#6b7280", "#f3f4f6", "↓ Arquivado"),
     }
     color, bg, label = colors.get(status.upper(), ("#6b7280", "#f3f4f6", status))
@@ -104,16 +109,16 @@ def _render_real_audience(ad: dict) -> None:
 
         if rows:
             df = pd.DataFrame(rows)
-            
+
             n_age_groups = df["Faixa"].nunique()
             n_genders = df["Gênero"].nunique()
-            
+
             # Dynamic height calculation standardized
             per_item = 28
             if n_genders > 1:
                 per_item = int(28 * 1.6)
             chart_height = max(200, n_age_groups * per_item + 120)
-            
+
             fig = px.bar(
                 df,
                 x="Impressões",
@@ -162,6 +167,7 @@ def _render_real_audience(ad: dict) -> None:
             )
             # iframe obrigatorio aqui: chart esta dentro de st.columns aninhadas
             import streamlit.components.v1 as st_components
+
             plotly_html = fig.to_html(
                 full_html=False,
                 include_plotlyjs="cdn",
@@ -174,7 +180,6 @@ def _render_real_audience(ad: dict) -> None:
                 f"<body>{plotly_html}</body></html>"
             )
             st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
-
 
     # ── Regiões + Países ─────────────────────────────────────────────────────
     if regions or countries:
@@ -201,17 +206,19 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
     right_margin = max(65, max(len(f"{v:,}") for v in values) * 9)
     chart_height = max(160, len(sorted_items) * 28 + 50)
 
-    fig = go.Figure(go.Bar(
-        x=values,
-        y=names,
-        orientation="h",
-        marker_color=color,
-        text=[_fmt_int(v) for v in values],
-        textposition="outside",
-        textfont=dict(color="#FFFFFF", size=10, family="Inter"),
-        cliponaxis=False,
-        hovertemplate="<b>%{y}</b><br>%{x:,}<extra></extra>",
-    ))
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=names,
+            orientation="h",
+            marker_color=color,
+            text=[_fmt_int(v) for v in values],
+            textposition="outside",
+            textfont=dict(color="#FFFFFF", size=10, family="Inter"),
+            cliponaxis=False,
+            hovertemplate="<b>%{y}</b><br>%{x:,}<extra></extra>",
+        )
+    )
     fig.update_layout(
         title=dict(text=title, font=dict(color="#94A3B8", size=11), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -222,7 +229,12 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
             showticklabels=False,
             range=[0, max(values) * 1.4] if values else [0, 1],
         ),
-        yaxis=dict(showgrid=False, autorange="reversed", tickfont=dict(size=10, color="#F1F5F9"), automargin=True),
+        yaxis=dict(
+            showgrid=False,
+            autorange="reversed",
+            tickfont=dict(size=10, color="#F1F5F9"),
+            automargin=True,
+        ),
         margin=dict(l=40, r=right_margin, t=28, b=10),
         height=chart_height,
         hoverlabel=dict(
@@ -246,8 +258,9 @@ def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) ->
     st_components.html(iframe_html, height=chart_height + 10, scrolling=False)
 
 
-
-def render_creatives_tab(date_preset: str, time_range: dict | None, client_name: str) -> None:
+def render_creatives_tab(
+    date_preset: str, time_range: dict | None, client_name: str
+) -> None:
     """Renderiza o Laboratório de Criativos com público real atraído e datas de veiculação."""
     st.subheader("🎨 Laboratório de Criativos")
     st.markdown(
@@ -324,7 +337,6 @@ def _render_creative_card(ad: dict) -> None:
 
     # ── Métricas de Performance ───────────────────────────────────────────────
     gasto = ad.get("spend", 0.0)
-    cpa = ad.get("cpa", 0.0)
     leads = int(ad.get("leads", 0))
     wpp = int(ad.get("whatsapp_starts", 0))
     instagram_follows = int(ad.get("instagram_follows", 0))
@@ -332,6 +344,7 @@ def _render_creative_card(ad: dict) -> None:
     impressions = int(ad.get("impressions", 0))
     clicks = int(ad.get("clicks", 0))
     link_clicks = int(ad.get("link_clicks", 0))
+    outbound_clicks = int(ad.get("outbound_clicks", 0))
 
     objective_friendly = ad.get("objective_friendly", "Desconhecido")
     traffic_dest = ad.get("traffic_destination", "Não Identificado")
@@ -341,26 +354,25 @@ def _render_creative_card(ad: dict) -> None:
         f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span><br>"
         f"🔗 Destino: <span style='color: #F1F5F9;'>{traffic_dest}</span>"
         f"</div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
-    # Evita aberrações matemáticas onde cliques no link são maiores que todos os cliques
-    clicks = max(clicks, link_clicks)
-    outros_cliques = max(0, clicks - link_clicks - profile_visits)
+    # Visitas ao perfil não são subtraídas dos cliques de anúncios.
+    outros_cliques = int(ad.get("other_clicks", max(0, clicks - link_clicks)))
 
     c1, c2, c3 = st.columns(3)
-    
+
     # Linha 1
     c1.metric("💸 Gasto", _fmt_brl(gasto))
     c2.metric("👁 Impressões", _fmt_int(impressions))
-    
-    if objective_friendly == "Mensagens (WhatsApp/Direct)":
-        c3.metric("💬 WhatsApp", _fmt_int(wpp))
+
+    if objective_friendly == "Mensagens" or wpp > 0:
+        c3.metric("💬 Conversas por mensagens", _fmt_int(wpp))
         # Linha 2
-        c1.metric("🎯 Custo p/ Mens.", _fmt_brl(cpa) if cpa > 0 else "—")
+        c1.metric("🎯 Custo p/ Mens.", _fmt_brl(gasto / wpp) if wpp > 0 else "N/D")
         if instagram_follows > 0:
             c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
     elif objective_friendly in ["Tráfego", "Reconhecimento"]:
         cpc_link = gasto / link_clicks if link_clicks > 0 else 0.0
         ctr_link = (link_clicks / impressions * 100) if impressions > 0 else 0.0
@@ -369,27 +381,32 @@ def _render_creative_card(ad: dict) -> None:
         c1.metric("📈 CTR (Link)", f"{ctr_link:.2f}%" if ctr_link > 0 else "—")
         if instagram_follows > 0:
             c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
     else:
         c3.metric("📋 Leads", _fmt_int(leads))
         # Linha 2
-        c1.metric("🎯 Custo p/ Lead", _fmt_brl(cpa) if cpa > 0 else "—")
+        c1.metric("🎯 Custo p/ Lead", _fmt_brl(gasto / leads) if leads > 0 else "N/D")
         if instagram_follows > 0:
             c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto/instagram_follows))
+            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
 
     # Linha 3 (Os 3 tipos de cliques separados, sem somar)
-    c1.metric("🚀 Cliques de Saída", _fmt_int(link_clicks))
+    c1.metric("Cliques no link", _fmt_int(link_clicks))
+    c1.metric("Cliques de saída", _fmt_int(outbound_clicks))
     c2.metric("👁 Visitas ao Perfil", _fmt_int(profile_visits))
-    
+
     with c3:
-        st.metric("📸 Cliques no Criativo", _fmt_int(outros_cliques), help="Cliques para ampliar a foto, ler 'Ver Mais', curtidas, etc.")
+        st.metric(
+            "Outros cliques",
+            _fmt_int(outros_cliques),
+            help="Diferença entre cliques totais e cliques no link; não inclui uma soma de interações.",
+        )
         if outros_cliques > 0:
             likes = ad.get("post_reactions", 0)
             shares = ad.get("post_shares", 0)
             saves = ad.get("post_saves", 0)
             comments = ad.get("post_comments", 0)
-            
+
             # HTML para o texto pequeno alinhado ao Metric
             st.markdown(
                 f"<div style='font-size:0.75rem; color:#A0AEC0; margin-top:-10px; line-height:1.2;'>"
@@ -398,7 +415,7 @@ def _render_creative_card(ad: dict) -> None:
                 f"{f'💬 {comments} Comentários<br>' if comments else ''}"
                 f"{f'💾 {saves} Salvamentos<br>' if saves else ''}"
                 f"</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
     # ── Público REAL Atraído ─────────────────────────────────────────────────
