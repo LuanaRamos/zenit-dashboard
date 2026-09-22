@@ -190,20 +190,20 @@ def render_metric_card(
     label: str, value: str, subtext: str = None, help_text: str = None
 ) -> None:
     sub_html = (
-        f"<div style='color: #FFFFFF; font-size: 0.95rem; font-weight: 500; margin-bottom: 12px;'>{subtext}</div>"
+        f"<div style='color: #FFFFFF; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; line-height: 1.25; word-break: break-word;'>{subtext}</div>"
         if subtext
         else ""
     )
     help_html = (
-        f"<div style='font-size: 0.75rem; color: #c4c9ac; font-weight: 400;'>{help_text}</div>"
+        f"<div style='font-size: 0.72rem; color: #c4c9ac; font-weight: 400; line-height: 1.2; word-break: break-word;'>{help_text}</div>"
         if help_text
         else ""
     )
 
     html = (
         '<div class="glass-card kpi-card">'
-        f'<div style="color: #FFFFFF; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">{label}</div>'
-        f"<div style=\"background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 12px; font-family: 'Montserrat', sans-serif; display: inline-block;\">{value}</div>"
+        f'<div style="color: #FFFFFF; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.25; margin-bottom: 8px; hyphens: none; -webkit-hyphens: none; word-break: normal; overflow-wrap: normal;">{label}</div>'
+        f"<div style=\"background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.6rem, 2.2vw, 2.3rem); font-weight: 800; line-height: 1.15; margin-bottom: 8px; font-family: 'Montserrat', sans-serif; display: block; word-break: break-word;\">{value}</div>"
         f"{sub_html}"
         f"{help_html}"
         "</div>"

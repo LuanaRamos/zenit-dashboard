@@ -18,18 +18,29 @@
     font-family: 'Inter', sans-serif; 
 }
 
-.block-container { 
-    padding-top: 2rem !important; 
-    max-width: 1200px !important; 
+html, body {
+    background-color: var(--bg-base) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: 100vh !important;
 }
 
-[data-testid="stAppViewContainer"] { 
+.block-container { 
+    padding-top: 1.5rem !important; 
+    max-width: 1200px !important; 
+    width: 100% !important;
+}
+
+[data-testid="stAppViewContainer"], [data-testid="stApp"] { 
     background-color: var(--bg-base) !important;
     background-image: 
         radial-gradient(at 0% 0%, rgba(255, 179, 0, 0.08) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(98, 250, 227, 0.06) 0px, transparent 50%),
         radial-gradient(at 50% 50%, rgba(255, 179, 0, 0.03) 0px, transparent 70%) !important;
     background-attachment: fixed !important;
+    min-height: 100vh !important;
+    width: 100% !important;
 }
 
 [data-testid="stHeader"] { 
@@ -78,10 +89,11 @@
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
-    padding: 32px 24px !important;
-    border-radius: 20px !important;
+    padding: 16px 14px !important;
+    border-radius: 14px !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40) !important;
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    min-height: 120px !important;
 }
 
 .glass-card:hover, [data-testid="stPlotlyChart"]:hover {
@@ -167,20 +179,24 @@ section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover {
 
 /* Estilo elegante para abas no dashboard */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background: rgba(17, 19, 23, 0.4);
-    padding: 6px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 20px;
+    gap: 6px !important;
+    background: rgba(17, 19, 23, 0.4) !important;
+    padding: 4px !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    margin-bottom: 20px !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    padding: 8px 18px;
-    color: #c4c9ac;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    color: #c4c9ac !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    transition: all 0.2s ease !important;
 }
 
 .stTabs [aria-selected="true"] {
