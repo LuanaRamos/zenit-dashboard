@@ -91,6 +91,9 @@ class StreamlitCapture:
     def empty(self):
         return nullcontext()
 
+    def plotly_chart(self, *args, **kwargs):
+        pass
+
 
 def test_organic_aggregate_sums_only_available_values_and_reports_coverage():
     items = [
