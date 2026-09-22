@@ -29,9 +29,9 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
 
         st.markdown(
             f"""
-            <div style="padding: 10px 0 24px 0; text-align: left; display: flex; align-items: center; gap: 12px;">
+            <div style="padding: 4px 0 10px 0; text-align: left; display: flex; align-items: center; gap: 12px;">
                 {logo_html}
-                <h2 style="margin:0; font-size: 1.4rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
+                <h2 style="margin:0; font-size: 1.3rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;">
                     <span style="color: #ffffff;">Zenit</span><span style="color: #FFB300;">Analytics</span>
                 </h2>
             </div>
@@ -55,7 +55,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             st.session_state["selected_client_name"] = client_names[0]
 
         st.markdown(
-            "<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>",
+            "<h4 style='color: #c4c9ac; font-size: 0.72rem; margin-top: 4px; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>",
             unsafe_allow_html=True,
         )
 
@@ -75,7 +75,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         selected_client = next(c for c in clients if c.name == selected_client_name)
 
         st.markdown(
-            "<br><h4 style='color: #c4c9ac; font-size: 0.75rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Navegação</h4>",
+            "<h4 style='color: #c4c9ac; font-size: 0.72rem; margin-top: 10px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Navegação</h4>",
             unsafe_allow_html=True,
         )
         selected_module = option_menu(
@@ -89,14 +89,14 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "padding": "0!important",
                     "background-color": "transparent",
                 },
-                "icon": {"color": "#c4c9ac", "font-size": "16px"},
+                "icon": {"color": "#c4c9ac", "font-size": "15px"},
                 "nav-link": {
-                    "font-size": "14px",
+                    "font-size": "13px",
                     "text-align": "left",
-                    "margin": "0px 0px 6px 0px",
+                    "margin": "0px 0px 4px 0px",
                     "--hover-color": "rgba(255, 255, 255, 0.02)",
                     "border-radius": "6px",
-                    "padding": "10px 14px",
+                    "padding": "8px 12px",
                     "border": "1px solid transparent",
                     "color": "#c4c9ac",
                     "font-family": "Inter, sans-serif",
@@ -125,7 +125,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
 
         # Filtro de Tempo Global
         st.markdown(
-            "<br><h4 style='color: #c4c9ac; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filtros</h4>",
+            "<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-top: 10px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filtros</h4>",
             unsafe_allow_html=True,
         )
         periodo_selecionado = st.selectbox(
@@ -198,7 +198,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 st.stop()
 
         st.markdown(
-            "<div style='margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;'></div>",
+            "<div style='margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;'></div>",
             unsafe_allow_html=True,
         )
         version_file = Path(__file__).resolve().parents[3] / "VERSION"

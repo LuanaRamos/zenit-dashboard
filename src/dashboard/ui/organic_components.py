@@ -83,7 +83,7 @@ def format_hhmmss(ms_val: float) -> str:
         return f"{s:02d}s"
 
 
-def render_profile_bio_header(profile_info: dict) -> None:
+def render_profile_bio_header(profile_info: dict, client_name: str = "") -> None:
     """
     Renderiza o cabeçalho com foto de perfil, @username, biografia
     e contadores de publicações, seguidores e seguindo em design Glassmorphism.
@@ -658,9 +658,16 @@ def render_historic_top_comment(
         if not all_comments:
             return
 
-        best = max(
-            all_comments, key=lambda c: int(c.get("like_count", 0)), default=None
-        )
+        def _get_like_val(c):
+            val = c.get("like_count")
+            if val is None:
+                return 0
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return 0
+
+        best = max(all_comments, key=_get_like_val, default=None)
         if not best:
             return
 
@@ -668,7 +675,7 @@ def render_historic_top_comment(
 
         text = html_lib.escape(str(best.get("text", "")))
         username = html_lib.escape(str(best.get("username", "Usuário")))
-        likes = best.get("like_count", 0)
+        likes = _get_like_val(best)
 
         html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
     <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">\"{text}\"</div>
@@ -691,10 +698,11 @@ def render_historic_top_comment(
             )
             df_comments = df_comments.drop(columns=["timestamp"])
 
-        csv = df_comments.to_csv(index=False).encode("utf-8")
+        csv_data = df_comments.to_csv(index=False)
+        csv_bytes = csv_data.encode("utf-8") if isinstance(csv_data, str) else csv_data
         st.download_button(
             label="📥 Baixar comentários consultados (CSV)",
-            data=csv,
+            data=csv_bytes,
             file_name=f"comentarios_consultados_{client_name}.csv",
             mime="text/csv",
         )

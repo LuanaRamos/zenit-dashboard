@@ -76,10 +76,31 @@ def fetch_account_profile_cached(client_name: str) -> dict:
     """Busca informações de perfil do Instagram (avatar, bio, contadores) com cache de 1 hora."""
     try:
         ig_client = get_instagram_client(client_name)
-        return ig_client.get_account_profile_info()
+        profile = ig_client.get_account_profile_info()
+        if not profile or not isinstance(profile, dict):
+            return {
+                "id": "",
+                "username": client_name.lower().replace(" ", "_"),
+                "name": client_name,
+                "biography": "",
+                "profile_picture_url": "",
+                "followers_count": 0,
+                "follows_count": 0,
+                "media_count": 0,
+            }
+        return profile
     except Exception as e:
         logger.warning(f"Erro ao carregar perfil em cache para {client_name}: {e}")
-        return {}
+        return {
+            "id": "",
+            "username": client_name.lower().replace(" ", "_"),
+            "name": client_name,
+            "biography": "",
+            "profile_picture_url": "",
+            "followers_count": 0,
+            "follows_count": 0,
+            "media_count": 0,
+        }
 
 
 @st.cache_data(ttl=900)
@@ -216,8 +237,13 @@ def fetch_all_historic_comments(
     """
     try:
         ig_client = get_instagram_client(client_name)
-        if not media_ids:
-            media_ids = ig_client.get_all_media_ids_since_beginning()[:30]
+        if media_ids is None:
+            if hasattr(ig_client, "get_all_media_ids_since_beginning"):
+                media_ids = ig_client.get_all_media_ids_since_beginning()[:30]
+            else:
+                media_ids = []
+        if hasattr(ig_client, "get_all_comments_for_account"):
+            return ig_client.get_all_comments_for_account(media_ids)
         return ig_client.get_comments_for_media(media_ids)
     except Exception as e:
         logger.warning(
@@ -228,8 +254,12 @@ def fetch_all_historic_comments(
 
 @st.cache_data(ttl=3600)
 def fetch_account_demographics(client_name: str):
-    ig_client = get_instagram_client(client_name)
-    return ig_client.get_account_demographics()
+    try:
+        ig_client = get_instagram_client(client_name)
+        return ig_client.get_account_demographics()
+    except Exception as e:
+        logger.warning(f"Erro ao buscar dados demográficos de {client_name}: {e}")
+        return None
 
 
 @st.cache_data(ttl=3600)
@@ -238,28 +268,36 @@ def fetch_account_insights_cached(
     date_preset: str = "last_30d",
     time_range: dict | None = None,
 ) -> dict:
-    ig_client = get_instagram_client(client_name)
-    return ig_client.get_account_insights(date_preset, time_range)
+    try:
+        ig_client = get_instagram_client(client_name)
+        return ig_client.get_account_insights(date_preset, time_range)
+    except Exception as e:
+        logger.warning(f"Erro ao buscar insights de conta de {client_name}: {e}")
+        return {}
 
 
 @st.cache_data(ttl=3600)
 def fetch_followers_history_cached(client_name: str) -> list:
-    from datetime import datetime
+    try:
+        from datetime import datetime
 
-    ig_client = get_instagram_client(client_name)
-    raw_history = ig_client.get_followers_history()
+        ig_client = get_instagram_client(client_name)
+        raw_history = ig_client.get_followers_history()
 
-    clean_history = []
-    for item in raw_history:
-        end_time_str = item.get("end_time")
-        val = item.get("value", 0)
-        if end_time_str:
-            try:
-                dt = datetime.strptime(end_time_str, "%Y-%m-%dT%H:%M:%S%z")
-                clean_history.append(
-                    {"Data": dt.strftime("%d/%m"), "Novos Seguidores": val}
-                )
-            except Exception:
-                pass
+        clean_history = []
+        for item in raw_history:
+            end_time_str = item.get("end_time")
+            val = item.get("value", 0)
+            if end_time_str:
+                try:
+                    dt = datetime.strptime(end_time_str, "%Y-%m-%dT%H:%M:%S%z")
+                    clean_history.append(
+                        {"Data": dt.strftime("%d/%m"), "Novos Seguidores": val}
+                    )
+                except Exception:
+                    pass
 
-    return clean_history
+        return clean_history
+    except Exception as e:
+        logger.warning(f"Erro ao carregar histórico de seguidores de {client_name}: {e}")
+        return []

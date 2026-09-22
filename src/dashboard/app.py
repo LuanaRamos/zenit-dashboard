@@ -126,7 +126,9 @@ def render_ads_page(date_preset, time_range, client):
 def render_organic_page(date_preset, time_range, client):
     from ui import data_loader
     from ui.organic_components import (
+        render_followers_timeline,
         render_historic_top_comment,
+        render_metric_card,
         render_organic_metrics_cards,
         render_posts_table,
         render_profile_bio_header,
@@ -144,74 +146,138 @@ def render_organic_page(date_preset, time_range, client):
     try:
         profile_info = data_loader.fetch_account_profile_cached(client.name)
         if profile_info and any(profile_info.values()):
-            render_profile_bio_header(profile_info)
+            render_profile_bio_header(profile_info, client.name)
     except Exception as error:
         logger.warning(
             f"Erro ao carregar dados do perfil de {client.name}: {error}"
         )
         sentry_sdk.capture_exception(error)
 
-    media = []
-    try:
-        with st.spinner("Carregando publicações orgânicas..."):
-            media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
-    except Exception as error:
-        logger.error(f"Erro ao carregar publicações orgânicas de {client.name}: {error}")
-        sentry_sdk.capture_exception(error)
-        st.warning(f"Aviso sobre as publicações do Instagram ({client.name}): {error}")
-        return
+    tab_posts, tab_growth, tab_audience = st.tabs([
+        "📊 Publicações & Conteúdo",
+        "📈 Seguidores & Crescimento",
+        "👥 Audiência & Demografia",
+    ])
 
-    if not media:
-        st.info("Nenhuma publicação encontrada no período selecionado.")
-        return
+    with tab_posts:
+        media = []
+        try:
+            with st.spinner("Carregando publicações orgânicas..."):
+                media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
+        except Exception as error:
+            logger.error(f"Erro ao carregar publicações orgânicas de {client.name}: {error}")
+            sentry_sdk.capture_exception(error)
+            st.warning(f"Aviso sobre as publicações do Instagram ({client.name}): {error}")
+            media = []
 
-    # 2. Desempenho orgânico das publicações
-    render_organic_metrics_cards(media)
+        if not media:
+            st.info("Nenhuma publicação encontrada no período selecionado.")
+        else:
+            # 2. Desempenho orgânico das publicações
+            render_organic_metrics_cards(media)
 
-    # 3. Ranking de publicações ordenado primariamente por alcance (reach)
-    render_top_posts_and_comments(media)
+            # 3. Ranking de publicações ordenado primariamente por alcance (reach)
+            render_top_posts_and_comments(media)
 
-    # 4. Comentário mais curtido em destaque com download CSV rápido
-    render_historic_top_comment(client.name, media)
+            # 4. Comentário mais curtido em destaque com download CSV rápido
+            render_historic_top_comment(client.name, media)
 
-    # 5. Tabela de publicações orgânicas com filtros
-    render_posts_table(media)
+            # 5. Tabela de publicações orgânicas com filtros
+            render_posts_table(media)
 
-    with st.expander("Comparativo com anúncios do Instagram", expanded=False):
-        st.caption(
-            "Consulta opcional de anúncios vinculados às publicações acima. "
-            "Os resultados pagos não entram nos indicadores orgânicos."
-        )
-        if st.checkbox("Carregar comparação com Ads", key=f"compare_ads_{client.name}"):
-            try:
-                from ui.organic_components import render_paid_comparison
+        with st.expander("Comparativo com anúncios do Instagram", expanded=False):
+            st.caption(
+                "Consulta opcional de anúncios vinculados às publicações acima. "
+                "Os resultados pagos não entram nos indicadores orgânicos."
+            )
+            if st.checkbox("Carregar comparação com Ads", key=f"compare_ads_{client.name}"):
+                try:
+                    from ui.organic_components import render_paid_comparison
 
-                with st.spinner("Carregando comparação..."):
-                    compared = data_loader.enrich_media_with_ads(
-                        media, date_preset, time_range, client.name
+                    with st.spinner("Carregando comparação..."):
+                        compared = data_loader.enrich_media_with_ads(
+                            media, date_preset, time_range, client.name
+                        )
+                    render_paid_comparison(compared)
+                except Exception as error:
+                    sentry_sdk.capture_exception(error)
+                    st.warning(
+                        "Comparativo pago indisponível no momento. Os resultados orgânicos acima continuam disponíveis."
                     )
-                render_paid_comparison(compared)
-            except Exception as error:
-                sentry_sdk.capture_exception(error)
-                st.warning(
-                    "Comparativo pago indisponível no momento. Os resultados orgânicos acima continuam disponíveis."
-                )
 
-    with st.expander("Público e contexto do perfil", expanded=False):
-        st.caption(
-            "Composição do público do perfil. Não representa atribuição de seguidores ao orgânico."
-        )
-        if st.checkbox(
-            "Carregar público do perfil", key=f"profile_audience_{client.name}"
-        ):
-            try:
-                from ui.demographics_components import render_demographics_dashboard
+    with tab_growth:
+        st.markdown("### 📈 Crescimento e Histórico de Seguidores")
+        st.caption("Acompanhamento de novos seguidores diários e ações registradas no perfil.")
 
+        # 1. Gráfico de novos seguidores diários (Plotly com spline e maior pico)
+        try:
+            with st.spinner("Carregando evolução de seguidores..."):
+                followers_history = data_loader.fetch_followers_history_cached(client.name)
+            if followers_history:
+                render_followers_timeline(followers_history)
+            else:
+                st.info("Histórico de novos seguidores diários não disponível no momento para esta conta.")
+        except Exception as error:
+            logger.warning(f"Erro ao buscar histórico de seguidores de {client.name}: {error}")
+            sentry_sdk.capture_exception(error)
+            st.info("Histórico de novos seguidores diários não disponível no momento para esta conta.")
+
+        # 2. Ações no perfil (visitas, toques no link, engajamento)
+        try:
+            insights = data_loader.fetch_account_insights_cached(client.name, date_preset, time_range)
+            if insights:
+                st.write("")
+                st.markdown("#### 👤 Ações e Interações no Perfil")
+                st.caption("Ações diretas realizadas pelos usuários no perfil do Instagram durante o período.")
+                cols_act = st.columns(3)
+
+                def _fmt(val):
+                    try:
+                        return f"{int(val):,}".replace(",", ".")
+                    except Exception:
+                        return str(val or 0)
+
+                with cols_act[0]:
+                    render_metric_card(
+                        "Visitas ao Perfil",
+                        _fmt(insights.get("profile_views", 0)),
+                        "Acessos à bio",
+                        "Visualizações diretas do perfil no período",
+                    )
+                with cols_act[1]:
+                    render_metric_card(
+                        "Cliques no Link",
+                        _fmt(insights.get("profile_links_taps", 0)),
+                        "Cliques no site",
+                        "Conversões diretas pelo link da bio",
+                    )
+                with cols_act[2]:
+                    engaged = insights.get("engaged_audience") or insights.get("total_interactions") or 0
+                    render_metric_card(
+                        "Contas com Engajamento",
+                        _fmt(engaged),
+                        "Público ativo",
+                        "Contas únicas que interagiram com seu conteúdo",
+                    )
+        except Exception as error:
+            logger.warning(f"Erro ao buscar ações do perfil de {client.name}: {error}")
+            sentry_sdk.capture_exception(error)
+
+    with tab_audience:
+        # Demografia e Audiência do Instagram
+        try:
+            from ui.demographics_components import render_demographics_dashboard
+
+            with st.spinner("Carregando dados de audiência..."):
                 demographics = data_loader.fetch_account_demographics(client.name)
+            if demographics:
                 render_demographics_dashboard(demographics)
-            except Exception as error:
-                sentry_sdk.capture_exception(error)
-                st.warning("Dados de público indisponíveis no momento.")
+            else:
+                st.info("Dados demográficos de audiência indisponíveis para esta conta.")
+        except Exception as error:
+            logger.warning(f"Erro ao carregar dados demográficos de {client.name}: {error}")
+            sentry_sdk.capture_exception(error)
+            st.warning("Dados de audiência indisponíveis no momento.")
 
 
 def main():

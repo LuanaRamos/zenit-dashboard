@@ -158,3 +158,19 @@ def test_organic_page_historic_top_comment_with_comments_data(monkeypatch):
     assert not app.error
     visible = "\n".join(text.value for text in app.markdown)
     assert "Comentário" in visible or "usuario_fa" in visible or "Comentários" in visible
+
+
+def test_organic_page_renders_growth_and_followers(monkeypatch):
+    loader = organic_app(monkeypatch)
+    monkeypatch.setattr(
+        loader,
+        "fetch_followers_history_cached",
+        lambda name: [{"Data": "01/09", "Novos Seguidores": 33}],
+        raising=False,
+    )
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+    assert not app.error
+    visible = "\n".join(text.value for text in app.markdown)
+    assert "Seguidores" in visible or "Crescimento" in visible
+

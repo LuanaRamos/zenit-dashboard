@@ -661,3 +661,29 @@ def test_historic_comment_csv_download_content_and_headers(monkeypatch):
     csv_text = download["data"].decode("utf-8")
     assert "Conteúdo teste para exportação" in csv_text
     assert "autor_teste" in csv_text
+
+
+def test_render_followers_timeline_empty_returns_info(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+
+    organic_ui.render_followers_timeline([])
+    assert any("não está disponível" in str(msg) for msg in st.infos)
+
+
+def test_render_followers_timeline_with_data_renders_peak_and_chart(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+
+    history = [
+        {"Data": "01/09", "Novos Seguidores": 12},
+        {"Data": "02/09", "Novos Seguidores": 45},
+        {"Data": "03/09", "Novos Seguidores": 18},
+    ]
+
+    organic_ui.render_followers_timeline(history)
+    output = "\n".join(str(m) for m in st.markdowns)
+    assert "+45" in output
+    assert "02/09" in output
+    assert "Evolução de Seguidores" in output
+

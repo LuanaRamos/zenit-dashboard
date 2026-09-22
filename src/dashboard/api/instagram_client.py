@@ -603,8 +603,6 @@ class InstagramClient:
         if not media_ids:
             return []
 
-        # Limita a 50 publicações por chamada para manter execução rápida e leve
-        target_ids = media_ids[:50]
         batch_requests = [
             {
                 "method": "GET",
@@ -613,7 +611,7 @@ class InstagramClient:
                     f"?fields=id,text,like_count,username,timestamp&limit={limit_per_media}"
                 ),
             }
-            for ig_id in target_ids
+            for ig_id in media_ids
         ]
 
         all_comments = []
