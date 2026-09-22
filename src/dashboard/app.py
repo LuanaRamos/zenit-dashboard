@@ -26,7 +26,8 @@ def configure_page():
     css = DASHBOARD_DIR / "ui" / "style.css"
     if css.exists():
         st.markdown(
-            f"<style>{css.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True
+            f"<style>{css.read_text(encoding='utf-8')}</style>",
+            unsafe_allow_html=True,
         )
     if os.getenv("SENTRY_DSN"):
         sentry_sdk.init(
@@ -93,11 +94,15 @@ def render_ads_page(date_preset, time_range, client):
         if c.leads > 0 or c.objective in {"OUTCOME_LEADS", "LEAD_GENERATION"}
     )
     messages_spend = sum(
-        c.spend for c in campaigns if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
+        c.spend
+        for c in campaigns
+        if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
     )
     cpl = leads_spend / total_leads if total_leads else None
     cost_per_message = messages_spend / total_messages if total_messages else None
-    render_metric_cards(total_spend, total_leads, cpl, total_messages, cost_per_message)
+    render_metric_cards(
+        total_spend, total_leads, cpl, total_messages, cost_per_message
+    )
 
     messages = [
         c for c in campaigns if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
@@ -121,8 +126,10 @@ def render_ads_page(date_preset, time_range, client):
 def render_organic_page(date_preset, time_range, client):
     from ui import data_loader
     from ui.organic_components import (
+        render_historic_top_comment,
         render_organic_metrics_cards,
         render_posts_table,
+        render_profile_bio_header,
         render_top_posts_and_comments,
     )
 
@@ -132,15 +139,35 @@ def render_organic_page(date_preset, time_range, client):
         "O filtro seleciona a data de publicação. Os Insights mostram os resultados acumulados "
         "dessas publicações até a consulta, não somente as interações ocorridas no período."
     )
+
+    # 1. Métricas de perfil e bio visíveis no topo da tela
+    try:
+        profile_info = data_loader.fetch_account_profile_cached(client.name)
+        if profile_info and any(profile_info.values()):
+            render_profile_bio_header(profile_info)
+    except Exception as error:
+        logger.warning(
+            f"Erro ao carregar dados do perfil de {client.name}: {error}"
+        )
+        sentry_sdk.capture_exception(error)
+
     with st.spinner("Carregando publicações orgânicas..."):
         media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
     if not media:
         st.info("Nenhuma publicação encontrada no período selecionado.")
         return
 
+    # 2. Desempenho orgânico das publicações
     render_organic_metrics_cards(media)
-    render_posts_table(media)
+
+    # 3. Ranking de publicações ordenado primariamente por alcance (reach)
     render_top_posts_and_comments(media)
+
+    # 4. Comentário mais curtido em destaque com download CSV rápido
+    render_historic_top_comment(client.name, media)
+
+    # 5. Tabela de publicações orgânicas com filtros
+    render_posts_table(media)
 
     with st.expander("Comparativo com anúncios do Instagram", expanded=False):
         st.caption(
@@ -177,17 +204,6 @@ def render_organic_page(date_preset, time_range, client):
             except Exception as error:
                 sentry_sdk.capture_exception(error)
                 st.warning("Dados de público indisponíveis no momento.")
-
-    with st.expander("Comentários do perfil", expanded=False):
-        st.caption(
-            "Histórico do perfil, independente do filtro de publicação e sem atribuição orgânica confirmada."
-        )
-        if st.checkbox(
-            "Carregar histórico de comentários", key=f"profile_comments_{client.name}"
-        ):
-            from ui.organic_components import render_historic_top_comment
-
-            render_historic_top_comment(client.name)
 
 
 def main():

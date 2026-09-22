@@ -26,8 +26,52 @@ def organic_app(monkeypatch):
                 comments_count=3,
                 total_interactions=10,
                 organic_views=100,
+                reach=120,
                 timestamp="2026-09-01T12:00:00Z",
             )
+        ],
+        raising=False,
+    )
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_account_profile_cached",
+        lambda *a, **k: {
+            "id": "ig_123",
+            "username": "cliente_teste",
+            "name": "Cliente Teste",
+            "biography": "Biografia da conta de teste",
+            "profile_picture_url": "https://example.com/avatar.jpg",
+            "followers_count": 2500,
+            "follows_count": 350,
+            "media_count": 48,
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_all_historic_comments",
+        lambda *a, **k: [
+            {
+                "id": "c1",
+                "text": "Comentário teste histórico",
+                "username": "usuario_fa",
+                "like_count": 14,
+                "timestamp": "2026-09-01T12:00:00Z",
+            }
+        ],
+        raising=False,
+    )
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_recent_comments_cached",
+        lambda *a, **k: [
+            {
+                "id": "c1",
+                "text": "Comentário teste histórico",
+                "username": "usuario_fa",
+                "like_count": 14,
+                "timestamp": "2026-09-01T12:00:00Z",
+            }
         ],
         raising=False,
     )
@@ -66,3 +110,51 @@ def test_ads_comparison_failure_keeps_organic_results(monkeypatch):
     assert not app.error
     assert any("indisponível" in warning.value for warning in app.warning)
     assert [text.value for text in app.markdown if "kpi-card" in text.value] == before
+
+
+def test_organic_page_renders_profile_bio_header(monkeypatch):
+    organic_app(monkeypatch)
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+    assert not app.error
+    visible = "\n".join(text.value for text in app.markdown)
+    assert "cliente_teste" in visible
+    assert "Biografia da conta de teste" in visible
+
+
+def test_organic_page_renders_top_posts_ranking_by_reach(monkeypatch):
+    organic_app(monkeypatch)
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+    assert not app.error
+    visible = "\n".join(text.value for text in app.markdown)
+    assert "Top posts" in visible or "alcance" in visible.lower()
+
+
+def test_organic_page_handles_profile_fetch_failure_gracefully(monkeypatch):
+    loader = organic_app(monkeypatch)
+
+    def profile_fails(*a, **k):
+        raise RuntimeError("Profile API error")
+
+    monkeypatch.setattr(loader, "fetch_account_profile_cached", profile_fails, raising=False)
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+
+
+def test_organic_page_with_empty_media_list_renders_empty_notice(monkeypatch):
+    loader = organic_app(monkeypatch)
+    monkeypatch.setattr(loader, "fetch_organic_media", lambda *a: [], raising=False)
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+    assert not app.error
+    assert any("Nenhuma publicação encontrada" in info.value for info in app.info)
+
+
+def test_organic_page_historic_top_comment_with_comments_data(monkeypatch):
+    organic_app(monkeypatch)
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+    assert not app.exception
+    assert not app.error
+    visible = "\n".join(text.value for text in app.markdown)
+    assert "Comentário" in visible or "usuario_fa" in visible or "Comentários" in visible

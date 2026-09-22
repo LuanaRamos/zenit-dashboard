@@ -40,7 +40,6 @@ def aggregate_organic_metrics(
     media_list: list[Any],
 ) -> dict[str, OrganicMetricAggregate]:
     """Aggregate confirmed publication-level organic fields without inventing zeros."""
-
     return {
         field: _sum_available(media_list, field) for field in ORGANIC_METRIC_FIELDS
     }
@@ -68,6 +67,7 @@ def _format_timestamp(value: Any) -> Any:
         return value
     return value.replace("+0000", "").replace(".000Z", "").replace("T", " ")
 
+
 def format_hhmmss(ms_val: float) -> str:
     """Formata milissegundos em HH:MM:SS"""
     if not ms_val:
@@ -82,83 +82,213 @@ def format_hhmmss(ms_val: float) -> str:
     else:
         return f"{s:02d}s"
 
-def render_account_insights_cards(insights: dict, paid_totals: dict, followers_history: list = None) -> None:
+
+def render_profile_bio_header(profile_info: dict) -> None:
+    """
+    Renderiza o cabeçalho com foto de perfil, @username, biografia
+    e contadores de publicações, seguidores e seguindo em design Glassmorphism.
+    """
+    if not profile_info:
+        return
+
+    name = html_lib.escape(str(profile_info.get("name") or ""))
+    username = html_lib.escape(str(profile_info.get("username") or ""))
+    raw_bio = str(profile_info.get("biography") or "")
+    safe_bio = html_lib.escape(raw_bio).replace("\n", "<br>")
+
+    profile_pic = profile_info.get("profile_picture_url")
+    safe_pic = html_lib.escape(str(profile_pic), quote=True) if profile_pic else ""
+
+    media_count_str = _format_optional_int(profile_info.get("media_count"))
+    followers_str = _format_optional_int(profile_info.get("followers_count"))
+    follows_str = _format_optional_int(profile_info.get("follows_count"))
+
+    if safe_pic:
+        avatar_html = (
+            f'<img src="{safe_pic}" '
+            'style="width: 76px; height: 76px; border-radius: 50%; object-fit: cover; '
+            'border: 2px solid #FFB300; box-shadow: 0 4px 14px rgba(0,0,0,0.4); flex-shrink: 0;" />'
+        )
+    else:
+        avatar_html = (
+            '<div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(255,179,0,0.15); '
+            'display: flex; align-items: center; justify-content: center; font-size: 2rem; '
+            'border: 2px solid #FFB300; color: #FFB300; flex-shrink: 0;">👤</div>'
+        )
+
+    display_name = name or (f"@{username}" if username else "Instagram")
+    handle_html = (
+        f'<div style="font-size: 0.95rem; color: #FFB300; font-weight: 600; margin-bottom: 6px;">@{username}</div>'
+        if username
+        else ""
+    )
+    bio_html = (
+        f'<div style="font-size: 0.85rem; color: #c4c9ac; line-height: 1.45; max-width: 580px;">{safe_bio}</div>'
+        if safe_bio
+        else ""
+    )
+
+    header_html = f"""<div class="glass-card" style="padding: 22px 26px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.02); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 18px; min-width: 280px; flex: 1;">
+        {avatar_html}
+        <div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #FFFFFF; font-family: 'Montserrat', sans-serif;">{display_name}</div>
+            {handle_html}
+            {bio_html}
+        </div>
+    </div>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+        <div style="text-align: center; min-width: 100px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 1.35rem; font-weight: 800; color: #FFB300; font-family: 'Montserrat', sans-serif; line-height: 1.1;">{media_count_str}</div>
+            <div style="font-size: 0.72rem; color: #c4c9ac; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">Publicações</div>
+        </div>
+        <div style="text-align: center; min-width: 100px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 1.35rem; font-weight: 800; color: #FFB300; font-family: 'Montserrat', sans-serif; line-height: 1.1;">{followers_str}</div>
+            <div style="font-size: 0.72rem; color: #c4c9ac; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">Seguidores</div>
+        </div>
+        <div style="text-align: center; min-width: 100px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 1.35rem; font-weight: 800; color: #FFB300; font-family: 'Montserrat', sans-serif; line-height: 1.1;">{follows_str}</div>
+            <div style="font-size: 0.72rem; color: #c4c9ac; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">Seguindo</div>
+        </div>
+    </div>
+</div>"""
+    st.markdown(header_html, unsafe_allow_html=True)
+
+
+def render_account_insights_cards(
+    insights: dict, paid_totals: dict, followers_history: list = None
+) -> None:
     """Renderiza KPIs sem apresentar métricas mistas como se fossem orgânicas."""
     st.markdown("### 👁️ Visão Geral da Conta")
     if insights.get("_is_partial"):
-        st.info("⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos.")
+        st.info(
+            "⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos."
+        )
     if insights.get("_is_segmented"):
-        st.info("ℹ️ Em períodos maiores que 30 dias, alcance e contas engajadas são somas de janelas. A mesma pessoa pode aparecer em mais de uma janela.")
-    
-    # Calcula novos seguidores dos últimos 30 dias a partir do histórico real da API
+        st.info(
+            "ℹ️ Em períodos maiores que 30 dias, alcance e contas engajadas são somas de janelas. A mesma pessoa pode aparecer em mais de uma janela."
+        )
+
     new_followers_30d = 0
     if followers_history:
         for item in followers_history:
-            # Suporta tanto o formato raw {"value": N} quanto o transformado {"Novos Seguidores": N}
             val = item.get("Novos Seguidores") or item.get("value", 0)
             if val and val > 0:
                 new_followers_30d += val
-    
-    # O alcance de conta inclui anúncios. Não é matematicamente seguro subtrair
-    # o reach pago porque as audiências podem se sobrepor. As demais métricas
-    # de conta também não são apresentadas como um total orgânico.
-    r_ig = insights.get('reach', 0)
-    r_paid = paid_totals.get('reach', 0)
-    
-    likes_ig = insights.get('likes', 0)
-    likes_paid = paid_totals.get('likes', 0)
-    
-    shares_ig = insights.get('shares', 0)
-    shares_paid = paid_totals.get('shares', 0)
-    
-    saves_ig = max(0, insights.get('saves', 0))
-    saves_paid = max(0, paid_totals.get('saved', 0))
-    
-    int_ig = insights.get('total_interactions', 0)
-    
-    def fmt(val): return f"{int(val):,}".replace(",", ".")
-    def paid_context(paid): return f"Pago no Instagram: {fmt(paid)} (já pode estar incluído no total)"
-    
+
+    r_ig = insights.get("reach", 0)
+    r_paid = paid_totals.get("reach", 0)
+
+    likes_ig = insights.get("likes", 0)
+    likes_paid = paid_totals.get("likes", 0)
+
+    shares_ig = insights.get("shares", 0)
+    shares_paid = paid_totals.get("shares", 0)
+
+    saves_ig = max(0, insights.get("saves", 0))
+    saves_paid = max(0, paid_totals.get("saved", 0))
+
+    int_ig = insights.get("total_interactions", 0)
+
+    def fmt(val):
+        return f"{int(val):,}".replace(",", ".")
+
+    def paid_context(paid):
+        return f"Pago no Instagram: {fmt(paid)} (já pode estar incluído no total)"
+
     st.markdown("#### 🎯 Métricas Totais")
     cols_mix = st.columns(5)
     with cols_mix[0]:
-        render_metric_card("Alcance da Conta", fmt(r_ig), "Inclui anúncios", "Total informado pelo Instagram; não subtrair o pago")
+        render_metric_card(
+            "Alcance da Conta",
+            fmt(r_ig),
+            "Inclui anúncios",
+            "Total informado pelo Instagram; não subtrair o pago",
+        )
     with cols_mix[1]:
-        render_metric_card("Alcance Pago no Instagram", fmt(r_paid), "Ads do Instagram", "Não inclui placements do Facebook")
+        render_metric_card(
+            "Alcance Pago no Instagram",
+            fmt(r_paid),
+            "Ads do Instagram",
+            "Não inclui placements do Facebook",
+        )
     with cols_mix[2]:
-        render_metric_card("Total de Interações", fmt(int_ig), "Total da conta", "Não é usado como total orgânico")
+        render_metric_card(
+            "Total de Interações",
+            fmt(int_ig),
+            "Total da conta",
+            "Não é usado como total orgânico",
+        )
     with cols_mix[3]:
-        render_metric_card("Curtidas", fmt(likes_ig), paid_context(likes_paid), "Não é usado como total orgânico")
+        render_metric_card(
+            "Curtidas",
+            fmt(likes_ig),
+            paid_context(likes_paid),
+            "Não é usado como total orgânico",
+        )
     with cols_mix[4]:
-        render_metric_card("Compartilhamentos", fmt(shares_ig), paid_context(shares_paid), "Não é usado como total orgânico")
+        render_metric_card(
+            "Compartilhamentos",
+            fmt(shares_ig),
+            paid_context(shares_paid),
+            "Não é usado como total orgânico",
+        )
 
     st.write("")
     st.markdown("#### 👤 Ações Registradas no Perfil")
     cols_org = st.columns(4)
     with cols_org[0]:
-        render_metric_card("Visitas ao Perfil", fmt(insights.get('profile_views', 0)), "Total", "Acessos à bio")
+        render_metric_card(
+            "Visitas ao Perfil",
+            fmt(insights.get("profile_views", 0)),
+            "Total",
+            "Acessos à bio",
+        )
     with cols_org[1]:
-        render_metric_card("Toques no Link", fmt(insights.get('profile_links_taps', 0)), "Total", "Cliques no link da bio")
+        render_metric_card(
+            "Toques no Link",
+            fmt(insights.get("profile_links_taps", 0)),
+            "Total",
+            "Cliques no link da bio",
+        )
     with cols_org[2]:
-        render_metric_card("Cliques no Site", fmt(insights.get('website_clicks', 0)), "Total", "Cliques gerais")
+        render_metric_card(
+            "Cliques no Site",
+            fmt(insights.get("website_clicks", 0)),
+            "Total",
+            "Cliques gerais",
+        )
     with cols_org[3]:
-        render_metric_card("Contas Engajadas", fmt(insights.get('accounts_engaged', 0)), "Total (Max 13m)", "Usuários únicos")
-        
+        render_metric_card(
+            "Contas Engajadas",
+            fmt(insights.get("accounts_engaged", 0)),
+            "Total (Max 13m)",
+            "Usuários únicos",
+        )
+
     st.write("")
     cols_org2 = st.columns(4)
     with cols_org2[0]:
-        render_metric_card("Comentários", fmt(insights.get('comments', 0)), "Total da conta", "Não é usado como total orgânico")
+        render_metric_card(
+            "Comentários",
+            fmt(insights.get("comments", 0)),
+            "Total da conta",
+            "Não é usado como total orgânico",
+        )
     with cols_org2[1]:
-        render_metric_card("Salvamentos", fmt(saves_ig), paid_context(saves_paid), "Total da conta")
+        render_metric_card(
+            "Salvamentos", fmt(saves_ig), paid_context(saves_paid), "Total da conta"
+        )
     with cols_org2[2]:
         render_metric_card(
             "Novos Seguidores",
             fmt(new_followers_30d),
             "Total",
-            "⚠️ A Meta só permite consultar seguidores dos últimos 30 dias, independente do filtro."
+            "⚠️ A Meta só permite consultar seguidores dos últimos 30 dias, independente do filtro.",
         )
     with cols_org2[3]:
-        st.empty() # Espaço vazio para alinhar
+        st.empty()
+
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Render the four confirmed organic Media Insights aggregates."""
@@ -207,7 +337,9 @@ ORGANIC_POST_COLUMNS = [
 ]
 
 
-def _organic_post_rows(media_list: list[Any], selected_type: str) -> list[dict[str, Any]]:
+def _organic_post_rows(
+    media_list: list[Any], selected_type: str
+) -> list[dict[str, Any]]:
     rows = []
     for media in media_list:
         media_type = _media_type_label(media)
@@ -367,39 +499,55 @@ def render_paid_comparison(media_list: List[InstagramMedia]) -> None:
         link_label="Ver no Instagram",
     )
 
+
 def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
-    """Render the posts with most confirmed organic interactions."""
-    st.markdown("### 🏆 Top posts por interações orgânicas")
+    """
+    Renderiza os posts em destaque ordenados primariamente por alcance (reach),
+    com fallback para interações orgânicas totais.
+    """
+    st.markdown("### 🏆 Top posts por alcance")
 
     if not media_list:
         return
 
     ranked_media = [
-        media for media in media_list if _value(media, "total_interactions") is not None
+        media
+        for media in media_list
+        if _value(media, "reach") is not None
+        or _value(media, "total_interactions") is not None
     ]
     if not ranked_media:
-        st.info("Ranking indisponível: as publicações não têm interações orgânicas informadas.")
+        st.info(
+            "Ranking indisponível: as publicações não têm alcance ou interações informadas."
+        )
         return
-    sorted_media = sorted(
-        ranked_media,
-        key=lambda item: (
-            _value(item, "total_interactions") is not None,
-            _value(item, "total_interactions") or 0,
-        ),
-        reverse=True,
-    )
+
+    def _rank_sort_key(item: Any):
+        reach_val = _value(item, "reach")
+        interactions_val = _value(item, "total_interactions")
+        has_reach = reach_val is not None
+        # Primariamente por alcance; se reach não estiver disponível, usa interações como fallback
+        primary_score = reach_val if has_reach else (interactions_val or 0)
+        tie_breaker = (interactions_val or 0) if has_reach else 0
+        return (has_reach, primary_score, tie_breaker)
+
+    sorted_media = sorted(ranked_media, key=_rank_sort_key, reverse=True)
     top_posts = sorted_media[:3]
     cols = st.columns(len(top_posts))
 
     for column, media in zip(cols, top_posts):
         with column:
-            thumbnail = _value(media, "thumbnail_url") or _value(media, "media_url") or ""
+            thumbnail = (
+                _value(media, "thumbnail_url")
+                or _value(media, "media_url")
+                or ""
+            )
             media_url = _value(media, "media_url") or ""
             permalink = _value(media, "permalink", "") or ""
             media_type = _value(media, "media_type", "")
-            is_video = media_type in ("VIDEO", "REELS") or media_url.split("?")[
-                0
-            ].lower().endswith(".mp4")
+            is_video = media_type in ("VIDEO", "REELS") or media_url.split(
+                "?"
+            )[0].lower().endswith(".mp4")
 
             safe_thumbnail = html_lib.escape(thumbnail, quote=True)
             safe_permalink = html_lib.escape(permalink, quote=True)
@@ -420,7 +568,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             )
             if safe_thumbnail:
                 preview = (
-                    f"{image_open}<img src=\"{safe_thumbnail}\" "
+                    f'{image_open}<img src="{safe_thumbnail}" '
                     'style="width:100%;height:200px;object-fit:cover;border-radius:8px;'
                     f'margin-bottom:15px;background:#1a1a1a;">{play_badge}{image_close}'
                 )
@@ -431,10 +579,31 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
                     'margin-bottom:15px;color:#c4c9ac;">Sem prévia</div>'
                 )
 
-            interactions = _format_optional_int(_value(media, "total_interactions"))
+            reach_val = _value(media, "reach")
+            reach_str = _format_optional_int(reach_val)
+            interactions_str = _format_optional_int(
+                _value(media, "total_interactions")
+            )
             likes = _format_optional_int(_value(media, "like_count"))
             comments = _format_optional_int(_value(media, "comments_count"))
             views = _format_optional_int(_value(media, "organic_views"))
+
+            if reach_val is not None:
+                highlight_html = (
+                    f'<div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:4px;">'
+                    f"{reach_str} de alcance</div>"
+                )
+                sub_interactions = (
+                    f'<div style="font-size:0.8rem;color:#c4c9ac;margin-bottom:12px;">'
+                    f"{interactions_str} interações orgânicas</div>"
+                )
+            else:
+                highlight_html = (
+                    f'<div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:12px;">'
+                    f"{interactions_str} interações orgânicas</div>"
+                )
+                sub_interactions = ""
+
             post_link = (
                 f'<a href="{safe_permalink}" target="_blank" class="glass-link">'
                 "Ver no Instagram</a>"
@@ -444,9 +613,8 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
 
             html = f"""<div class="glass-card" style="padding:15px;text-align:center;height:100%;">
     {preview}
-    <div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:12px;">
-        {interactions} interações orgânicas
-    </div>
+    {highlight_html}
+    {sub_interactions}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
         <div><strong>{likes}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Curtidas orgânicas</span></div>
         <div><strong>{comments}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Comentários orgânicos</span></div>
@@ -456,43 +624,74 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
 </div>"""
             st.markdown(html, unsafe_allow_html=True)
 
-def render_historic_top_comment(client_name: str) -> None:
-    """Renderiza o comentário mais curtido entre os consultados e permite exportá-los."""
+
+def render_historic_top_comment(
+    client_name: str, media_list: List[Any] | None = None
+) -> None:
+    """
+    Renderiza o comentário com mais curtidas entre os consultados
+    e permite baixar o arquivo CSV com rapidez e segurança contra travamentos.
+    """
     try:
-        from ui.data_loader import fetch_all_historic_comments
+        from ui import data_loader
         import pandas as pd
-        all_comments = fetch_all_historic_comments(client_name)
-        
+
+        media_ids = None
+        if media_list:
+            media_ids = [
+                str(getattr(m, "id"))
+                for m in media_list
+                if getattr(m, "id", None)
+            ][:30]
+
+        all_comments = []
+        try:
+            if media_ids:
+                all_comments = data_loader.fetch_all_historic_comments(
+                    client_name, media_ids=media_ids
+                )
+            else:
+                all_comments = data_loader.fetch_all_historic_comments(client_name)
+        except TypeError:
+            all_comments = data_loader.fetch_all_historic_comments(client_name)
+
         if not all_comments:
             return
-            
-        best = max(all_comments, key=lambda c: int(c.get("like_count", 0)), default=None)
+
+        best = max(
+            all_comments, key=lambda c: int(c.get("like_count", 0)), default=None
+        )
         if not best:
             return
-            
+
         st.markdown("### 💬 Comentário com mais curtidas entre os consultados")
-        
+
         text = html_lib.escape(str(best.get("text", "")))
         username = html_lib.escape(str(best.get("username", "Usuário")))
         likes = best.get("like_count", 0)
-        
+
         html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
-    <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">"{text}"</div>
+    <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">\"{text}\"</div>
     <div style="color: #c4c9ac; font-size: 0.9rem;">
         <strong>@{username}</strong> • 🏆 {int(likes):,} curtidas
     </div>
 </div>"""
         st.markdown(html, unsafe_allow_html=True)
-        
+
         st.write("")
         df_comments = pd.DataFrame(all_comments)
-        
-        # Formatar Data e Hora para o CSV de comentários
+
         if "timestamp" in df_comments.columns:
-            df_comments["Data e Hora"] = df_comments["timestamp"].str.replace("+0000", "", regex=False).str.replace(".000Z", "", regex=False).str.replace("T", " ", regex=False)
+            df_comments["Data e Hora"] = (
+                df_comments["timestamp"]
+                .astype(str)
+                .str.replace("+0000", "", regex=False)
+                .str.replace(".000Z", "", regex=False)
+                .str.replace("T", " ", regex=False)
+            )
             df_comments = df_comments.drop(columns=["timestamp"])
-            
-        csv = df_comments.to_csv(index=False).encode('utf-8')
+
+        csv = df_comments.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Baixar comentários consultados (CSV)",
             data=csv,
@@ -500,79 +699,86 @@ def render_historic_top_comment(client_name: str) -> None:
             mime="text/csv",
         )
     except Exception as e:
-        import sentry_sdk
         import logging
-        logging.getLogger(__name__).error(f"Erro ao renderizar top comment historico: {e}")
+        import sentry_sdk
+
+        logging.getLogger(__name__).error(
+            f"Erro ao renderizar top comment histórico: {e}"
+        )
         sentry_sdk.capture_exception(e)
+
 
 def render_followers_timeline(history_data: list) -> None:
     """Renderiza a linha do tempo de ganho de seguidores dos últimos 30 dias."""
     if not history_data:
         st.info("O histórico de seguidores não está disponível para esta conta.")
         return
-        
+
     import pandas as pd
     import plotly.express as px
-    
+
     df = pd.DataFrame(history_data)
-    if df.empty or "Data" not in df.columns or "Novos Seguidores" not in df.columns:
+    if (
+        df.empty
+        or "Data" not in df.columns
+        or "Novos Seguidores" not in df.columns
+    ):
         st.info("Sem dados suficientes de histórico no momento.")
         return
-        
+
     st.markdown("### 📈 Evolução de Seguidores (Últimos 30 Dias)")
-    
-    # Encontrar o pico
+
     peak_row = df.loc[df["Novos Seguidores"].idxmax()]
     peak_val = peak_row["Novos Seguidores"]
     peak_date = peak_row["Data"]
-    
-    # Criar um card de destaque para o recorde
-    st.markdown(f"""
+
+    st.markdown(
+        f"""
     <div class="metric-card" style="margin-bottom: 20px;">
         <div class="metric-label">Maior Pico (Últimos 30d)</div>
         <div class="metric-value" style="color: #FFB300;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #c4c9ac;">Seguidores</span></div>
         <div style="font-size: 0.8rem; color: #c4c9ac; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
     </div>
-    """, unsafe_allow_html=True)
-    
-    # Gráfico de Área
+    """,
+        unsafe_allow_html=True,
+    )
+
     fig = px.area(
-        df, 
-        x="Data", 
-        y="Novos Seguidores",
-        color_discrete_sequence=["#FFB300"]
+        df, x="Data", y="Novos Seguidores", color_discrete_sequence=["#FFB300"]
     )
-    
+
     fig.update_traces(
-        line_shape='spline',
-        mode='lines+markers',
-        fill='tozeroy',
+        line_shape="spline",
+        mode="lines+markers",
+        fill="tozeroy",
         marker=dict(size=6, color="#FFB300", line=dict(width=1, color="white")),
-        hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>",
     )
-    
+
     fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#E2E8F0"),
         xaxis=dict(
-            title="", 
+            title="",
             showgrid=False,
             zeroline=False,
             showline=True,
             linecolor="rgba(255,255,255,0.1)",
-            tickangle=-45
+            tickangle=-45,
         ),
         yaxis=dict(
-            title="", 
+            title="",
             showgrid=True,
             gridcolor="rgba(255,255,255,0.05)",
             zeroline=True,
-            zerolinecolor="rgba(255,255,255,0.1)"
+            zerolinecolor="rgba(255,255,255,0.1)",
         ),
         margin=dict(l=10, r=45, t=10, b=45),
         height=350,
-        hovermode="x unified"
+        hovermode="x unified",
     )
-    
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    st.plotly_chart(
+        fig, use_container_width=True, config={"displayModeBar": False}
+    )

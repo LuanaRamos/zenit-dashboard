@@ -53,6 +53,8 @@ class StreamlitCapture:
         self.captions = []
         self.downloads = []
         self.expanders = []
+        self.warnings = []
+        self.errors = []
 
     def markdown(self, body, **kwargs):
         self.markdowns.append(body)
@@ -62,6 +64,12 @@ class StreamlitCapture:
 
     def caption(self, body, **kwargs):
         self.captions.append(body)
+
+    def warning(self, body, **kwargs):
+        self.warnings.append(body)
+
+    def error(self, body, **kwargs):
+        self.errors.append(body)
 
     def columns(self, spec):
         count = spec if isinstance(spec, int) else len(spec)
@@ -79,6 +87,9 @@ class StreamlitCapture:
 
     def write(self, *args, **kwargs):
         pass
+
+    def empty(self):
+        return nullcontext()
 
 
 def test_organic_aggregate_sums_only_available_values_and_reports_coverage():
@@ -261,37 +272,264 @@ def test_paid_comparison_uses_raw_non_equivalent_ads_metrics_and_has_no_cards(mo
     assert any("3 segundos" in message for message in st.infos)
 
 
-def test_top_posts_sort_by_confirmed_organic_interactions_and_show_no_paid_values(monkeypatch):
+def test_top_posts_sorts_by_reach_as_primary_metric(monkeypatch):
     st = StreamlitCapture()
     monkeypatch.setattr(organic_ui, "st", st)
     items = [
-        media(id="wide", total_interactions=1, reach=999, like_count=111),
-        media(id="engaged", total_interactions=9, reach=1, like_count=222),
-        media(id="missing", total_interactions=None, like_count=None),
+        media(id="low_reach_high_int", reach=200, total_interactions=99, like_count=10),
+        media(id="high_reach_low_int", reach=1500, total_interactions=5, like_count=20),
+        media(id="mid_reach", reach=800, total_interactions=30, like_count=15),
     ]
 
     organic_ui.render_top_posts_and_comments(items)
 
     cards = [body for body in st.markdowns if "glass-card" in body]
-    assert "222" in cards[0]
-    assert "111" in cards[1]
-    assert len(cards) == 2  # Unavailable scores cannot earn a ranking position.
+    assert len(cards) == 3
+    # First post must be the one with reach=1500
+    assert "1.500" in cards[0] or "1500" in cards[0]
+    # Second post must be the one with reach=800
+    assert "800" in cards[1]
+    # Third post must be the one with reach=200
+    assert "200" in cards[2]
     assert all("Pago" not in body and "Ads" not in body for body in cards)
 
 
-def test_top_posts_reports_unavailable_ranking_without_known_interactions(monkeypatch):
+def test_top_posts_falls_back_to_total_interactions_when_reach_is_none(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [
+        media(id="no_reach_low_int", reach=None, total_interactions=12, like_count=5),
+        media(id="no_reach_high_int", reach=None, total_interactions=85, like_count=40),
+    ]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert len(cards) == 2
+    assert "85" in cards[0]
+    assert "12" in cards[1]
+
+
+def test_top_posts_reach_takes_precedence_over_interactions_only(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [
+        media(id="has_reach", reach=50, total_interactions=2, like_count=1),
+        media(id="interactions_only", reach=None, total_interactions=999, like_count=500),
+    ]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert len(cards) == 2
+    assert "50" in cards[0]
+    assert "999" in cards[1]
+
+
+def test_top_posts_handles_reach_tie_using_interactions_or_likes(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [
+        media(id="tie_low", reach=500, total_interactions=10, like_count=100),
+        media(id="tie_high", reach=500, total_interactions=50, like_count=200),
+    ]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert len(cards) == 2
+    assert "200" in cards[0]
+    assert "100" in cards[1]
+
+
+def test_top_posts_excludes_posts_with_neither_reach_nor_interactions(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [
+        media(id="valid", reach=100, total_interactions=10),
+        media(id="invalid_empty", reach=None, total_interactions=None, like_count=None),
+    ]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert len(cards) == 1
+    assert "100" in cards[0]
+
+
+def test_top_posts_reports_unavailable_ranking_without_known_reach_or_interactions(monkeypatch):
     st = StreamlitCapture()
     monkeypatch.setattr(organic_ui, "st", st)
 
-    organic_ui.render_top_posts_and_comments([media(total_interactions=None)])
+    organic_ui.render_top_posts_and_comments([media(reach=None, total_interactions=None)])
 
     assert any("Ranking indisponível" in message for message in st.infos)
     assert not any("glass-card" in body for body in st.markdowns)
 
 
-def test_historic_comment_copy_describes_consulted_subset_and_escapes_text(
-    monkeypatch,
-):
+def test_top_posts_empty_media_list_renders_nothing_cleanly(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+
+    organic_ui.render_top_posts_and_comments([])
+
+    assert not any("glass-card" in body for body in st.markdowns)
+    assert not any("Ranking indisponível" in message for message in st.infos)
+
+
+def test_top_posts_limits_to_top_three_posts(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [media(id=f"p{i}", reach=i * 100, total_interactions=i) for i in range(1, 6)]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert len(cards) == 3
+    assert "500" in cards[0]
+    assert "400" in cards[1]
+    assert "300" in cards[2]
+
+
+def test_top_posts_renders_video_badge_for_reels_and_video(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [
+        media(id="v1", media_type="VIDEO", reach=500, total_interactions=10),
+        media(id="img1", media_type="IMAGE", reach=400, total_interactions=10),
+    ]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert "Vídeo" in cards[0]
+    assert "Vídeo" not in cards[1]
+
+
+def test_top_posts_renders_preview_fallback_when_no_thumbnails(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [media(thumbnail_url="", media_url="", reach=100, total_interactions=5)]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert any("Sem prévia" in card for card in cards)
+
+
+def test_top_posts_escapes_xss_in_permalinks_and_thumbnails(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    xss_url = 'https://instagram.com/p/test"><script>alert(1)</script>'
+    items = [media(permalink=xss_url, thumbnail_url=xss_url, reach=100, total_interactions=5)]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert "<script>" not in cards[0]
+    assert "&lt;script&gt;" in cards[0] or "&quot;&gt;&lt;script&gt;" in cards[0]
+
+
+def test_top_posts_card_displays_reach_when_available(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    items = [media(reach=8500, total_interactions=40, like_count=30, comments_count=10)]
+
+    organic_ui.render_top_posts_and_comments(items)
+
+    cards = [body for body in st.markdowns if "glass-card" in body]
+    assert "8.500" in cards[0] or "8500" in cards[0]
+    assert "alcance" in cards[0].lower()
+
+
+def test_profile_bio_header_renders_complete_data(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    profile = {
+        "username": "zenit.growth",
+        "name": "Zenit Growth Intelligence",
+        "biography": "Impulsionando marcas no digital 🚀\nConsultoria de Dados",
+        "profile_picture_url": "https://example.com/avatar.jpg",
+        "followers_count": 12500,
+        "follows_count": 450,
+        "media_count": 89,
+    }
+
+    organic_ui.render_profile_bio_header(profile)
+
+    output = "\n".join(str(m) for m in st.markdowns)
+    assert "zenit.growth" in output
+    assert "Zenit Growth Intelligence" in output
+    assert "Impulsionando marcas no digital" in output
+    assert "12.500" in output or "12500" in output
+    assert "450" in output
+    assert "89" in output
+    assert "avatar.jpg" in output
+
+
+def test_profile_bio_header_renders_partial_and_missing_data_gracefully(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    partial_profile = {
+        "username": "zenit_only",
+        "followers_count": None,
+    }
+
+    # Deve executar perfeitamente sem levantar exceção por chaves ausentes
+    organic_ui.render_profile_bio_header(partial_profile)
+
+    output = "\n".join(str(m) for m in st.markdowns)
+    assert "zenit_only" in output
+
+
+def test_profile_bio_header_escapes_xss_in_name_username_and_bio(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    malicious = {
+        "username": "<script>alert('user')</script>",
+        "name": "<b onmouseover=evil()>Name</b>",
+        "biography": "<img src=x onerror=alert('bio')>",
+        "followers_count": 100,
+        "profile_picture_url": 'https://example.com/pic.jpg"><script>evil()</script>',
+    }
+
+    organic_ui.render_profile_bio_header(malicious)
+
+    output = "\n".join(str(m) for m in st.markdowns)
+    assert "<script>alert" not in output
+    assert "<img src=x" not in output
+    assert "&lt;script&gt;" in output
+    assert "&lt;img src=x" in output
+
+
+def test_profile_bio_header_handles_none_or_empty_dict(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+
+    organic_ui.render_profile_bio_header(None)
+    organic_ui.render_profile_bio_header({})
+
+    # Deve executar suavemente sem erros
+
+
+def test_profile_bio_header_formats_large_numbers_with_thousand_separators(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    profile = {
+        "username": "big_account",
+        "followers_count": 1500000,
+        "follows_count": 3200,
+        "media_count": 1200,
+    }
+
+    organic_ui.render_profile_bio_header(profile)
+
+    output = "\n".join(str(m) for m in st.markdowns)
+    assert "1.500.000" in output or "1500000" in output
+    assert "3.200" in output or "3200" in output
+
+
+def test_historic_comment_copy_describes_consulted_subset_and_escapes_text(monkeypatch):
     st = StreamlitCapture()
     monkeypatch.setattr(organic_ui, "st", st)
     from ui import data_loader
@@ -299,7 +537,7 @@ def test_historic_comment_copy_describes_consulted_subset_and_escapes_text(
     monkeypatch.setattr(
         data_loader,
         "fetch_all_historic_comments",
-        lambda client_name: [
+        lambda *a, **k: [
             {
                 "text": "olá, <script>alert(1)</script>",
                 "username": "<admin>",
@@ -317,3 +555,109 @@ def test_historic_comment_copy_describes_consulted_subset_and_escapes_text(
     assert "&lt;admin&gt;" in output
     assert "Recorde da Conta" not in output
     assert st.downloads[0]["label"] == "📥 Baixar comentários consultados (CSV)"
+
+
+def test_historic_comment_with_media_list_parameter(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    from ui import data_loader
+
+    called_args = []
+
+    def mock_fetch(client_name, media_ids=None):
+        called_args.append((client_name, media_ids))
+        return [
+            {
+                "text": "Comentário no post recente",
+                "username": "usuario_ativo",
+                "like_count": 19,
+                "timestamp": "2026-09-01T12:00:00Z",
+            }
+        ]
+
+    monkeypatch.setattr(data_loader, "fetch_all_historic_comments", mock_fetch)
+
+    items = [media(id="post_recent_1")]
+    organic_ui.render_historic_top_comment("cliente", items)
+
+    output = "\n".join(str(item) for item in st.markdowns)
+    assert "Comentário no post recente" in output
+    assert "usuario_ativo" in output
+
+
+def test_historic_comment_empty_comments_renders_nothing(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    from ui import data_loader
+
+    monkeypatch.setattr(data_loader, "fetch_all_historic_comments", lambda *a, **k: [])
+
+    organic_ui.render_historic_top_comment("cliente")
+
+    assert not any("glass-card" in body for body in st.markdowns)
+    assert len(st.downloads) == 0
+
+
+def test_historic_comment_handles_zero_likes_and_missing_like_count(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    from ui import data_loader
+
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_all_historic_comments",
+        lambda *a, **k: [
+            {"text": "Primeiro comentário", "username": "user1", "like_count": None},
+            {"text": "Segundo comentário", "username": "user2", "like_count": 0},
+        ],
+    )
+
+    organic_ui.render_historic_top_comment("cliente")
+
+    output = "\n".join(str(item) for item in st.markdowns)
+    assert "Primeiro comentário" in output or "Segundo comentário" in output
+    assert len(st.downloads) == 1
+
+
+def test_historic_comment_handles_loader_exception_gracefully(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    from ui import data_loader
+
+    def broken(*a, **k):
+        raise RuntimeError("API timeout loading comments")
+
+    monkeypatch.setattr(data_loader, "fetch_all_historic_comments", broken)
+
+    # Não deve subir exceção
+    organic_ui.render_historic_top_comment("cliente")
+    assert not any("glass-card" in body for body in st.markdowns)
+
+
+def test_historic_comment_csv_download_content_and_headers(monkeypatch):
+    st = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", st)
+    from ui import data_loader
+
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_all_historic_comments",
+        lambda *a, **k: [
+            {
+                "text": "Conteúdo teste para exportação",
+                "username": "autor_teste",
+                "like_count": 3,
+                "timestamp": "2026-09-01T12:00:00+0000",
+            }
+        ],
+    )
+
+    organic_ui.render_historic_top_comment("cliente")
+
+    assert len(st.downloads) == 1
+    download = st.downloads[0]
+    assert download["label"] == "📥 Baixar comentários consultados (CSV)"
+    assert download["file_name"] == "comentarios_consultados_cliente.csv"
+    csv_text = download["data"].decode("utf-8")
+    assert "Conteúdo teste para exportação" in csv_text
+    assert "autor_teste" in csv_text
