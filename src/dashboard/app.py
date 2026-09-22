@@ -41,7 +41,7 @@ def configure_page():
 def report_error(message, error):
     logger.error(message, exc_info=error)
     sentry_sdk.capture_exception(error)
-    st.error(message)
+    st.error(f"{message}\n\nDetalhes do erro: {type(error).__name__} - {error}")
 
 
 def render_ads_page(date_preset, time_range, client):
@@ -151,8 +151,16 @@ def render_organic_page(date_preset, time_range, client):
         )
         sentry_sdk.capture_exception(error)
 
-    with st.spinner("Carregando publicações orgânicas..."):
-        media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
+    media = []
+    try:
+        with st.spinner("Carregando publicações orgânicas..."):
+            media = data_loader.fetch_organic_media(date_preset, time_range, client.name)
+    except Exception as error:
+        logger.error(f"Erro ao carregar publicações orgânicas de {client.name}: {error}")
+        sentry_sdk.capture_exception(error)
+        st.warning(f"Aviso sobre as publicações do Instagram ({client.name}): {error}")
+        return
+
     if not media:
         st.info("Nenhuma publicação encontrada no período selecionado.")
         return
