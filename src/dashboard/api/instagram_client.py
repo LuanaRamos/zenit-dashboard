@@ -624,11 +624,16 @@ class InstagramClient:
                     timeout=20,
                 )
                 batch_res.raise_for_status()
-                for response_item in batch_res.json():
+                for media_id, response_item in zip(
+                    media_ids[i : i + 50], batch_res.json(), strict=False
+                ):
                     if response_item.get("code") == 200:
                         body = json.loads(response_item.get("body", "{}"))
                         comments = body.get("data", [])
-                        all_comments.extend(comments)
+                        all_comments.extend(
+                            {**comment, "media_id": str(media_id)}
+                            for comment in comments
+                        )
         except Exception as e:
             logger.error(f"Erro ao buscar comentários via Batch: {e}")
             sentry_sdk.capture_exception(e)

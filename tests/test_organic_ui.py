@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import sys
 from contextlib import nullcontext
 from pathlib import Path
@@ -181,6 +183,38 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
     assert dataframe.iloc[0]["Interações orgânicas"] == 12
     assert not any("Pago" in column or "Ads" in column for column in dataframe.columns)
     assert kwargs["link_col"] == "Link"
+
+
+def test_posts_csv_preserves_full_captions_media_links_and_format_filter(monkeypatch):
+    st = StreamlitCapture(selected_type="Carrossel")
+    monkeypatch.setattr(organic_ui, "st", st)
+    monkeypatch.setattr(organic_ui, "render_glass_table", lambda *a, **k: None)
+    caption = 'Café, rio e "paz" 🌿\n' + "Uma legenda completa. " * 30
+    organic_ui.render_posts_table(
+        [
+            media(id="image-1", caption="Imagem fora do filtro"),
+            media(id="carousel-1", media_type="CAROUSEL_ALBUM", caption=caption),
+            media(
+                id="carousel-2",
+                media_type="CAROUSEL_ALBUM",
+                caption=None,
+                media_url=None,
+                thumbnail_url=None,
+            ),
+        ]
+    )
+
+    rows = list(
+        csv.DictReader(io.StringIO(st.downloads[0]["data"].decode("utf-8-sig")))
+    )
+    assert [row["ID da publicação"] for row in rows] == ["carousel-1", "carousel-2"]
+    assert rows[0]["Legenda"] == caption
+    assert rows[0]["URL da mídia"] == "https://example.com/media.jpg"
+    assert rows[0]["URL da miniatura"] == "https://example.com/thumb.jpg"
+    assert rows[0]["Link"] == "https://instagram.com/p/post-1"
+    assert rows[1]["Legenda"] == ""
+    assert rows[1]["URL da mídia"] == ""
+    assert rows[1]["URL da miniatura"] == ""
 
 
 def test_posts_table_empty_filter_is_handled_without_dataframe_key_error(monkeypatch):
@@ -651,11 +685,18 @@ def test_historic_comment_csv_download_content_and_headers(monkeypatch):
                 "username": "autor_teste",
                 "like_count": 3,
                 "timestamp": "2026-09-01T12:00:00+0000",
+                "media_id": "post-2",
             }
         ],
     )
 
-    organic_ui.render_historic_top_comment("cliente")
+    organic_ui.render_historic_top_comment(
+        "cliente",
+        [
+            media(id="post-1", permalink="https://instagram.com/p/first"),
+            media(id="post-2", permalink="https://instagram.com/p/second"),
+        ],
+    )
 
     assert len(st.downloads) == 1
     download = st.downloads[0]
@@ -664,6 +705,9 @@ def test_historic_comment_csv_download_content_and_headers(monkeypatch):
     csv_text = download["data"].decode("utf-8")
     assert "Conteúdo teste para exportação" in csv_text
     assert "autor_teste" in csv_text
+    row = next(csv.DictReader(io.StringIO(csv_text)))
+    assert row["media_id"] == "post-2"
+    assert row["media_permalink"] == "https://instagram.com/p/second"
 
 
 def test_render_followers_timeline_empty_returns_info(monkeypatch):

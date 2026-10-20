@@ -163,6 +163,7 @@ def test_client_get_comments_for_media_single_media_success():
     assert comments[0]["id"] == "c1"
     assert comments[0]["like_count"] == 12
     assert comments[1]["username"] == "joao"
+    assert all(comment["media_id"] == "media_101" for comment in comments)
 
 
 def test_client_get_comments_for_media_batches_over_50_items():
@@ -172,21 +173,30 @@ def test_client_get_comments_for_media_batches_over_50_items():
     def mock_post(*args, **kwargs):
         post_calls.append(kwargs)
         batch = json.loads(kwargs["data"]["batch"])
-        # Retorna resposta vazia para cada item do batch
-        items = [{"code": 200, "body": json.dumps({"data": []})} for _ in batch]
+        items = [
+            {
+                "code": 200,
+                "body": json.dumps({"data": [{"id": f"c{len(post_calls)}_{index}"}]}),
+            }
+            for index, _ in enumerate(batch)
+        ]
         return _MockBatchResponse(items)
 
     client.session.post = mock_post
 
     # 75 mídias devem gerar 2 chunks (50 + 25)
     media_ids = [f"media_{i}" for i in range(75)]
-    client.get_comments_for_media(media_ids)
+    comments = client.get_comments_for_media(media_ids)
 
     assert len(post_calls) == 2
     batch_1 = json.loads(post_calls[0]["data"]["batch"])
     batch_2 = json.loads(post_calls[1]["data"]["batch"])
     assert len(batch_1) == 50
     assert len(batch_2) == 25
+    assert len(comments) == 75
+    assert comments[49]["media_id"] == "media_49"
+    assert comments[50]["media_id"] == "media_50"
+    assert comments[-1]["media_id"] == "media_74"
 
 
 def test_client_get_comments_for_media_handles_item_level_batch_error():
@@ -197,14 +207,18 @@ def test_client_get_comments_for_media_handles_item_level_batch_error():
     batch_response_item = [
         {"code": 200, "body": json.dumps(success_payload)},
         {"code": 400, "body": json.dumps({"error": {"message": "Invalid media"}})},
+        {"code": 200, "body": json.dumps({"data": [{"id": "c3"}]})},
     ]
 
     client.session.post = lambda *args, **kwargs: _MockBatchResponse(batch_response_item)
 
-    comments = client.get_comments_for_media(["m_valid", "m_invalid"])
+    comments = client.get_comments_for_media(["m_valid", "m_invalid", "m_after_error"])
 
-    assert len(comments) == 1
+    assert len(comments) == 2
     assert comments[0]["id"] == "c1"
+    assert comments[0]["media_id"] == "m_valid"
+    assert comments[1]["id"] == "c3"
+    assert comments[1]["media_id"] == "m_after_error"
 
 
 def test_client_get_comments_for_media_http_error_returns_collected_without_crash():
