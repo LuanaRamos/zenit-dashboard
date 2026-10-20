@@ -336,6 +336,13 @@ ORGANIC_POST_COLUMNS = [
     "Link",
 ]
 
+ORGANIC_POST_EXPORT_COLUMNS = ORGANIC_POST_COLUMNS + [
+    "ID da publicação",
+    "Legenda",
+    "URL da mídia",
+    "URL da miniatura",
+]
+
 
 def _organic_post_rows(
     media_list: list[Any], selected_type: str
@@ -354,6 +361,10 @@ def _organic_post_rows(
                 "Comentários orgânicos": _value(media, "comments_count"),
                 "Visualizações orgânicas": _value(media, "organic_views"),
                 "Link": _value(media, "permalink", ""),
+                "ID da publicação": str(_value(media, "id", "") or ""),
+                "Legenda": _value(media, "caption", ""),
+                "URL da mídia": _value(media, "media_url", ""),
+                "URL da miniatura": _value(media, "thumbnail_url", ""),
             }
         )
     return rows
@@ -382,16 +393,17 @@ def render_posts_table(
         for media in media_list
         if selected_type == "Todos" or _media_type_label(media) == selected_type
     ]
-    dataframe = pd.DataFrame(
-        _organic_post_rows(filtered_media, "Todos"), columns=ORGANIC_POST_COLUMNS
-    )
+    rows = _organic_post_rows(filtered_media, "Todos")
+    dataframe = pd.DataFrame(rows, columns=ORGANIC_POST_COLUMNS)
     if dataframe.empty:
         st.info("Nenhuma publicação corresponde ao filtro selecionado.")
         return
 
     st.download_button(
         label="⬇ Baixar CSV orgânico",
-        data=dataframe.to_csv(index=False).encode("utf-8-sig"),
+        data=pd.DataFrame(rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
+        .to_csv(index=False)
+        .encode("utf-8-sig"),
         file_name="publicacoes_organicas.csv",
         mime="text/csv",
     )
@@ -639,9 +651,9 @@ def render_historic_top_comment(
         media_ids = None
         if media_list:
             media_ids = [
-                str(getattr(m, "id"))
+                str(_value(m, "id"))
                 for m in media_list
-                if getattr(m, "id", None)
+                if _value(m, "id")
             ][:30]
 
         all_comments = []
@@ -687,6 +699,15 @@ def render_historic_top_comment(
 
         st.write("")
         df_comments = pd.DataFrame(all_comments)
+        if "media_id" in df_comments.columns and media_list:
+            media_links = {
+                str(_value(media, "id")): _value(media, "permalink", "") or ""
+                for media in media_list
+                if _value(media, "id")
+            }
+            df_comments["media_permalink"] = (
+                df_comments["media_id"].astype(str).map(media_links).fillna("")
+            )
 
         if "timestamp" in df_comments.columns:
             df_comments["Data e Hora"] = (

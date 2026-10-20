@@ -10,6 +10,10 @@ Painel Streamlit para acompanhar campanhas Meta Ads e conteúdo orgânico do Ins
 
 O filtro orgânico seleciona **data de publicação**. As métricas são o acumulado das publicações até a consulta. Ads usa **datas de veiculação**. A comparação é descritiva, não uma decomposição exata de um total. Dados ausentes aparecem como N/D e somas parciais identificam a cobertura. Alcance, salvamentos e compartilhamentos de Media Insights permanecem em detalhes com rótulos neutros.
 
+O CSV orgânico inclui o ID da publicação, a legenda completa e os links da mídia principal e da miniatura para pesquisa de conteúdo. Esses links não incluem todas as páginas dos carrosséis nem texto extraído das imagens.
+
+O CSV de comentários inclui `media_id` e, quando a publicação está no período carregado, `media_permalink`. A consulta considera até 30 publicações e a primeira página de até 25 comentários por publicação. O arquivo representa os comentários consultados, sem garantir cobertura completa do histórico ou das respostas.
+
 ## Executar
 
 Python 3.11 ou superior:
