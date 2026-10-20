@@ -95,6 +95,26 @@ def test_organic_page_does_not_request_ads_by_default(monkeypatch):
     assert any("orgânic" in text.value.lower() for text in app.markdown)
 
 
+def test_maximum_history_displays_loaded_date_range(monkeypatch):
+    organic_app(monkeypatch)
+    from core.config import settings
+    from ui import layouts
+
+    monkeypatch.setattr(
+        layouts,
+        "render_sidebar",
+        lambda: ("Orgânico (Instagram)", "maximum", None, settings.get_clients()[0]),
+    )
+
+    app = AppTest.from_file(str(APP)).run(timeout=15)
+
+    assert not app.exception
+    assert any(
+        "Histórico carregado: 1 publicação, de 01/09/2026 a 01/09/2026." in caption.value
+        for caption in app.caption
+    )
+
+
 def test_ads_comparison_failure_keeps_organic_results(monkeypatch):
     loader = organic_app(monkeypatch)
 

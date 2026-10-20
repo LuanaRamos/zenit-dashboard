@@ -68,6 +68,19 @@ def _format_timestamp(value: Any) -> Any:
     return value.replace("+0000", "").replace(".000Z", "").replace("T", " ")
 
 
+def render_organic_history_summary(media_list: list[Any]) -> None:
+    dates = [
+        pd.to_datetime(_value(media, "timestamp"), errors="coerce", utc=True)
+        for media in media_list
+    ]
+    dates = [date for date in dates if pd.notna(date)]
+    label = "publicação" if len(media_list) == 1 else "publicações"
+    summary = f"Histórico carregado: {len(media_list)} {label}"
+    if dates:
+        summary += f", de {min(dates):%d/%m/%Y} a {max(dates):%d/%m/%Y}"
+    st.caption(summary + ".")
+
+
 def format_hhmmss(ms_val: float) -> str:
     """Formata milissegundos em HH:MM:SS"""
     if not ms_val:

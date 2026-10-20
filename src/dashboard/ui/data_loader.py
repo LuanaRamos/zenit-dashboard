@@ -110,6 +110,11 @@ def fetch_organic_media(
     """Fetch Media Insights without constructing or querying a paid Ads client."""
     ig_client = get_instagram_client(client_name)
 
+    if date_preset == "maximum":
+        # O histórico do perfil é independente de qualquer intervalo de Ads.
+        # limit controla apenas o tamanho da página; o cliente percorre todas.
+        return ig_client.get_recent_media(limit=100)
+
     if time_range:
         since_dt = datetime.datetime.strptime(time_range["since"], "%Y-%m-%d")
         until_dt = (
@@ -124,9 +129,6 @@ def fetch_organic_media(
             since_timestamp=since_timestamp,
             until_timestamp=until_timestamp,
         )
-    elif date_preset == "maximum":
-        return ig_client.get_recent_media(limit=100)
-
     days = 90 if date_preset == "last_90d" else 30
     since_timestamp = int(
         (datetime.datetime.now() - datetime.timedelta(days=days)).timestamp()
