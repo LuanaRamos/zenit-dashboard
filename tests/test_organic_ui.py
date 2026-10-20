@@ -97,6 +97,30 @@ class StreamlitCapture:
         pass
 
 
+def test_history_summary_shows_oldest_and_latest_loaded_publications(monkeypatch):
+    ui = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", ui)
+
+    organic_ui.render_organic_history_summary([
+        media(timestamp="2026-10-15T12:00:00Z"),
+        media(timestamp="2011-05-02T12:00:00+0000"),
+        media(timestamp="invalid-date"),
+    ])
+
+    assert ui.captions == [
+        "Histórico carregado: 3 publicações, de 02/05/2011 a 15/10/2026."
+    ]
+
+
+def test_history_summary_keeps_count_when_dates_are_unavailable(monkeypatch):
+    ui = StreamlitCapture()
+    monkeypatch.setattr(organic_ui, "st", ui)
+
+    organic_ui.render_organic_history_summary([media(timestamp=None)])
+
+    assert ui.captions == ["Histórico carregado: 1 publicação."]
+
+
 def test_organic_aggregate_sums_only_available_values_and_reports_coverage():
     items = [
         media(total_interactions=10, like_count=4, comments_count=2),

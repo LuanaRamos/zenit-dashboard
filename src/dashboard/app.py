@@ -129,6 +129,7 @@ def render_organic_page(date_preset, time_range, client):
         render_followers_timeline,
         render_historic_top_comment,
         render_metric_card,
+        render_organic_history_summary,
         render_organic_metrics_cards,
         render_posts_table,
         render_profile_bio_header,
@@ -173,6 +174,9 @@ def render_organic_page(date_preset, time_range, client):
         if not media:
             st.info("Nenhuma publicação encontrada no período selecionado.")
         else:
+            if date_preset == "maximum":
+                render_organic_history_summary(media)
+
             # 2. Desempenho orgânico das publicações
             render_organic_metrics_cards(media)
 

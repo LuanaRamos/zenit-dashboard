@@ -147,11 +147,14 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
 
         if periodo_selecionado == "Histórico disponível":
             date_preset = "maximum"
-            ads_start = datetime.date.today() - datetime.timedelta(days=395)
-            st.caption(
-                f"Histórico de Ads consultado: {ads_start:%d/%m/%Y} a "
-                f"{datetime.date.today():%d/%m/%Y}."
-            )
+            if selected_module == "Orgânico (Instagram)":
+                st.caption("Desde a primeira publicação disponível do perfil selecionado.")
+            else:
+                ads_start = datetime.date.today() - datetime.timedelta(days=395)
+                st.caption(
+                    f"Histórico de Ads consultado: {ads_start:%d/%m/%Y} a "
+                    f"{datetime.date.today():%d/%m/%Y}."
+                )
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
 

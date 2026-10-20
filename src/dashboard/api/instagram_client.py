@@ -148,7 +148,10 @@ class InstagramClient:
         until_timestamp: int | None = None,
     ) -> list[InstagramMedia]:
         """
-        Busca publicações recentes e seus insights via Batch Operations (alta performance).
+        Busca todas as páginas de publicações e seus insights via Batch Operations.
+
+        ``limit`` é o tamanho de cada página, não o total de publicações.
+        Sem filtros de data, percorre até a publicação mais antiga disponível.
         """
         endpoint = f"{self.instagram_account_id}/media"
         params = {
@@ -166,20 +169,31 @@ class InstagramClient:
             params["until"] = str(until_timestamp)
 
         media_items_data = []
+        media_ids_seen = set()
+        cursors_seen = set()
 
         while True:
             data = self._make_request(endpoint, params)
             page_data = data.get("data", [])
-            if not page_data:
-                break
-
-            media_items_data.extend(page_data)
+            for item in page_data:
+                media_id = item.get("id")
+                if media_id and media_id in media_ids_seen:
+                    continue
+                if media_id:
+                    media_ids_seen.add(media_id)
+                media_items_data.append(item)
 
             paging = data.get("paging", {})
-            if "cursors" in paging and "after" in paging["cursors"]:
-                params["after"] = paging["cursors"]["after"]
-            else:
+            if not paging.get("next"):
                 break
+            after = paging.get("cursors", {}).get("after")
+            if not after or after in cursors_seen:
+                raise InstagramAPIError(
+                    "A paginação do Instagram foi interrompida. "
+                    "Não foi possível confirmar o histórico completo; tente atualizar novamente."
+                )
+            cursors_seen.add(after)
+            params["after"] = after
 
         # Batch Request para puxar Insights sem N+1 queries
         insights_map = {}
