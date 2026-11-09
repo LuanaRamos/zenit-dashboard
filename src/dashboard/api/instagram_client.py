@@ -498,6 +498,7 @@ class InstagramClient:
         from dateutil.relativedelta import relativedelta
 
         today = datetime.datetime.now(datetime.timezone.utc).date()
+        requested_full_history = date_preset == "maximum" and time_range is None
         end = today + datetime.timedelta(days=1)  # until exclusivo
         if time_range:
             start = datetime.date.fromisoformat(time_range["since"])
@@ -539,7 +540,12 @@ class InstagramClient:
                 "until": (end - datetime.timedelta(days=1)).isoformat(),
             },
             "_coverage": {},
-            "_is_partial": clamped,
+            "_is_partial": clamped or requested_full_history,
+            "_history_note": (
+                "A API não disponibiliza alcance único vitalício da conta. "
+                "As datas de cada indicador representam apenas o histórico recuperado."
+                if requested_full_history else ""
+            ),
         })
 
         endpoint = f"{self.instagram_account_id}/insights"
@@ -611,7 +617,7 @@ class InstagramClient:
 
         for metric in additive:
             if metric in earliest:
-                was_partial = earliest[metric] > start or clamped
+                was_partial = earliest[metric] > start or clamped or requested_full_history
                 _set_coverage(
                     metric, earliest[metric], latest[metric],
                     "parcial" if was_partial else "ok",
@@ -646,7 +652,7 @@ class InstagramClient:
             else:
                 value, begin = found
                 result[metric] = value
-                partial = begin > start or clamped
+                partial = begin > start or clamped or requested_full_history
                 _set_coverage(
                     metric, begin, unique_end, "parcial" if partial else "ok",
                     ("Agregado único da janela informada; não representa o histórico vitalício."
