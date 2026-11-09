@@ -989,6 +989,10 @@ class MetaAdsClient:
         for ig_id, ig_data in ig_mapping.items():
             ad_ids = ig_data.pop("_ad_ids", [])
             if len(ad_ids) > 1:
+                # O alcance de anúncios diferentes não é aditivo. Nunca
+                # oferecer a soma como alcance desduplicado quando a chamada
+                # agregada falhar ou a Meta não retornar esse dado.
+                ig_data["reach"] = None
                 try:
                     summary_params = {
                         "level": "account",
@@ -1008,11 +1012,15 @@ class MetaAdsClient:
                         for row in resp.get("data", [])
                         if row.get("publisher_platform") == "instagram"
                     )
-                    if summary_reach > 0:
+                    if any(
+                        row.get("publisher_platform") == "instagram"
+                        and row.get("reach") is not None
+                        for row in resp.get("data", [])
+                    ):
                         ig_data["reach"] = summary_reach
                 except Exception as e:
                     logger.warning(f"Falha ao buscar reach desduplicado para {ig_id}: {e}")
-                    # Mantém a soma como fallback
+                    # Mantém N/D; somar usuários únicos inflaria o alcance.
 
             # Garantia de paridade com Ads Manager:
             # - 1 anúncio: usa valores EXATOS da API (bit-a-bit idêntico ao Ads Manager)
@@ -1036,8 +1044,8 @@ class MetaAdsClient:
                 ig_data["cpm"] = (spend / impressions) * 1000 if impressions > 0 else 0.0
                 ig_data["cpc"] = spend / clicks if clicks > 0 else 0.0
                 ig_data["ctr"] = (clicks / impressions) * 100 if impressions > 0 else 0.0
-                ig_data["cpp"] = (spend / reach) * 1000 if reach > 0 else 0.0
-                ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
+                ig_data["cpp"] = (spend / reach) * 1000 if reach is not None and reach > 0 else None
+                ig_data["frequency"] = impressions / reach if reach is not None and reach > 0 else None
                 ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
                 ig_data["roas"] = action_values / spend if spend > 0 else 0.0
                 # This derived cost is unavailable when the canonical net-like
@@ -1087,12 +1095,11 @@ class MetaAdsClient:
                 row for row in data.get("data", [])
                 if row.get("publisher_platform") == "instagram"
             ]
-            if instagram_rows:
-                # O alcance só é agregado pela própria API. Somar linhas com
-                # quebras adicionais poderia duplicar contas únicas.
-                totals["reach"] = sum(
-                    int(row.get("reach") or 0) for row in instagram_rows
-                )
+            if len(instagram_rows) == 1:
+                # Sem outra quebra, a API já agregou o alcance do Instagram.
+                value = instagram_rows[0].get("reach")
+                totals["reach"] = int(value) if value is not None else None
+            # Mais de uma linha: não inferir alcance único somando pessoas.
             for item in instagram_rows:
                 totals["impressions"] += int(item.get("impressions") or 0)
                 by_type = {
