@@ -20,6 +20,20 @@ def get_api_client(client_name: str) -> MetaAdsClient:
     return MetaAdsClient(client_config)
 
 
+@st.cache_data(ttl=21600)
+def fetch_ads_history_coverage_cached(client_name: str) -> dict:
+    """Janela consultável e primeiro dia de entrega realmente encontrado."""
+    try:
+        return get_api_client(client_name).get_ads_history_coverage()
+    except Exception as exc:
+        logger.warning("Cobertura histórica dos anúncios indisponível: %s", exc)
+        return {
+            "status": "indisponivel",
+            "first_delivery": None,
+            "note": "Não foi possível confirmar a cobertura histórica dos anúncios.",
+        }
+
+
 @st.cache_data(ttl=86400)
 def get_account_creation_date_cached(client_name: str) -> datetime.date:
     client = get_api_client(client_name)
