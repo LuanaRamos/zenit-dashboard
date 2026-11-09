@@ -219,22 +219,70 @@ def render_organic_page(date_preset, time_range, client):
             insights = data_loader.fetch_account_insights_cached(client.name, date_preset, time_range)
             if insights:
                 st.write("")
+                st.markdown("#### 📅 Insights da Conta e Cobertura")
+                st.caption(
+                    "Esses Insights abrangem a conta, não são necessariamente "
+                    "exclusivamente orgânicos. O período pode ser menor que o "
+                    "histórico de publicações."
+                )
+                coverage = insights.get("_coverage", {})
+
+                def _metric_with_scope(title, key):
+                    value = insights.get(key)
+                    info = coverage.get(key, {})
+                    display = (
+                        f"{int(value):,}".replace(",", ".")
+                        if value is not None else "N/D"
+                    )
+                    st.metric(title, display)
+                    if info.get("since") and info.get("until"):
+                        st.caption(
+                            f"Dados de {info['since']} a {info['until']}. "
+                            f"{info.get('note', '')}"
+                        )
+                    else:
+                        st.caption(info.get("note", "Não retornado pela Meta."))
+
+                c_reach, c_views = st.columns(2)
+                with c_reach:
+                    _metric_with_scope("Alcance único da conta", "reach")
+                with c_views:
+                    _metric_with_scope("Visualizações da conta", "views")
+
+                with st.expander("Cobertura e limitações de cada métrica", expanded=(date_preset == "maximum")):
+                    st.caption(
+                        "N/D significa que não houve valor confirmado, e não zero. "
+                        "Métricas únicas não são somadas entre meses."
+                    )
+                    for metric, info in coverage.items():
+                        period = (
+                            f"{info['since']} a {info['until']}"
+                            if info.get("since") and info.get("until")
+                            else "sem período confirmado"
+                        )
+                        st.markdown(
+                            f"**{metric}**: {info.get('status', 'N/D')} "
+                            f"({period}). {info.get('note', '')}"
+                        )
+                st.write("")
                 st.markdown("#### 👤 Ações e Interações no Perfil")
                 st.caption("Ações diretas realizadas pelos usuários no perfil do Instagram durante o período.")
                 cols_act = st.columns(3)
 
                 def _fmt(val):
+                    if val is None:
+                        return "N/D"
                     try:
                         return f"{int(val):,}".replace(",", ".")
-                    except Exception:
-                        return str(val or 0)
+                    except (TypeError, ValueError):
+                        return "N/D"
 
                 with cols_act[0]:
                     render_metric_card(
                         "Visitas ao Perfil",
                         _fmt(insights.get("profile_views", 0)),
                         "Acessos à bio",
-                        "Visualizações diretas do perfil no período",
+                        "Indisponível: sem variável substituta equivalente validada",
                     )
                 with cols_act[1]:
                     render_metric_card(
@@ -244,12 +292,12 @@ def render_organic_page(date_preset, time_range, client):
                         "Conversões diretas pelo link da bio",
                     )
                 with cols_act[2]:
-                    engaged = insights.get("engaged_audience") or insights.get("total_interactions") or 0
+                    engaged = insights.get("accounts_engaged")
                     render_metric_card(
                         "Contas com Engajamento",
                         _fmt(engaged),
                         "Público ativo",
-                        "Contas únicas que interagiram com seu conteúdo",
+                        "Contas únicas engajadas no período efetivamente consultado",
                     )
         except Exception as error:
             logger.warning(f"Erro ao buscar ações do perfil de {client.name}: {error}")
