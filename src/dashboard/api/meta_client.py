@@ -202,7 +202,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,cpc,cpm,actions",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,cpc,cpm,actions,instagram_profile_follow,instagram_profile_visits",
             "limit": "1000",
         }
 
@@ -216,7 +216,20 @@ class MetaAdsClient:
         insights = []
         try:
             while True:
-                data = self._make_request(endpoint, params)
+                try:
+                    data = self._make_request(endpoint, params)
+                except MetaAPIError as exc:
+                    # Nem toda conta/consulta aceita os campos novos. A falha
+                    # não pode ocultar spend, impressões e ações tradicionais.
+                    if "instagram_profile_follow" not in params["fields"]:
+                        raise
+                    logger.warning(
+                        "Campos de seguidores/visitas não aceitos na consulta: %s", exc
+                    )
+                    params["fields"] = params["fields"].replace(
+                        ",instagram_profile_follow,instagram_profile_visits", ""
+                    )
+                    data = self._make_request(endpoint, params)
                 insights_data = data.get("data") or []
                 
                 for item in insights_data:
@@ -383,7 +396,7 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "ad",
-            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions",
+            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,instagram_profile_follow,instagram_profile_visits",
             "breakdowns": "publisher_platform",
             "limit": "1000",
         }
@@ -397,7 +410,16 @@ class MetaAdsClient:
         insights_data = []
         try:
             while True:
-                data = self._make_request(endpoint, params)
+                try:
+                    data = self._make_request(endpoint, params)
+                except MetaAPIError as exc:
+                    if "instagram_profile_follow" not in params["fields"]:
+                        raise
+                    logger.warning("Campos extras dos criativos indisponíveis: %s", exc)
+                    params["fields"] = params["fields"].replace(
+                        ",instagram_profile_follow,instagram_profile_visits", ""
+                    )
+                    data = self._make_request(endpoint, params)
                 insights_data.extend(data.get("data", []))
                 paging = data.get("paging", {})
                 if "cursors" in paging and "after" in paging["cursors"]:
@@ -481,8 +503,18 @@ class MetaAdsClient:
             action_metrics = parse_paid_actions(item.get("actions"))
             leads = action_metrics["leads"]
             whatsapp = action_metrics["messaging_conversations"]
-            instagram_follows = action_metrics["instagram_follows"]
-            profile_visits = action_metrics["profile_visits"]
+            # Priorizar campos diretos de Ads quando presentes; actions
+            # permanece como fallback para contas sem disponibilidade.
+            instagram_follows = (
+                int(item["instagram_profile_follow"])
+                if item.get("instagram_profile_follow") is not None
+                else action_metrics["instagram_follows"]
+            )
+            profile_visits = (
+                int(item["instagram_profile_visits"])
+                if item.get("instagram_profile_visits") is not None
+                else action_metrics["profile_visits"]
+            )
                     
             if instagram_follows == 0:
                 instagram_follows = int(item.get("instagram_follows", 0))
