@@ -166,8 +166,16 @@ class CampaignInsight(BaseModel):
         native_leads = action_metrics["native_leads"]
         leads = action_metrics["leads"]
         whatsapp_starts = action_metrics["messaging_conversations"]
-        instagram_follows = action_metrics["instagram_follows"]
-        profile_visits = action_metrics["profile_visits"]
+        instagram_follows = (
+            int(data["instagram_profile_follow"])
+            if data.get("instagram_profile_follow") is not None
+            else action_metrics["instagram_follows"]
+        )
+        profile_visits = (
+            int(data["instagram_profile_visits"])
+            if data.get("instagram_profile_visits") is not None
+            else action_metrics["profile_visits"]
+        )
         inline_link_clicks = int(data.get("inline_link_clicks") or 0) if "inline_link_clicks" in data else action_metrics["link_clicks_action"]
         outbound_clicks = parse_outbound_clicks(data.get("outbound_clicks"))
 
