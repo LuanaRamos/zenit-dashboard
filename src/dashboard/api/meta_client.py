@@ -113,6 +113,85 @@ class MetaAdsClient:
         }
         return self._ads_history_range
 
+    def get_ads_history_coverage(self) -> dict[str, Any]:
+        """Identifica o primeiro dia com entrega na janela consultável.
+
+        Consulta meses primeiro, depois dias do primeiro mês encontrado. A
+        ausência de dados no período não prova que a conta nunca teve anúncios.
+        """
+        requested = self.get_ads_history_range()
+        out: dict[str, Any] = {
+            "requested_since": requested["since"],
+            "requested_until": requested["until"],
+            "first_delivery": None,
+            "status": "indisponivel",
+            "note": "Não foi possível identificar o primeiro anúncio com entrega.",
+        }
+        try:
+            endpoint = f"{self.ad_account_id}/insights"
+            params = {
+                "level": "account",
+                "fields": "spend,impressions,date_start,date_stop",
+                "time_range": json.dumps(requested),
+                "time_increment": "monthly",
+                "limit": "1000",
+            }
+            months = []
+            seen = set()
+            while True:
+                response = self._make_request(endpoint, params)
+                months.extend(response.get("data", []))
+                after = response.get("paging", {}).get("cursors", {}).get("after")
+                if not response.get("paging", {}).get("next"):
+                    break
+                if not after or after in seen:
+                    raise MetaAPIError("Paginação de histórico de anúncios interrompida")
+                seen.add(after)
+                params["after"] = after
+
+            active_months = [
+                row for row in months
+                if float(row.get("spend") or 0) > 0
+                or int(row.get("impressions") or 0) > 0
+            ]
+            if not active_months:
+                out["status"] = "sem_entrega"
+                out["note"] = "Nenhuma entrega encontrada na janela consultável."
+                return out
+            first_month = min(active_months, key=lambda x: x.get("date_start", "9999"))
+            month_since = max(first_month["date_start"], requested["since"])
+            month_until = min(first_month["date_stop"], requested["until"])
+            daily_params = {
+                "level": "account",
+                "fields": "spend,impressions,date_start",
+                "time_range": json.dumps({"since": month_since, "until": month_until}),
+                "time_increment": 1,
+                "limit": "100",
+            }
+            first_date = month_since
+            try:
+                daily = self._make_request(endpoint, daily_params).get("data", [])
+                delivery_days = [
+                    row["date_start"] for row in daily
+                    if float(row.get("spend") or 0) > 0
+                    or int(row.get("impressions") or 0) > 0
+                ]
+                if delivery_days:
+                    first_date = min(delivery_days)
+            except (MetaAPIError, KeyError, TypeError, ValueError) as exc:
+                logger.warning("Precisão diária do início de anúncios indisponível: %s", exc)
+            out["first_delivery"] = first_date
+            out["status"] = "ok"
+            at_cutoff = first_date <= requested["since"]
+            out["note"] = (
+                "O histórico anterior ao limite retroativo da API pode não estar disponível."
+                if at_cutoff
+                else "Primeiro dia de entrega localizado dentro da janela consultável."
+            )
+        except (MetaAPIError, KeyError, TypeError, ValueError) as exc:
+            logger.warning("Não foi possível determinar cobertura histórica dos Ads: %s", exc)
+        return out
+
     def get_campaign_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> list[CampaignInsight]:
@@ -965,27 +1044,48 @@ class MetaAdsClient:
         else:
             insights_params["date_preset"] = date_preset
 
-        totals = {"reach": 0, "impressions": 0, "likes": 0, "shares": 0, "saved": 0}
-        
+        totals = {
+            "reach": None, "impressions": 0,
+            "likes": None, "reactions": None, "shares": None, "saved": None,
+        }
+
         try:
             data = self._make_request(insights_endpoint, insights_params)
-            for item in data.get("data", []):
-                if item.get("publisher_platform") != "instagram":
-                    continue
-                totals["reach"] += int(item.get("reach", 0))
-                totals["impressions"] += int(item.get("impressions", 0))
-                
-                actions = item.get("actions", [])
-                for action in actions:
-                    action_type = action.get("action_type")
-                    val = int(action.get("value", 0))
-                    if action_type in ["like", "onsite_conversion.post_net_like", "post_reaction"]:
-                        totals["likes"] = max(totals["likes"], val)
-                    elif action_type == "post":
-                        totals["shares"] = max(totals["shares"], val)
-                    elif action_type in ["onsite_conversion.post_save", "onsite_conversion.post_net_save"]:
-                        totals["saved"] = max(totals["saved"], val)
-                        
+            instagram_rows = [
+                row for row in data.get("data", [])
+                if row.get("publisher_platform") == "instagram"
+            ]
+            if instagram_rows:
+                # O alcance só é agregado pela própria API. Somar linhas com
+                # quebras adicionais poderia duplicar contas únicas.
+                totals["reach"] = sum(
+                    int(row.get("reach") or 0) for row in instagram_rows
+                )
+            for item in instagram_rows:
+                totals["impressions"] += int(item.get("impressions") or 0)
+                by_type = {
+                    action.get("action_type"): int(action.get("value") or 0)
+                    for action in item.get("actions", [])
+                    if action.get("action_type")
+                }
+                # Classes distintas não são intercambiáveis: curtida líquida
+                # não é reação, nem compartilhamento é impressão.
+                action_fields = {
+                    "likes": "onsite_conversion.post_net_like",
+                    "reactions": "post_reaction",
+                    "shares": "post",
+                }
+                for field, action_type in action_fields.items():
+                    if action_type in by_type:
+                        totals[field] = (totals[field] or 0) + by_type[action_type]
+                save_type = (
+                    "onsite_conversion.post_net_save"
+                    if "onsite_conversion.post_net_save" in by_type
+                    else "onsite_conversion.post_save"
+                )
+                if save_type in by_type:
+                    totals["saved"] = (totals["saved"] or 0) + by_type[save_type]
+
             return totals
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
