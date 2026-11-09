@@ -15,11 +15,15 @@ class InstagramStory(BaseModel):
     permalink: str = ""
     timestamp: str = ""
     caption: str = ""
-    reach: int = Field(default=0, description="Alcance orgânico do Story")
-    exits: int = Field(default=0, description="Saídas do Story")
-    replies: int = Field(default=0, description="Respostas (Replies)")
-    taps_forward: int = Field(default=0, description="Toques para avançar")
-    taps_back: int = Field(default=0, description="Toques para voltar")
+    views: int | None = Field(default=None, description="Visualizações retornadas")
+    reach: int | None = Field(default=None, description="Alcance do Story")
+    shares: int | None = Field(default=None)
+    replies: int | None = Field(default=None)
+    total_interactions: int | None = Field(default=None)
+    exits: int | None = Field(default=None, description="Navigation TAP_EXIT")
+    taps_forward: int | None = Field(default=None, description="Navigation TAP_FORWARD")
+    taps_back: int | None = Field(default=None, description="Navigation TAP_BACK")
+    navigation: dict[str, int] = Field(default_factory=dict)
 
 
 class InstagramMedia(BaseModel):

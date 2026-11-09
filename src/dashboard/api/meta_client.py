@@ -77,6 +77,121 @@ class MetaAdsClient:
                 "Não foi possível conectar aos servidores da Meta. Verifique sua conexão."
             )
 
+    def get_ads_history_range(self) -> dict[str, str]:
+        """Maior janela retroativa consultável, limitada pela idade da conta.
+
+        O limite de 37 meses é um teto da Marketing API, não uma promessa de
+        que existam dados desde o primeiro anúncio. A data inicial real dos
+        anúncios com entrega deve ser identificada nos Insights disponíveis.
+        """
+        import calendar
+
+        cached = getattr(self, "_ads_history_range", None)
+        if cached is not None:
+            return cached
+
+        today = datetime.date.today()
+        month_index = today.year * 12 + today.month - 1 - 37
+        year, month_zero = divmod(month_index, 12)
+        month = month_zero + 1
+        day = min(today.day, calendar.monthrange(year, month)[1])
+        # Um dia de margem contra o limite retroativo da API.
+        cutoff = datetime.date(year, month, day) + datetime.timedelta(days=1)
+        try:
+            account = self._make_request(self.ad_account_id, {"fields": "created_time"})
+            created = datetime.date.fromisoformat(
+                str(account["created_time"])[:10]
+            )
+            since = max(cutoff, created)
+        except (KeyError, TypeError, ValueError, MetaAPIError) as exc:
+            logger.warning("Data de criação da conta indisponível: %s", exc)
+            since = cutoff
+
+        self._ads_history_range = {
+            "since": since.isoformat(),
+            "until": today.isoformat(),
+        }
+        return self._ads_history_range
+
+    def get_ads_history_coverage(self) -> dict[str, Any]:
+        """Identifica o primeiro dia com entrega na janela consultável.
+
+        Consulta meses primeiro, depois dias do primeiro mês encontrado. A
+        ausência de dados no período não prova que a conta nunca teve anúncios.
+        """
+        requested = self.get_ads_history_range()
+        out: dict[str, Any] = {
+            "requested_since": requested["since"],
+            "requested_until": requested["until"],
+            "first_delivery": None,
+            "status": "indisponivel",
+            "note": "Não foi possível identificar o primeiro anúncio com entrega.",
+        }
+        try:
+            endpoint = f"{self.ad_account_id}/insights"
+            params = {
+                "level": "account",
+                "fields": "spend,impressions,date_start,date_stop",
+                "time_range": json.dumps(requested),
+                "time_increment": "monthly",
+                "limit": "1000",
+            }
+            months = []
+            seen = set()
+            while True:
+                response = self._make_request(endpoint, params)
+                months.extend(response.get("data", []))
+                after = response.get("paging", {}).get("cursors", {}).get("after")
+                if not response.get("paging", {}).get("next"):
+                    break
+                if not after or after in seen:
+                    raise MetaAPIError("Paginação de histórico de anúncios interrompida")
+                seen.add(after)
+                params["after"] = after
+
+            active_months = [
+                row for row in months
+                if float(row.get("spend") or 0) > 0
+                or int(row.get("impressions") or 0) > 0
+            ]
+            if not active_months:
+                out["status"] = "sem_entrega"
+                out["note"] = "Nenhuma entrega encontrada na janela consultável."
+                return out
+            first_month = min(active_months, key=lambda x: x.get("date_start", "9999"))
+            month_since = max(first_month["date_start"], requested["since"])
+            month_until = min(first_month["date_stop"], requested["until"])
+            daily_params = {
+                "level": "account",
+                "fields": "spend,impressions,date_start",
+                "time_range": json.dumps({"since": month_since, "until": month_until}),
+                "time_increment": 1,
+                "limit": "100",
+            }
+            first_date = month_since
+            try:
+                daily = self._make_request(endpoint, daily_params).get("data", [])
+                delivery_days = [
+                    row["date_start"] for row in daily
+                    if float(row.get("spend") or 0) > 0
+                    or int(row.get("impressions") or 0) > 0
+                ]
+                if delivery_days:
+                    first_date = min(delivery_days)
+            except (MetaAPIError, KeyError, TypeError, ValueError) as exc:
+                logger.warning("Precisão diária do início de anúncios indisponível: %s", exc)
+            out["first_delivery"] = first_date
+            out["status"] = "ok"
+            at_cutoff = first_date <= requested["since"]
+            out["note"] = (
+                "O histórico anterior ao limite retroativo da API pode não estar disponível."
+                if at_cutoff
+                else "Primeiro dia de entrega localizado dentro da janela consultável."
+            )
+        except (MetaAPIError, KeyError, TypeError, ValueError) as exc:
+            logger.warning("Não foi possível determinar cobertura histórica dos Ads: %s", exc)
+        return out
+
     def get_campaign_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> list[CampaignInsight]:
@@ -87,23 +202,34 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "campaign",
-            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,cpc,cpm,actions",
+            "fields": "campaign_name,campaign_id,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,cpc,cpm,actions,instagram_profile_follow,instagram_profile_visits",
             "limit": "1000",
         }
 
         if time_range:
             params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             params["date_preset"] = date_preset
 
         insights = []
         try:
             while True:
-                data = self._make_request(endpoint, params)
+                try:
+                    data = self._make_request(endpoint, params)
+                except MetaAPIError as exc:
+                    # Nem toda conta/consulta aceita os campos novos. A falha
+                    # não pode ocultar spend, impressões e ações tradicionais.
+                    if "instagram_profile_follow" not in params["fields"]:
+                        raise
+                    logger.warning(
+                        "Campos de seguidores/visitas não aceitos na consulta: %s", exc
+                    )
+                    params["fields"] = params["fields"].replace(
+                        ",instagram_profile_follow,instagram_profile_visits", ""
+                    )
+                    data = self._make_request(endpoint, params)
                 insights_data = data.get("data") or []
                 
                 for item in insights_data:
@@ -147,9 +273,7 @@ class MetaAdsClient:
             if time_range:
                 params["time_range"] = json.dumps(time_range)
             elif date_preset == "maximum":
-                since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-                until_dt = datetime.datetime.now()
-                params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+                params["time_range"] = json.dumps(self.get_ads_history_range())
             else:
                 params["date_preset"] = date_preset
 
@@ -212,9 +336,7 @@ class MetaAdsClient:
         if time_range:
             base_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            base_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            base_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             base_params["date_preset"] = date_preset
 
@@ -274,23 +396,30 @@ class MetaAdsClient:
         endpoint = f"{self.ad_account_id}/insights"
         params = {
             "level": "ad",
-            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions",
+            "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,instagram_profile_follow,instagram_profile_visits",
             "breakdowns": "publisher_platform",
             "limit": "1000",
         }
         if time_range:
             params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             params["date_preset"] = date_preset
 
         insights_data = []
         try:
             while True:
-                data = self._make_request(endpoint, params)
+                try:
+                    data = self._make_request(endpoint, params)
+                except MetaAPIError as exc:
+                    if "instagram_profile_follow" not in params["fields"]:
+                        raise
+                    logger.warning("Campos extras dos criativos indisponíveis: %s", exc)
+                    params["fields"] = params["fields"].replace(
+                        ",instagram_profile_follow,instagram_profile_visits", ""
+                    )
+                    data = self._make_request(endpoint, params)
                 insights_data.extend(data.get("data", []))
                 paging = data.get("paging", {})
                 if "cursors" in paging and "after" in paging["cursors"]:
@@ -374,8 +503,18 @@ class MetaAdsClient:
             action_metrics = parse_paid_actions(item.get("actions"))
             leads = action_metrics["leads"]
             whatsapp = action_metrics["messaging_conversations"]
-            instagram_follows = action_metrics["instagram_follows"]
-            profile_visits = action_metrics["profile_visits"]
+            # Priorizar campos diretos de Ads quando presentes; actions
+            # permanece como fallback para contas sem disponibilidade.
+            instagram_follows = (
+                int(item["instagram_profile_follow"])
+                if item.get("instagram_profile_follow") is not None
+                else action_metrics["instagram_follows"]
+            )
+            profile_visits = (
+                int(item["instagram_profile_visits"])
+                if item.get("instagram_profile_visits") is not None
+                else action_metrics["profile_visits"]
+            )
                     
             if instagram_follows == 0:
                 instagram_follows = int(item.get("instagram_follows", 0))
@@ -573,9 +712,7 @@ class MetaAdsClient:
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            insights_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             insights_params["date_preset"] = date_preset
 
@@ -852,6 +989,10 @@ class MetaAdsClient:
         for ig_id, ig_data in ig_mapping.items():
             ad_ids = ig_data.pop("_ad_ids", [])
             if len(ad_ids) > 1:
+                # O alcance de anúncios diferentes não é aditivo. Nunca
+                # oferecer a soma como alcance desduplicado quando a chamada
+                # agregada falhar ou a Meta não retornar esse dado.
+                ig_data["reach"] = None
                 try:
                     summary_params = {
                         "level": "account",
@@ -862,9 +1003,7 @@ class MetaAdsClient:
                     if time_range:
                         summary_params["time_range"] = json.dumps(time_range)
                     elif date_preset == "maximum":
-                        since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-                        until_dt = datetime.datetime.now()
-                        summary_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+                        summary_params["time_range"] = json.dumps(self.get_ads_history_range())
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
@@ -873,11 +1012,15 @@ class MetaAdsClient:
                         for row in resp.get("data", [])
                         if row.get("publisher_platform") == "instagram"
                     )
-                    if summary_reach > 0:
+                    if any(
+                        row.get("publisher_platform") == "instagram"
+                        and row.get("reach") is not None
+                        for row in resp.get("data", [])
+                    ):
                         ig_data["reach"] = summary_reach
                 except Exception as e:
                     logger.warning(f"Falha ao buscar reach desduplicado para {ig_id}: {e}")
-                    # Mantém a soma como fallback
+                    # Mantém N/D; somar usuários únicos inflaria o alcance.
 
             # Garantia de paridade com Ads Manager:
             # - 1 anúncio: usa valores EXATOS da API (bit-a-bit idêntico ao Ads Manager)
@@ -901,8 +1044,8 @@ class MetaAdsClient:
                 ig_data["cpm"] = (spend / impressions) * 1000 if impressions > 0 else 0.0
                 ig_data["cpc"] = spend / clicks if clicks > 0 else 0.0
                 ig_data["ctr"] = (clicks / impressions) * 100 if impressions > 0 else 0.0
-                ig_data["cpp"] = (spend / reach) * 1000 if reach > 0 else 0.0
-                ig_data["frequency"] = impressions / reach if reach > 0 else 0.0
+                ig_data["cpp"] = (spend / reach) * 1000 if reach is not None and reach > 0 else None
+                ig_data["frequency"] = impressions / reach if reach is not None and reach > 0 else None
                 ig_data["cost_per_outbound_click"] = spend / link_clicks if link_clicks > 0 else 0.0
                 ig_data["roas"] = action_values / spend if spend > 0 else 0.0
                 # This derived cost is unavailable when the canonical net-like
@@ -937,33 +1080,51 @@ class MetaAdsClient:
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            insights_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             insights_params["date_preset"] = date_preset
 
-        totals = {"reach": 0, "impressions": 0, "likes": 0, "shares": 0, "saved": 0}
-        
+        totals = {
+            "reach": None, "impressions": 0,
+            "likes": None, "reactions": None, "shares": None, "saved": None,
+        }
+
         try:
             data = self._make_request(insights_endpoint, insights_params)
-            for item in data.get("data", []):
-                if item.get("publisher_platform") != "instagram":
-                    continue
-                totals["reach"] += int(item.get("reach", 0))
-                totals["impressions"] += int(item.get("impressions", 0))
-                
-                actions = item.get("actions", [])
-                for action in actions:
-                    action_type = action.get("action_type")
-                    val = int(action.get("value", 0))
-                    if action_type in ["like", "onsite_conversion.post_net_like", "post_reaction"]:
-                        totals["likes"] = max(totals["likes"], val)
-                    elif action_type == "post":
-                        totals["shares"] = max(totals["shares"], val)
-                    elif action_type in ["onsite_conversion.post_save", "onsite_conversion.post_net_save"]:
-                        totals["saved"] = max(totals["saved"], val)
-                        
+            instagram_rows = [
+                row for row in data.get("data", [])
+                if row.get("publisher_platform") == "instagram"
+            ]
+            if len(instagram_rows) == 1:
+                # Sem outra quebra, a API já agregou o alcance do Instagram.
+                value = instagram_rows[0].get("reach")
+                totals["reach"] = int(value) if value is not None else None
+            # Mais de uma linha: não inferir alcance único somando pessoas.
+            for item in instagram_rows:
+                totals["impressions"] += int(item.get("impressions") or 0)
+                by_type = {
+                    action.get("action_type"): int(action.get("value") or 0)
+                    for action in item.get("actions", [])
+                    if action.get("action_type")
+                }
+                # Classes distintas não são intercambiáveis: curtida líquida
+                # não é reação, nem compartilhamento é impressão.
+                action_fields = {
+                    "likes": "onsite_conversion.post_net_like",
+                    "reactions": "post_reaction",
+                    "shares": "post",
+                }
+                for field, action_type in action_fields.items():
+                    if action_type in by_type:
+                        totals[field] = (totals[field] or 0) + by_type[action_type]
+                save_type = (
+                    "onsite_conversion.post_net_save"
+                    if "onsite_conversion.post_net_save" in by_type
+                    else "onsite_conversion.post_save"
+                )
+                if save_type in by_type:
+                    totals["saved"] = (totals["saved"] or 0) + by_type[save_type]
+
             return totals
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar paid totals consolidados: {e}")
