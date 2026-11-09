@@ -132,7 +132,6 @@ def render_organic_page(date_preset, time_range, client):
         render_organic_history_summary,
         render_organic_metrics_cards,
         render_posts_table,
-        render_profile_bio_header,
         render_top_posts_and_comments,
     )
 
@@ -142,17 +141,6 @@ def render_organic_page(date_preset, time_range, client):
         "O filtro seleciona a data de publicação. Os Insights mostram os resultados acumulados "
         "dessas publicações até a consulta, não somente as interações ocorridas no período."
     )
-
-    # 1. Métricas de perfil e bio visíveis no topo da tela
-    try:
-        profile_info = data_loader.fetch_account_profile_cached(client.name)
-        if profile_info and any(profile_info.values()):
-            render_profile_bio_header(profile_info, client.name)
-    except Exception as error:
-        logger.warning(
-            f"Erro ao carregar dados do perfil de {client.name}: {error}"
-        )
-        sentry_sdk.capture_exception(error)
 
     tab_posts, tab_growth, tab_audience = st.tabs([
         "📊 Publicações & Conteúdo",
