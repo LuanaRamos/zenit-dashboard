@@ -1,4 +1,5 @@
 import datetime
+import unicodedata
 import streamlit as st
 from streamlit_option_menu import option_menu
 from core.config import ClientConfig
@@ -11,6 +12,13 @@ from pathlib import Path
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
+
+
+def _client_name_sort_key(name: str) -> tuple[str, str, str]:
+    folded = name.casefold()
+    normalized = unicodedata.normalize("NFD", folded)
+    unaccented = "".join(char for char in normalized if not unicodedata.combining(char))
+    return unaccented, folded, name
 
 
 def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
@@ -46,13 +54,10 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             st.error("⚠️ Nenhum cliente configurado no sistema (CLIENTS_JSON).")
             st.stop()
 
-        client_names = [c.name for c in clients]
-        if "selected_client_name" not in st.session_state:
-            st.session_state["selected_client_name"] = client_names[0]
-
-        # Garante que o cliente salvo na sessao ainda existe na config
-        if st.session_state["selected_client_name"] not in client_names:
-            st.session_state["selected_client_name"] = client_names[0]
+        client_names = sorted((client.name for client in clients), key=_client_name_sort_key)
+        # A ordem do menu é independente do cliente padrão definido na configuração.
+        if st.session_state.get("selected_client_name") not in client_names:
+            st.session_state["selected_client_name"] = clients[0].name
 
         st.markdown(
             "<h4 style='color: #c4c9ac; font-size: 0.72rem; margin-top: 4px; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>",
@@ -66,7 +71,6 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         selected_client_name = st.selectbox(
             "Selecione o Cliente",
             options=client_names,
-            index=client_names.index(st.session_state["selected_client_name"]),
             key="selected_client_name",
             label_visibility="collapsed",
             on_change=on_client_change,
