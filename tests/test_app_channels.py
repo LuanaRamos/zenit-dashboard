@@ -132,14 +132,13 @@ def test_ads_comparison_failure_keeps_organic_results(monkeypatch):
     assert [text.value for text in app.markdown if "kpi-card" in text.value] == before
 
 
-def test_organic_page_renders_profile_bio_header(monkeypatch):
+def test_organic_page_does_not_render_profile_bio_header(monkeypatch):
     organic_app(monkeypatch)
     app = AppTest.from_file(str(APP)).run(timeout=15)
     assert not app.exception
     assert not app.error
     visible = "\n".join(text.value for text in app.markdown)
-    assert "cliente_teste" in visible
-    assert "Biografia da conta de teste" in visible
+    assert "Biografia da conta de teste" not in visible
 
 
 def test_organic_page_renders_top_posts_ranking_by_reach(monkeypatch):
