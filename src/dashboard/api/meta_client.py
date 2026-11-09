@@ -77,6 +77,42 @@ class MetaAdsClient:
                 "Não foi possível conectar aos servidores da Meta. Verifique sua conexão."
             )
 
+    def get_ads_history_range(self) -> dict[str, str]:
+        """Maior janela retroativa consultável, limitada pela idade da conta.
+
+        O limite de 37 meses é um teto da Marketing API, não uma promessa de
+        que existam dados desde o primeiro anúncio. A data inicial real dos
+        anúncios com entrega deve ser identificada nos Insights disponíveis.
+        """
+        import calendar
+
+        cached = getattr(self, "_ads_history_range", None)
+        if cached is not None:
+            return cached
+
+        today = datetime.date.today()
+        month_index = today.year * 12 + today.month - 1 - 37
+        year, month_zero = divmod(month_index, 12)
+        month = month_zero + 1
+        day = min(today.day, calendar.monthrange(year, month)[1])
+        # Um dia de margem contra o limite retroativo da API.
+        cutoff = datetime.date(year, month, day) + datetime.timedelta(days=1)
+        try:
+            account = self._make_request(self.ad_account_id, {"fields": "created_time"})
+            created = datetime.date.fromisoformat(
+                str(account["created_time"])[:10]
+            )
+            since = max(cutoff, created)
+        except (KeyError, TypeError, ValueError, MetaAPIError) as exc:
+            logger.warning("Data de criação da conta indisponível: %s", exc)
+            since = cutoff
+
+        self._ads_history_range = {
+            "since": since.isoformat(),
+            "until": today.isoformat(),
+        }
+        return self._ads_history_range
+
     def get_campaign_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> list[CampaignInsight]:
@@ -94,9 +130,7 @@ class MetaAdsClient:
         if time_range:
             params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             params["date_preset"] = date_preset
 
@@ -147,9 +181,7 @@ class MetaAdsClient:
             if time_range:
                 params["time_range"] = json.dumps(time_range)
             elif date_preset == "maximum":
-                since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-                until_dt = datetime.datetime.now()
-                params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            params["time_range"] = json.dumps(self.get_ads_history_range())
             else:
                 params["date_preset"] = date_preset
 
@@ -212,9 +244,7 @@ class MetaAdsClient:
         if time_range:
             base_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            base_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            base_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             base_params["date_preset"] = date_preset
 
@@ -281,9 +311,7 @@ class MetaAdsClient:
         if time_range:
             params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             params["date_preset"] = date_preset
 
@@ -573,9 +601,7 @@ class MetaAdsClient:
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            insights_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             insights_params["date_preset"] = date_preset
 
@@ -862,9 +888,7 @@ class MetaAdsClient:
                     if time_range:
                         summary_params["time_range"] = json.dumps(time_range)
                     elif date_preset == "maximum":
-                        since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-                        until_dt = datetime.datetime.now()
-                        summary_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            summary_params["time_range"] = json.dumps(self.get_ads_history_range())
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
@@ -937,9 +961,7 @@ class MetaAdsClient:
         if time_range:
             insights_params["time_range"] = json.dumps(time_range)
         elif date_preset == "maximum":
-            since_dt = datetime.datetime.now() - datetime.timedelta(days=395)
-            until_dt = datetime.datetime.now()
-            insights_params["time_range"] = json.dumps({"since": since_dt.strftime("%Y-%m-%d"), "until": until_dt.strftime("%Y-%m-%d")})
+            insights_params["time_range"] = json.dumps(self.get_ads_history_range())
         else:
             insights_params["date_preset"] = date_preset
 
