@@ -132,7 +132,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             "Período de Análise",
             [
                 "Últimos 30 Dias",
-                "Histórico disponível",
+                "Todo o histórico disponível",
                 "Personalizado",
             ],
             label_visibility="collapsed",
@@ -145,16 +145,29 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         date_preset = "last_30d"
         time_range = None
 
-        if periodo_selecionado == "Histórico disponível":
+        if periodo_selecionado == "Todo o histórico disponível":
             date_preset = "maximum"
             if selected_module == "Orgânico (Instagram)":
-                st.caption("Desde a primeira publicação disponível do perfil selecionado.")
-            else:
-                ads_start = datetime.date.today() - datetime.timedelta(days=395)
                 st.caption(
-                    f"Histórico de Ads consultado: {ads_start:%d/%m/%Y} a "
-                    f"{datetime.date.today():%d/%m/%Y}."
+                    "Publicações: desde o primeiro post acessível. Insights da conta: "
+                    "maior período retornado por métrica, com avisos de cobertura."
                 )
+            else:
+                from ui.data_loader import fetch_ads_history_coverage_cached
+
+                history = fetch_ads_history_coverage_cached(selected_client.name)
+                if history.get("status") == "ok":
+                    st.caption(
+                        "Primeira entrega recuperável: "
+                        f"{history.get('first_delivery', 'N/D')}. "
+                        f"Consulta desde {history.get('requested_since', 'N/D')}. "
+                        "A API pode não fornecer anúncios anteriores ao seu limite histórico."
+                    )
+                else:
+                    st.caption(
+                        "Buscando a maior janela permitida da API. "
+                        + history.get("note", "Início de veiculação não confirmado.")
+                    )
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
 
@@ -185,17 +198,18 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     st.stop()
                 else:
                     delta = end_date - start_date
-                    # Meta API restricts custom time_range to ~37 months (approx 1125 days).
-                    if delta.days > 1125:
+                    if selected_module == "Visão Geral (Ads)" and delta.days > 1125:
                         st.warning(
-                            "⚠️ A API da Meta permite um intervalo personalizado máximo de 37 meses (aprox. 3 anos). Para ver todo o histórico, selecione 'Histórico disponível' no filtro acima."
+                            "O intervalo solicitado ultrapassa a janela retroativa "
+                            "usual de 37 meses dos Insights de anúncios. "
+                            "Use 'Todo o histórico disponível' para consultar o máximo "
+                            "recuperável com indicação da cobertura."
                         )
                         st.stop()
-                    else:
-                        time_range = {
-                            "since": start_date.strftime("%Y-%m-%d"),
-                            "until": end_date.strftime("%Y-%m-%d"),
-                        }
+                    time_range = {
+                        "since": start_date.strftime("%Y-%m-%d"),
+                        "until": end_date.strftime("%Y-%m-%d"),
+                    }
             else:
                 st.warning("Selecione a data inicial e final.")
                 st.stop()
