@@ -303,6 +303,100 @@ def render_account_insights_cards(
         st.empty()
 
 
+# Na visão de conta, o filtro representa a DATA DA INTERAÇÃO. Em cada
+# publicação, as métricas de Media Insights são acumuladas desde a postagem.
+ACCOUNT_ENGAGEMENT_METRICS = (
+    ("Curtidas recebidas", "likes"),
+    ("Comentários recebidos", "comments"),
+    ("Compartilhamentos", "shares"),
+    ("Salvamentos", "saves"),
+    ("Interações totais", "total_interactions"),
+    ("Visualizações", "views"),
+    ("Alcance único", "reach"),
+    ("Contas engajadas", "accounts_engaged"),
+    ("Respostas aos Stories", "replies"),
+    ("Republicações", "reposts"),
+    ("Toques nos botões de contato", "profile_links_taps"),
+    ("Cliques na URL específica da bio", "bio_url_clicks"),
+)
+
+
+def account_engagement_rows(insights: dict) -> list[dict[str, Any]]:
+    """Uma linha por métrica com fonte, disponibilidade e datas efetivas."""
+    coverage = insights.get("_coverage") or {}
+    rows = []
+    for label, key in ACCOUNT_ENGAGEMENT_METRICS:
+        value = insights.get(key)
+        scope = coverage.get(key) or {}
+        if key == "bio_url_clicks":
+            value = None
+            scope = {
+                "status": "nao_fornecido_pela_meta",
+                "note": (
+                    "A API não informa cliques de uma URL externa específica. "
+                    "Requer link rastreável próprio ou analytics do destino."
+                ),
+            }
+        rows.append({
+            "Indicador": label,
+            "Campo API": key if key != "bio_url_clicks" else "Sem campo equivalente",
+            "Valor": value,
+            "Status": scope.get("status") or "indisponivel",
+            "Início efetivo": scope.get("since"),
+            "Fim efetivo": scope.get("until"),
+            "Observação": scope.get("note", ""),
+            "Fonte": "Instagram Graph API / Insights" if key != "bio_url_clicks" else "Rastreamento externo necessário",
+        })
+    return rows
+
+
+def render_account_engagement_summary(insights: dict) -> None:
+    """Mostra a atividade do período antes do ranking e dos posts."""
+    st.markdown("### Engajamento e atividade da conta")
+    st.caption(
+        "Esses indicadores usam a data da interação no período filtrado. "
+        "Os totais da conta podem incluir conteúdo promovido, conforme a definição "
+        "da Meta; não são necessariamente exclusivamente orgânicos."
+    )
+    rows = account_engagement_rows(insights)
+    for offset in range(0, len(rows), 4):
+        columns = st.columns(4)
+        for column, row in zip(columns, rows[offset:offset + 4]):
+            with column:
+                st.metric(row["Indicador"], _format_optional_int(row["Valor"]))
+                if row["Início efetivo"] and row["Fim efetivo"]:
+                    st.caption(
+                        f"{row['Início efetivo']} a {row['Fim efetivo']}"
+                        + (" · Parcial" if row["Status"] == "parcial" else "")
+                    )
+                else:
+                    st.caption("Indisponível na API" if row["Valor"] is None else "Sem cobertura informada")
+
+    st.info(
+        "Toques nos botões de contato (profile_links_taps) não são cliques "
+        "na URL externa da bio. Para contar cliques em uma URL específica, "
+        "use um link rastreável ou registre a chegada no site."
+    )
+    with st.expander("Fonte, cobertura e disponibilidade de cada indicador"):
+        for row in rows:
+            scope = (
+                f"{row['Início efetivo']} até {row['Fim efetivo']}"
+                if row["Início efetivo"] and row["Fim efetivo"]
+                else "período indisponível"
+            )
+            st.markdown(
+                f"**{row['Indicador']}** · {row['Status']} · "
+                f"{scope}. {row['Observação']}"
+            )
+    st.download_button(
+        label="Baixar CSV de engajamento da conta",
+        data=pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig"),
+        file_name="engajamento_conta_instagram.csv",
+        mime="text/csv",
+        key="download_ig_account_engagement",
+    )
+
+
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Render the four confirmed organic Media Insights aggregates."""
     st.markdown("### 📊 Desempenho orgânico das publicações")
@@ -350,10 +444,16 @@ ORGANIC_POST_COLUMNS = [
 ]
 
 ORGANIC_POST_EXPORT_COLUMNS = ORGANIC_POST_COLUMNS + [
-    "ID da publicação",
-    "Legenda",
-    "URL da mídia",
-    "URL da miniatura",
+    "ID da publicação", "Legenda", "URL da mídia", "URL da miniatura",
+    "Tipo de mídia (API)", "Produto de mídia (API)",
+    "Alcance (Media Insights)", "Compartilhamentos (Media Insights)",
+    "Salvamentos (Media Insights)",
+    "Curtidas públicas (objeto mídia)", "Comentários públicos (objeto mídia)",
+    "Tempo total de Reel (ms)", "Tempo médio de Reel (ms)",
+    "Visitas ao perfil atribuídas à publicação", "Seguidores atribuídos à publicação",
+    "Atividade do perfil (publicação)", "Cliques na bio atribuídos à publicação",
+    "Status da coleta de Insights", "Métricas retornadas", "Métricas indisponíveis",
+    "Origem dos valores",
 ]
 
 
@@ -378,6 +478,23 @@ def _organic_post_rows(
                 "Legenda": _value(media, "caption", ""),
                 "URL da mídia": _value(media, "media_url", ""),
                 "URL da miniatura": _value(media, "thumbnail_url", ""),
+                "Tipo de mídia (API)": _value(media, "media_type", ""),
+                "Produto de mídia (API)": _value(media, "media_product_type", ""),
+                "Alcance (Media Insights)": _value(media, "reach"),
+                "Compartilhamentos (Media Insights)": _value(media, "shares"),
+                "Salvamentos (Media Insights)": _value(media, "saved"),
+                "Curtidas públicas (objeto mídia)": _value(media, "visible_like_count"),
+                "Comentários públicos (objeto mídia)": _value(media, "visible_comments_count"),
+                "Tempo total de Reel (ms)": _value(media, "ig_reels_video_view_total_time"),
+                "Tempo médio de Reel (ms)": _value(media, "ig_reels_avg_watch_time"),
+                "Visitas ao perfil atribuídas à publicação": _value(media, "profile_visits"),
+                "Seguidores atribuídos à publicação": _value(media, "follows"),
+                "Atividade do perfil (publicação)": _value(media, "profile_activity"),
+                "Cliques na bio atribuídos à publicação": _value(media, "bio_link_clicks"),
+                "Status da coleta de Insights": _value(media, "insights_status", "indisponivel"),
+                "Métricas retornadas": ", ".join(_value(media, "insights_available", ()) or ()),
+                "Métricas indisponíveis": ", ".join(_value(media, "insights_missing", ()) or ()),
+                "Origem dos valores": "Instagram Graph API: objeto mídia e Media Insights",
             }
         )
     return rows
@@ -412,13 +529,23 @@ def render_posts_table(
         st.info("Nenhuma publicação corresponde ao filtro selecionado.")
         return
 
+    # A exportação não herda o filtro de formato da tabela: inclui todas
+    # as publicações que a consulta carregou no período global selecionado.
+    export_rows = _organic_post_rows(media_list, "Todos")
     st.download_button(
-        label="⬇ Baixar CSV orgânico",
-        data=pd.DataFrame(rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
+        label="Baixar CSV completo das publicações carregadas",
+        data=pd.DataFrame(export_rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
         .to_csv(index=False)
         .encode("utf-8-sig"),
-        file_name="publicacoes_organicas.csv",
+        file_name="publicacoes_instagram_completo.csv",
         mime="text/csv",
+        key="download_all_ig_posts",
+    )
+    st.caption(
+        f"CSV: {len(export_rows)} publicações carregadas, independentemente do "
+        "filtro de formato desta tabela. Para exportar todo o perfil acessível, "
+        "escolha 'Todo o histórico disponível' no menu lateral. "
+        "Campos não retornados pela API ficam vazios."
     )
     render_glass_table(
         dataframe,

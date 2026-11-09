@@ -131,6 +131,7 @@ def render_organic_page(date_preset, time_range, client):
         render_metric_card,
         render_organic_history_summary,
         render_organic_metrics_cards,
+        render_account_engagement_summary,
         render_posts_table,
         render_top_posts_and_comments,
     )
@@ -140,6 +141,26 @@ def render_organic_page(date_preset, time_range, client):
     st.caption(
         "O filtro seleciona a data de publicação. Os Insights mostram os resultados acumulados "
         "dessas publicações até a consulta, não somente as interações ocorridas no período."
+    )
+
+    # Primeiro bloco visível: atividade do período, independente da data
+    # de publicação dos posts listados nas abas abaixo.
+    account_insights = {}
+    try:
+        with st.spinner("Consultando engajamento da conta no período..."):
+            account_insights = data_loader.fetch_account_insights_cached(
+                client.name, date_preset, time_range
+            )
+    except Exception as error:
+        logger.warning("Não foi possível carregar Insights da conta: %s", error)
+
+    render_account_engagement_summary(account_insights)
+
+    st.divider()
+    st.caption(
+        "A tabela abaixo filtra posts pela data de publicação. Já os cartões "
+        "acima consultam a atividade ocorrida nas datas disponíveis da API. "
+        "Métricas acumuladas de posts não são contagens por dia de interação."
     )
 
     tab_posts, tab_growth, tab_audience = st.tabs([
@@ -216,7 +237,7 @@ def render_organic_page(date_preset, time_range, client):
 
         # 2. Ações no perfil (visitas, toques no link, engajamento)
         try:
-            insights = data_loader.fetch_account_insights_cached(client.name, date_preset, time_range)
+            insights = account_insights
             if insights:
                 st.write("")
                 st.markdown("#### 📅 Insights da Conta e Cobertura")
@@ -280,16 +301,16 @@ def render_organic_page(date_preset, time_range, client):
                 with cols_act[0]:
                     render_metric_card(
                         "Visitas ao Perfil",
-                        _fmt(insights.get("profile_views", 0)),
+                        _fmt(insights.get("profile_views")),
                         "Acessos à bio",
                         "Indisponível: sem variável substituta equivalente validada",
                     )
                 with cols_act[1]:
                     render_metric_card(
-                        "Cliques no Link",
-                        _fmt(insights.get("profile_links_taps", 0)),
-                        "Cliques no site",
-                        "Conversões diretas pelo link da bio",
+                        "Toques em links/botões do perfil",
+                        _fmt(insights.get("profile_links_taps")),
+                        "Fonte: profile_links_taps",
+                        "Métrica agregada, não identifica a URL específica da bio",
                     )
                 with cols_act[2]:
                     engaged = insights.get("accounts_engaged")

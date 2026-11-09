@@ -89,6 +89,10 @@ class InstagramMedia(BaseModel):
     profile_activity: int | None = Field(default=None)
     profile_visits: int | None = Field(default=None)
     follows: int | None = Field(default=None)
+    bio_link_clicks: int | None = Field(default=None)
+    insights_status: str = "indisponivel"
+    insights_available: tuple[str, ...] = ()
+    insights_missing: tuple[str, ...] = ()
 
 
 

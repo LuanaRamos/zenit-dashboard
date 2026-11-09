@@ -195,133 +195,114 @@ class InstagramClient:
             cursors_seen.add(after)
             params["after"] = after
 
-        # Batch Request para puxar Insights sem N+1 queries
-        insights_map = {}
-        batch_requests = []
+        # Consultas em lote separadas por família de métricas. Uma métrica
+        # não suportada não pode invalidar todas as outras do mesmo post.
+        base_metrics = ("reach", "views", "likes", "comments", "saved",
+                        "shares", "total_interactions")
+        reel_metrics = ("ig_reels_video_view_total_time", "ig_reels_avg_watch_time")
+        profile_metrics = ("profile_activity", "profile_visits", "follows")
+        requested_by_media = {}
         for item in media_items_data:
-            ig_id = item.get("id")
-            media_product_type = item.get("media_product_type", "")
-            media_type = item.get("media_type", "")
-            if media_product_type == "REELS":
-                metrics = (
-                    "reach,saved,shares,likes,comments,total_interactions,"
-                    "ig_reels_video_view_total_time,ig_reels_avg_watch_time,views"
-                )
-            elif media_type == "VIDEO":
-                metrics = "reach,views,saved,shares,likes,comments,total_interactions"
-            else:
-                metrics = "reach,views,saved,shares,likes,comments,total_interactions"
+            media_id = str(item.get("id") or "")
+            if not media_id:
+                continue
+            relevant = list(base_metrics)
+            if item.get("media_product_type") == "REELS":
+                relevant.extend(reel_metrics)
+                relevant.extend(profile_metrics)
+            requested_by_media[media_id] = tuple(relevant)
 
-            batch_requests.append(
-                {
-                    "method": "GET",
-                    "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
-                }
-            )
+        metrics_by_media: dict[str, dict] = {
+            media_id: {} for media_id in requested_by_media
+        }
 
-        for i in range(0, len(batch_requests), 50):
-            chunk = batch_requests[i : i + 50]
-            try:
-                batch_res = self.session.post(
-                    self.BATCH_URL,
-                    data={"access_token": self.token, "batch": json.dumps(chunk)},
-                    timeout=20,
-                )
-                batch_res.raise_for_status()
-
-                fallback_requests = []
-                fallback_indices = []
-
-                for j, response_item in enumerate(batch_res.json()):
-                    req_idx = i + j
-                    ig_id = media_items_data[req_idx]["id"]
-
-                    if response_item.get("code") == 200:
-                        body = json.loads(response_item.get("body", "{}"))
-                        insights_map[ig_id] = body.get("data", [])
-                    else:
-                        metrics = (
-                            "total_interactions,reach,views,saved,shares,likes,comments"
-                        )
-                        fallback_requests.append(
-                            {
-                                "method": "GET",
-                                "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric={metrics}",
-                            }
-                        )
-                        fallback_indices.append(req_idx)
-
-                if fallback_requests:
-                    fallback_res = self.session.post(
+        def fetch_metric_batch(requests_list):
+            """Processa no máximo 50 GETs por POST, sem mascarar HTTP 400."""
+            responses = {}
+            for offset in range(0, len(requests_list), 50):
+                chunk = requests_list[offset:offset + 50]
+                try:
+                    batch = self.session.post(
                         self.BATCH_URL,
                         data={
                             "access_token": self.token,
-                            "batch": json.dumps(fallback_requests),
+                            "batch": json.dumps([
+                                {
+                                    "method": "GET",
+                                    "relative_url": (
+                                        f"/{self.API_VERSION}/{media_id}/insights"
+                                        f"?metric={','.join(names)}"
+                                    ),
+                                }
+                                for media_id, names in chunk
+                            ]),
                         },
-                        timeout=20,
+                        timeout=30,
                     )
+                    batch.raise_for_status()
+                    payload = batch.json()
+                    for (media_id, names), row in zip(chunk, payload):
+                        if row.get("code") != 200:
+                            continue
+                        body = json.loads(row.get("body") or "{}")
+                        extracted = {}
+                        for insight in body.get("data", []):
+                            name = insight.get("name")
+                            if name not in names:
+                                continue
+                            raw = (insight.get("total_value") or {}).get("value")
+                            if raw is None:
+                                values = insight.get("values") or []
+                                raw = values[0].get("value") if values else None
+                            if isinstance(raw, (int, float)):
+                                extracted[name] = raw
+                        responses[(media_id, names)] = extracted
+                except Exception as exc:
+                    logger.warning("Batch de Insights de mídia indisponível: %s", exc)
+            return responses
 
-                    ultra_fallback_requests = []
-                    ultra_fallback_indices = []
-
-                    if fallback_res.status_code == 200:
-                        for j, fallback_item in enumerate(fallback_res.json()):
-                            req_idx = fallback_indices[j]
-                            ig_id = media_items_data[req_idx]["id"]
-
-                            if fallback_item.get("code") == 200:
-                                body = json.loads(fallback_item.get("body", "{}"))
-                                insights_map[ig_id] = body.get("data", [])
-                            else:
-                                ultra_fallback_requests.append(
-                                    {
-                                        "method": "GET",
-                                        "relative_url": f"/{self.API_VERSION}/{ig_id}/insights?metric=reach",
-                                    }
-                                )
-                                ultra_fallback_indices.append(req_idx)
-
-                    if ultra_fallback_requests:
-                        ultra_res = self.session.post(
-                            self.BATCH_URL,
-                            data={
-                                "access_token": self.token,
-                                "batch": json.dumps(ultra_fallback_requests),
-                            },
-                            timeout=20,
-                        )
-                        if ultra_res.status_code == 200:
-                            for j, ultra_item in enumerate(ultra_res.json()):
-                                req_idx = ultra_fallback_indices[j]
-                                ig_id = media_items_data[req_idx]["id"]
-
-                                if ultra_item.get("code") == 200:
-                                    body = json.loads(ultra_item.get("body", "{}"))
-                                    insights_map[ig_id] = body.get("data", [])
-                                else:
-                                    body = json.loads(ultra_item.get("body", "{}"))
-                                    err_msg = body.get("error", {}).get(
-                                        "message", "Unknown API Error"
-                                    )
-                                    logger.warning(
-                                        f"Ultra-Fallback falhou para {ig_id}: {err_msg}"
-                                    )
-
-            except Exception as e:
-                logger.error(f"Erro no Batch de Insights: {e}")
-                sentry_sdk.capture_exception(e)
+        # Prioriza grupos menores de métricas. Campos de Reel só são
+        # consultados para Reels, e falhas geram fallback por campo.
+        groups = (
+            ("reach", "views"),
+            ("likes", "comments", "saved", "shares", "total_interactions"),
+            reel_metrics,
+            profile_metrics,
+        )
+        for group in groups:
+            requests_list = [
+                (media_id, tuple(metric for metric in group
+                                 if metric in requested_by_media[media_id]))
+                for media_id in requested_by_media
+            ]
+            requests_list = [(mid, names) for mid, names in requests_list if names]
+            batched = fetch_metric_batch(requests_list)
+            retry = []
+            for media_id, names in requests_list:
+                got = batched.get((media_id, names), {})
+                metrics_by_media[media_id].update(got)
+                missing = [name for name in names if name not in got]
+                if missing and len(names) > 1:
+                    retry.extend((media_id, (metric,)) for metric in missing)
+            if retry:
+                for (media_id, names), found in fetch_metric_batch(retry).items():
+                    metrics_by_media[media_id].update(found)
 
         media_list = []
         for item in media_items_data:
-            ig_id = item.get("id")
-            insights_data = insights_map.get(ig_id, [])
-
-            metrics_dict = {}
-            for insight in insights_data:
-                name = insight.get("name")
-                values = insight.get("values", [])
-                if values:
-                    metrics_dict[name] = values[0].get("value", 0)
+            ig_id = str(item.get("id") or "")
+            if not ig_id:
+                continue
+            metrics_dict = metrics_by_media.get(ig_id, {})
+            expected = requested_by_media.get(ig_id, ())
+            present = tuple(name for name in expected if name in metrics_dict)
+            missing = tuple(name for name in expected if name not in metrics_dict)
+            if not expected or not present:
+                status = "indisponivel"
+            elif missing:
+                status = "parcial"
+            else:
+                status = "ok"
 
             try:
                 media = InstagramMedia(
@@ -351,10 +332,13 @@ class InstagramClient:
                     profile_activity=metrics_dict.get("profile_activity"),
                     profile_visits=metrics_dict.get("profile_visits"),
                     follows=metrics_dict.get("follows"),
+                    insights_status=status,
+                    insights_available=present,
+                    insights_missing=missing,
                 )
                 media_list.append(media)
-            except Exception as e:
-                logger.warning(f"Erro ao parsear a mídia do Instagram {ig_id}: {e}")
+            except Exception as exc:
+                logger.warning("Erro ao interpretar mídia do Instagram %s: %s", ig_id, exc)
 
         return media_list
 
