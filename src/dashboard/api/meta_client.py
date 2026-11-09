@@ -273,7 +273,7 @@ class MetaAdsClient:
             if time_range:
                 params["time_range"] = json.dumps(time_range)
             elif date_preset == "maximum":
-            params["time_range"] = json.dumps(self.get_ads_history_range())
+                params["time_range"] = json.dumps(self.get_ads_history_range())
             else:
                 params["date_preset"] = date_preset
 
@@ -1003,7 +1003,7 @@ class MetaAdsClient:
                     if time_range:
                         summary_params["time_range"] = json.dumps(time_range)
                     elif date_preset == "maximum":
-            summary_params["time_range"] = json.dumps(self.get_ads_history_range())
+                        summary_params["time_range"] = json.dumps(self.get_ads_history_range())
                     else:
                         summary_params["date_preset"] = date_preset
                     resp = self._make_request(insights_endpoint, summary_params)
