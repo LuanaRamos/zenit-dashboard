@@ -378,7 +378,7 @@ class InstagramClient:
         batch_requests = []
         for item in stories_data:
             ig_id = item.get("id")
-            metrics = "reach,exits,replies,taps_forward,taps_back"
+            metrics = "views,reach,replies,shares,total_interactions"
             batch_requests.append(
                 {
                     "method": "GET",
@@ -406,6 +406,48 @@ class InstagramClient:
                 logger.error(f"Erro no Batch de Insights de Stories: {e}")
                 sentry_sdk.capture_exception(e)
 
+        # "exits", "taps_forward" e "taps_back" foram substituídos
+        # pela métrica navigation com breakdown específico.
+        navigation_map = {}
+        for i in range(0, len(stories_data), 50):
+            subset = stories_data[i : i + 50]
+            nav_requests = [
+                {
+                    "method": "GET",
+                    "relative_url": (
+                        f"/{self.API_VERSION}/{item['id']}/insights"
+                        "?metric=navigation&breakdown=story_navigation_action_type"
+                    ),
+                }
+                for item in subset
+            ]
+            try:
+                nav_res = self.session.post(
+                    self.BATCH_URL,
+                    data={"access_token": self.token, "batch": json.dumps(nav_requests)},
+                    timeout=20,
+                )
+                nav_res.raise_for_status()
+                for j, response_item in enumerate(nav_res.json()):
+                    if response_item.get("code") != 200:
+                        continue
+                    body = json.loads(response_item.get("body", "{}"))
+                    actions = {}
+                    for insight in body.get("data", []):
+                        for breakdown in (
+                            (insight.get("total_value") or {}).get("breakdowns") or []
+                        ):
+                            for result in breakdown.get("results", []):
+                                dimensions = result.get("dimension_values") or []
+                                if dimensions:
+                                    key = str(dimensions[0]).upper()
+                                    actions[key] = actions.get(key, 0) + int(
+                                        result.get("value") or 0
+                                    )
+                    navigation_map[subset[j]["id"]] = actions
+            except Exception as exc:
+                logger.warning("Navegação de Stories indisponível: %s", exc)
+
         stories_list = []
         for item in stories_data:
             ig_id = item.get("id")
@@ -418,6 +460,7 @@ class InstagramClient:
                 if values:
                     metrics_dict[name] = values[0].get("value", 0)
 
+            nav = navigation_map.get(ig_id, {})
             stories_list.append(
                 InstagramStory(
                     id=ig_id,
@@ -425,11 +468,15 @@ class InstagramClient:
                     media_url=item.get("media_url"),
                     permalink=item.get("permalink", ""),
                     timestamp=item.get("timestamp", ""),
-                    reach=int(metrics_dict.get("reach", 0)),
-                    exits=int(metrics_dict.get("exits", 0)),
-                    replies=int(metrics_dict.get("replies", 0)),
-                    taps_forward=int(metrics_dict.get("taps_forward", 0)),
-                    taps_back=int(metrics_dict.get("taps_back", 0)),
+                    views=metrics_dict.get("views"),
+                    reach=metrics_dict.get("reach"),
+                    shares=metrics_dict.get("shares"),
+                    total_interactions=metrics_dict.get("total_interactions"),
+                    replies=metrics_dict.get("replies"),
+                    exits=nav.get("TAP_EXIT"),
+                    taps_forward=nav.get("TAP_FORWARD"),
+                    taps_back=nav.get("TAP_BACK"),
+                    navigation=nav,
                 )
             )
 
