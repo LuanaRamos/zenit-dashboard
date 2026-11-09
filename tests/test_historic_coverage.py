@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import datetime
-from types import SimpleNamespace
 
 from api.instagram_client import InstagramClient
 from api.meta_client import MetaAdsClient
