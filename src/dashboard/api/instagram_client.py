@@ -439,134 +439,184 @@ class InstagramClient:
         self,
         date_preset: str = "last_30d",
         time_range: dict[str, str] | None = None,
-    ) -> dict[str, int]:
-        """
-        Busca insights a nível de conta.
-        Burla o limite de 30 dias da Meta dividindo o período em chunks de até 30 dias
-        e somando os retornos.
+    ) -> dict[str, Any]:
+        """Consulta o maior histórico realmente recuperável por indicador.
+
+        Contagens de eventos são somadas somente entre janelas disjuntas.
+        Reach/accounts_engaged são consultados em uma única janela porque
+        usuários únicos NÃO podem ser somados entre meses ou posts.
+        Todas as métricas carregam sua cobertura, inclusive erros da API.
         """
         import datetime
         from dateutil.relativedelta import relativedelta
 
-        now = datetime.datetime.now()
-
-        # A Graph API v26 limita estas métricas de conta a cerca de 13 meses.
-        limit_date = now - relativedelta(months=13) + datetime.timedelta(days=1)
-
-        is_partial = False
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        end = today + datetime.timedelta(days=1)  # until exclusivo
         if time_range:
-            since = datetime.datetime.strptime(time_range["since"], "%Y-%m-%d")
-            until = (
-                datetime.datetime.strptime(time_range["until"], "%Y-%m-%d")
-                + datetime.timedelta(days=1)
-                - datetime.timedelta(seconds=1)
-            )
-
-            # Clamp historical request for insights since API will 400 on > 13 months
-            if until < limit_date:
-                return {
-                    "profile_links_taps": 0,
-                    "website_clicks": 0,
-                    "profile_views": 0,
-                    "reach": 0,
-                    "total_interactions": 0,
-                    "accounts_engaged": 0,
-                    "likes": 0,
-                    "comments": 0,
-                    "shares": 0,
-                    "saves": 0,
-                    "follows_and_unfollows": 0,
-                    "_is_partial": True,
-                }
-            if since < limit_date:
-                since = limit_date
-                is_partial = True
+            start = datetime.date.fromisoformat(time_range["since"])
+            end = datetime.date.fromisoformat(time_range["until"]) + datetime.timedelta(days=1)
         elif date_preset == "maximum":
-            until = now
-            since = limit_date
+            start = today - relativedelta(months=13)
         elif date_preset == "last_90d":
-            until = now
-            since = until - datetime.timedelta(days=90)
-        else:  # default 30d
-            until = now
-            since = until - datetime.timedelta(days=30)
+            start = today - datetime.timedelta(days=90)
+        else:
+            start = today - datetime.timedelta(days=30)
+
+        # A API de Insights da conta não expõe alcance único vitalício.
+        # 13 meses é um teto conservador para tentativa de backfill de
+        # eventos; cada resposta efetiva é documentada abaixo.
+        cutoff = today - relativedelta(months=13)
+        clamped = start < cutoff
+        if clamped:
+            start = cutoff
+        if start >= end:
+            return {"_coverage": {}, "_requested_period": {
+                "since": start.isoformat(), "until": end.isoformat(),
+            }}
+
+        additive = (
+            "views", "total_interactions", "likes", "comments",
+            "shares", "saves", "profile_links_taps",
+        )
+        unique = ("reach", "accounts_engaged")
+        result: dict[str, Any] = {
+            metric: None for metric in (*additive, *unique)
+        }
+        result.update({
+            "profile_views": None, "website_clicks": None,
+            "follows_and_unfollows": None,
+            "_requested_period": {
+                "since": (datetime.date.fromisoformat(time_range["since"]).isoformat()
+                          if time_range else (today - relativedelta(months=13)).isoformat()
+                          if date_preset == "maximum" else start.isoformat()),
+                "until": (end - datetime.timedelta(days=1)).isoformat(),
+            },
+            "_coverage": {},
+            "_is_partial": clamped,
+        })
 
         endpoint = f"{self.instagram_account_id}/insights"
-        metrics_list = (
-            "reach,accounts_engaged,profile_links_taps,website_clicks,"
-            "profile_views,total_interactions,likes,comments,shares,saves"
-        )
+        coverage = result["_coverage"]
 
-        results = {
-            "profile_links_taps": 0,
-            "website_clicks": 0,
-            "profile_views": 0,
-            "reach": 0,
-            "total_interactions": 0,
-            "accounts_engaged": 0,
-            "likes": 0,
-            "comments": 0,
-            "shares": 0,
-            "saves": 0,
-            "follows_and_unfollows": 0,
-        }
-        if is_partial:
-            results["_is_partial"] = True
-
-        chunk_count = 0
-
-        current_since = since
-        while current_since < until:
-            chunk_count += 1
-            current_until = min(
-                current_since
-                + datetime.timedelta(days=29, hours=23, minutes=59, seconds=59),
-                until,
-            )
-
-            params_total = {
-                "metric": metrics_list,
+        def _request(names: tuple[str, ...], begin: datetime.date,
+                     finish: datetime.date) -> dict[str, int]:
+            # Datas UTC e janelas não sobrepostas: [begin, finish).
+            def ts(date: datetime.date) -> int:
+                return int(datetime.datetime.combine(
+                    date, datetime.time.min, tzinfo=datetime.timezone.utc
+                ).timestamp())
+            response = self._make_request(endpoint, {
+                "metric": ",".join(names),
                 "metric_type": "total_value",
                 "period": "day",
-                "since": str(int(current_since.timestamp())),
-                "until": str(int(current_until.timestamp())),
+                "since": str(ts(begin)),
+                "until": str(ts(finish)),
+            })
+            values = {}
+            for item in response.get("data", []):
+                metric = item.get("name")
+                raw = item.get("total_value", {}).get("value")
+                if metric in names and isinstance(raw, (int, float)):
+                    values[metric] = int(raw)
+            return values
+
+        def _set_coverage(metric: str, since: datetime.date | None,
+                          until: datetime.date | None, status: str,
+                          explanation: str) -> None:
+            coverage[metric] = {
+                "since": since.isoformat() if since else None,
+                "until": (until - datetime.timedelta(days=1)).isoformat() if until else None,
+                "status": status, "note": explanation,
             }
+
+        # Contagens aditivas: blocos de até 30 dias, preservando a
+        # cobertura real de CADA métrica, não apenas da consulta em grupo.
+        # Se uma métrica tornar o batch inválido, tentamos as demais
+        # individualmente em vez de zerar o relatório inteiro.
+        earliest: dict[str, datetime.date] = {}
+        latest: dict[str, datetime.date] = {}
+        failed: set[str] = set()
+        remaining = set(additive)
+        cursor = end
+        while cursor > start and remaining:
+            begin = max(start, cursor - datetime.timedelta(days=30))
+            batch_names = tuple(m for m in additive if m in remaining)
             try:
-                data = self._make_request(endpoint, params_total)
-                for insight in data.get("data", []):
-                    name = insight.get("name")
-                    val = insight.get("total_value", {}).get("value", 0)
-                    results[name] = results.get(name, 0) + val
-            except Exception as e:
-                logger.warning(
-                    f"Erro account insights chunk (total_value) {current_since} a {current_until}: {e}"
+                found = _request(batch_names, begin, cursor)
+            except Exception as exc:
+                logger.warning("Falha do grupo de insights %s: %s", batch_names, exc)
+                found = {}
+            for metric in batch_names:
+                if metric not in found:
+                    try:
+                        found.update(_request((metric,), begin, cursor))
+                    except Exception as exc:
+                        logger.warning("Insight %s indisponível: %s", metric, exc)
+                if metric in found:
+                    result[metric] = (result[metric] or 0) + found[metric]
+                    earliest[metric] = begin
+                    latest.setdefault(metric, cursor)
+                else:
+                    failed.add(metric)
+                    # Consultas antigas que falham não apagam totais recentes.
+                    remaining.discard(metric)
+            cursor = begin
+
+        for metric in additive:
+            if metric in earliest:
+                was_partial = earliest[metric] > start or clamped
+                _set_coverage(
+                    metric, earliest[metric], latest[metric],
+                    "parcial" if was_partial else "ok",
+                    ("Somente a parte acessível do período; janelas anteriores indisponíveis."
+                     if was_partial else "Soma de janelas disjuntas retornadas pela API.")
+                )
+            else:
+                _set_coverage(metric, None, None, "indisponivel",
+                              "A API não retornou valor para esta métrica.")
+
+        # Métricas únicas: uma ÚNICA consulta agregada por período.
+        # Se a API recusar 90 dias, reduzir para 30, nunca somar
+        # alcances mensais ou somas de alcances das publicações.
+        unique_end = end
+        for metric in unique:
+            found = None
+            for days in (90, 30):
+                begin = max(start, unique_end - datetime.timedelta(days=days))
+                if begin >= unique_end:
+                    continue
+                try:
+                    value = _request((metric,), begin, unique_end).get(metric)
+                except Exception as exc:
+                    logger.warning("Insight único %s (%s dias): %s", metric, days, exc)
+                    value = None
+                if value is not None:
+                    found = (value, begin)
+                    break
+            if found is None:
+                _set_coverage(metric, None, None, "indisponivel",
+                              "A API não retornou um agregado único compatível.")
+            else:
+                value, begin = found
+                result[metric] = value
+                partial = begin > start or clamped
+                _set_coverage(
+                    metric, begin, unique_end, "parcial" if partial else "ok",
+                    ("Agregado único da janela informada; não representa o histórico vitalício."
+                     if partial else "Agregado único do período sem somas entre janelas.")
                 )
 
-            limit_30d = now - datetime.timedelta(days=30)
-            if current_until >= limit_30d:
-                adjusted_since = max(current_since, limit_30d)
-                params_daily = {
-                    "metric": "follows_and_unfollows",
-                    "period": "day",
-                    "since": str(int(adjusted_since.timestamp())),
-                    "until": str(int(current_until.timestamp())),
-                }
-                try:
-                    data = self._make_request(endpoint, params_daily)
-                    for insight in data.get("data", []):
-                        for val_data in insight.get("values", []):
-                            results["follows_and_unfollows"] += val_data.get("value", 0)
-                except Exception as e:
-                    logger.warning(
-                        f"Erro account insights chunk (daily) {adjusted_since} a {current_until}: {e}"
-                    )
-
-            current_since = current_until + datetime.timedelta(seconds=1)
-
-        if chunk_count > 1:
-            results["_is_segmented"] = True
-
-        return results
+        # Não reaproveitar nomes descontinuados ou não equivalentes.
+        for metric in ("profile_views", "website_clicks", "follows_and_unfollows"):
+            _set_coverage(
+                metric, None, None, "indisponivel",
+                ("Sem equivalente direto validado nesta consulta. "
+                 "Não foi substituído por outra métrica de significado diferente.")
+            )
+        result["_is_segmented"] = len(earliest) > 0 and (
+            end - start
+        ).days > 30
+        return result
 
     def get_total_media_count(self) -> int:
         """Busca o número total de posts publicados pela conta."""
