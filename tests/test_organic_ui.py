@@ -209,11 +209,11 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
     assert kwargs["link_col"] == "Link"
 
 
-def test_posts_csv_preserves_full_captions_media_links_and_format_filter(monkeypatch):
+def test_posts_csv_preserves_full_captions_media_links_and_exports_every_format(monkeypatch):
     st = StreamlitCapture(selected_type="Carrossel")
     monkeypatch.setattr(organic_ui, "st", st)
     monkeypatch.setattr(organic_ui, "render_glass_table", lambda *a, **k: None)
-    caption = 'Café, rio e "paz" 🌿\n' + "Uma legenda completa. " * 30
+    caption = 'Café, rio e "paz" 🌿\\n' + "Uma legenda completa. " * 30
     organic_ui.render_posts_table(
         [
             media(id="image-1", caption="Imagem fora do filtro"),
@@ -231,14 +231,16 @@ def test_posts_csv_preserves_full_captions_media_links_and_format_filter(monkeyp
     rows = list(
         csv.DictReader(io.StringIO(st.downloads[0]["data"].decode("utf-8-sig")))
     )
-    assert [row["ID da publicação"] for row in rows] == ["carousel-1", "carousel-2"]
-    assert rows[0]["Legenda"] == caption
-    assert rows[0]["URL da mídia"] == "https://example.com/media.jpg"
-    assert rows[0]["URL da miniatura"] == "https://example.com/thumb.jpg"
-    assert rows[0]["Link"] == "https://instagram.com/p/post-1"
-    assert rows[1]["Legenda"] == ""
-    assert rows[1]["URL da mídia"] == ""
-    assert rows[1]["URL da miniatura"] == ""
+    assert [row["ID da publicação"] for row in rows] == [
+        "image-1", "carousel-1", "carousel-2"
+    ]
+    assert rows[1]["Legenda"] == caption
+    assert rows[1]["URL da mídia"] == "https://example.com/media.jpg"
+    assert rows[1]["URL da miniatura"] == "https://example.com/thumb.jpg"
+    assert rows[1]["Link"] == "https://instagram.com/p/post-1"
+    assert rows[2]["Legenda"] == ""
+    assert rows[2]["URL da mídia"] == ""
+    assert rows[2]["URL da miniatura"] == ""
 
 
 def test_posts_table_empty_filter_is_handled_without_dataframe_key_error(monkeypatch):
