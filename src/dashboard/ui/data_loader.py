@@ -16,6 +16,8 @@ def get_api_client(client_name: str) -> MetaAdsClient:
     # requests.Session é mutável e não deve ser compartilhada entre sessões.
     clients = settings.get_clients()
     client_config = next(c for c in clients if c.name == client_name)
+    if not client_config.has_ads:
+        raise ValueError(f"Cliente {client_name} está sem conta de anúncios configurada.")
     return MetaAdsClient(client_config)
 
 
