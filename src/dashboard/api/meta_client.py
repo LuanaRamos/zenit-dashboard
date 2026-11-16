@@ -22,7 +22,12 @@ class MetaAdsClient:
     BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
     def __init__(self, client_config) -> None:
-        self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
+        self.token = (
+            getattr(client_config, "token", None)
+            or (settings.meta_master_token.get_secret_value() if settings.meta_master_token else None)
+        )
+        if not self.token:
+            raise ValueError("A conta selecionada não possui credencial Meta configurada.")
         self.ad_account_id = client_config.ad_account_id
         if not self.ad_account_id.startswith("act_"):
             self.ad_account_id = f"act_{self.ad_account_id}"
