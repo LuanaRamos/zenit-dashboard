@@ -177,3 +177,18 @@ def test_dashboard_account_rows_preserve_follows_source_and_contact_button_meani
     assert by_label["Novos seguidores"]["Status"] == "ok"
     assert by_label["Toques em botões de contato"]["Valor"] == 2
     assert by_label["Cliques na URL específica da bio"]["Valor"] is None
+
+
+def test_api_clients_are_not_shared_request_sessions_between_callers(monkeypatch):
+    from ui import data_loader
+
+    cfg = SimpleNamespace(
+        name="Conta Exemplo", ad_account_id="act_test", page_id="page_test", token="fake"
+    )
+    monkeypatch.setattr(
+        data_loader, "settings", SimpleNamespace(get_clients=lambda: [cfg])
+    )
+    first = data_loader.get_api_client("Conta Exemplo")
+    second = data_loader.get_api_client("Conta Exemplo")
+    assert first is not second
+    assert first.session is not second.session
