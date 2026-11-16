@@ -397,7 +397,6 @@ class MetaAdsClient:
         params = {
             "level": "ad",
             "fields": "ad_id,ad_name,objective,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,instagram_profile_follow,instagram_profile_visits",
-            "breakdowns": "publisher_platform",
             "limit": "1000",
         }
         if time_range:
@@ -493,9 +492,6 @@ class MetaAdsClient:
         results = []
         from schemas.meta import CreativePerformance
         for item in insights_data:
-            if item.get("publisher_platform") != "instagram":
-                continue
-            
             ad_id = item.get("ad_id")
             if not ad_id:
                 continue
@@ -614,6 +610,58 @@ class MetaAdsClient:
 
         return sorted(results, key=lambda x: (x.cpa == 0, x.cpa))
 
+
+    def get_creative_platform_breakdown(
+        self, date_preset: str = "last_30d",
+        time_range: dict[str, str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Provide a placement breakdown separately from all-platform ad totals.
+
+        Breakdown rows are for comparison only. Never add them again to the
+        aggregated ad rows: one ad can deliver across multiple placements.
+        """
+        endpoint = f"{self.ad_account_id}/insights"
+        params: dict[str, Any] = {
+            "level": "ad",
+            "fields": "ad_id,spend,impressions,clicks,inline_link_clicks,actions",
+            "breakdowns": "publisher_platform",
+            "limit": "1000",
+        }
+        if time_range:
+            params["time_range"] = json.dumps(time_range)
+        elif date_preset == "maximum":
+            params["time_range"] = json.dumps(self.get_ads_history_range())
+        else:
+            params["date_preset"] = date_preset
+
+        by_ad: dict[str, list[dict[str, Any]]] = {}
+        seen_cursors: set[str] = set()
+        while True:
+            page = self._make_request(endpoint, params)
+            for item in page.get("data") or []:
+                ad_id = str(item.get("ad_id") or "")
+                platform = str(item.get("publisher_platform") or "")
+                if not ad_id or not platform:
+                    continue
+                actions = parse_paid_actions(item.get("actions"))
+                by_ad.setdefault(ad_id, []).append({
+                    "platform": platform,
+                    "spend": float(item.get("spend") or 0),
+                    "impressions": int(item.get("impressions") or 0),
+                    "clicks": int(item.get("clicks") or 0),
+                    "link_clicks": int(item.get("inline_link_clicks") or 0),
+                    "leads": actions["leads"],
+                    "messaging_conversations": actions["messaging_conversations"],
+                })
+            paging = page.get("paging") or {}
+            if not paging.get("next"):
+                break
+            after = (paging.get("cursors") or {}).get("after")
+            if not after or after in seen_cursors:
+                raise MetaAPIError("Paginação de posicionamentos incompleta")
+            seen_cursors.add(after)
+            params["after"] = after
+        return by_ad
 
     def check_catalog_assets(self) -> list[Any]:
         """Busca catálogos vinculados à conta de anúncios"""
