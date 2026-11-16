@@ -22,7 +22,12 @@ class MetaAdsClient:
     BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
     def __init__(self, client_config) -> None:
-        self.token = client_config.token if getattr(client_config, "token", None) else settings.meta_master_token.get_secret_value()
+        self.token = (
+            getattr(client_config, "token", None)
+            or (settings.meta_master_token.get_secret_value() if settings.meta_master_token else None)
+        )
+        if not self.token:
+            raise ValueError("A conta selecionada não possui credencial Meta configurada.")
         self.ad_account_id = client_config.ad_account_id
         if not self.ad_account_id.startswith("act_"):
             self.ad_account_id = f"act_{self.ad_account_id}"
@@ -240,10 +245,12 @@ class MetaAdsClient:
                         sentry_sdk.capture_exception(e)
                 
                 paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    params["after"] = paging["cursors"]["after"]
-                else:
+                if not paging.get("next"):
                     break
+                next_cursor = (paging.get("cursors") or {}).get("after")
+                if not next_cursor or next_cursor == params.get("after"):
+                    raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                params["after"] = next_cursor
         except Exception as e:
             logger.error(f"Erro durante paginação de campanhas: {e}")
             sentry_sdk.capture_exception(e)
@@ -254,14 +261,14 @@ class MetaAdsClient:
     def get_demographics_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> "InstagramDemographics":
-        """Busca insights demográficos (Idade, Gênero, Cidades, Países) para Ads"""
+        """Busca insights demográficos (idade, gênero, regiões e países) para Ads."""
         endpoint = f"{self.ad_account_id}/insights"
         
         age_gender = {}
         cities = {}
         countries = {}
 
-        breakdowns_list = ["age,gender", "country", "audience_city"]
+        breakdowns_list = ["age,gender", "country", "region"]
 
         for brk in breakdowns_list:
             params = {
@@ -293,17 +300,19 @@ class MetaAdsClient:
                             country = item.get("country", "Unknown")
                             if country != "Unknown":
                                 countries[country] = countries.get(country, 0) + val
-                        elif brk == "audience_city":
-                            # 'region' no Meta Ads = estado/região (o mais próximo de cidade disponível)
-                            region = item.get("audience_city", "Unknown")
+                        elif brk == "region":
+                            # Região/estado geográfico. Não confundir com cidade.
+                            region = item.get("region", "Unknown")
                             if region != "Unknown":
                                 cities[region] = cities.get(region, 0) + val
                                 
                     paging = data.get("paging", {})
-                    if "cursors" in paging and "after" in paging["cursors"]:
-                        params["after"] = paging["cursors"]["after"]
-                    else:
+                    if not paging.get("next"):
                         break
+                    next_cursor = (paging.get("cursors") or {}).get("after")
+                    if not next_cursor or next_cursor == params.get("after"):
+                        raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                    params["after"] = next_cursor
             except Exception as e:
                 logger.error(f"Erro em demographics (breakdown {brk}): {e}")
                 sentry_sdk.capture_exception(e)
@@ -342,7 +351,7 @@ class MetaAdsClient:
 
         audience_map: dict[str, dict] = {}
 
-        for brk in ["age,gender", "audience_city", "country"]:
+        for brk in ["age,gender", "region", "country"]:
             params = {**base_params, "breakdowns": brk}
             try:
                 while True:
@@ -364,8 +373,8 @@ class MetaAdsClient:
                                 audience_map[ad_id]["age_gender"][key] = (
                                     audience_map[ad_id]["age_gender"].get(key, 0) + impressions
                                 )
-                        elif brk == "audience_city":
-                            region = item.get("audience_city", "")
+                        elif brk == "region":
+                            region = item.get("region", "")
                             if region:
                                 audience_map[ad_id]["regions"][region] = (
                                     audience_map[ad_id]["regions"].get(region, 0) + impressions
@@ -378,10 +387,12 @@ class MetaAdsClient:
                                 )
 
                     paging = data.get("paging", {})
-                    if "cursors" in paging and "after" in paging["cursors"]:
-                        params["after"] = paging["cursors"]["after"]
-                    else:
+                    if not paging.get("next"):
                         break
+                    next_cursor = (paging.get("cursors") or {}).get("after")
+                    if not next_cursor or next_cursor == params.get("after"):
+                        raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                    params["after"] = next_cursor
             except Exception as e:
                 logger.warning(f"Erro em real audience breakdown={brk}: {e}")
                 sentry_sdk.capture_exception(e)
@@ -421,13 +432,16 @@ class MetaAdsClient:
                     data = self._make_request(endpoint, params)
                 insights_data.extend(data.get("data", []))
                 paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    params["after"] = paging["cursors"]["after"]
-                else:
+                if not paging.get("next"):
                     break
+                next_cursor = (paging.get("cursors") or {}).get("after")
+                if not next_cursor or next_cursor == params.get("after"):
+                    raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                params["after"] = next_cursor
         except Exception as e:
-            logger.error(f"Erro em ad insights: {e}")
+            logger.error("Falha na consulta obrigatória de Insights de criativos: %s", e)
             sentry_sdk.capture_exception(e)
+            raise
 
         # Passo 2: Buscar imagens/thumbnails + adset (targeting + schedule) no endpoint de ads
         ads_endpoint = f"{self.ad_account_id}/ads"
@@ -445,10 +459,12 @@ class MetaAdsClient:
                 data = self._make_request(ads_endpoint, ads_params)
                 ads_data.extend(data.get("data", []))
                 paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    ads_params["after"] = paging["cursors"]["after"]
-                else:
+                if not paging.get("next"):
                     break
+                next_cursor = (paging.get("cursors") or {}).get("after")
+                if not next_cursor or next_cursor == ads_params.get("after"):
+                    raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                ads_params["after"] = next_cursor
         except Exception as e:
             logger.error(f"Erro em ads data: {e}")
             sentry_sdk.capture_exception(e)
@@ -547,11 +563,20 @@ class MetaAdsClient:
             other_clicks = max(0, clicks - inline_link_clicks)
             
             objective = item.get("objective", "UNKNOWN")
-            if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:
+            cpl = spend / leads if leads > 0 else None
+            cost_per_whatsapp = spend / whatsapp if whatsapp > 0 else None
+            # Não somar cadastros e mensagens: podem ser o mesmo lead.
+            # CPA legado: prioriza o resultado correspondente ao objetivo.
+            if objective in {"OUTCOME_LEADS", "LEAD_GENERATION"} and cpl is not None:
+                cpa = cpl
+            elif cost_per_whatsapp is not None:
+                cpa = cost_per_whatsapp
+            elif cpl is not None:
+                cpa = cpl
+            elif objective in {"OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"} and instagram_follows > 0:
                 cpa = spend / instagram_follows
             else:
-                conversions = leads + whatsapp
-                cpa = spend / conversions if conversions > 0 else 0.0
+                cpa = None
 
             creative = creatives_map.get(ad_id, {})
             
@@ -592,6 +617,8 @@ class MetaAdsClient:
                 instagram_follows=instagram_follows,
                 profile_visits=profile_visits,
                 cpa=cpa,
+                cpl=cpl,
+                cost_per_whatsapp=cost_per_whatsapp,
                 cpc=spend / clicks if clicks > 0 else 0.0,
                 # Novos campos
                 ad_status=creative.get("ad_status", ""),
@@ -608,7 +635,9 @@ class MetaAdsClient:
                 target_regions=creative.get("regions", []),
             ))
 
-        return sorted(results, key=lambda x: (x.cpa == 0, x.cpa))
+        return sorted(
+            results, key=lambda x: (x.cpa is None, x.cpa if x.cpa is not None else float("inf"))
+        )
 
 
     def get_creative_platform_breakdown(
@@ -729,10 +758,12 @@ class MetaAdsClient:
                             organic_leads += 1
                             
                     paging = leads_data.get("paging", {})
-                    if "cursors" in paging and "after" in paging["cursors"]:
-                        leads_params["after"] = paging["cursors"]["after"]
-                    else:
+                    if not paging.get("next"):
                         break
+                    next_cursor = (paging.get("cursors") or {}).get("after")
+                    if not next_cursor or next_cursor == leads_params.get("after"):
+                        raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                    leads_params["after"] = next_cursor
             except Exception as e:
                 logger.warning(f"Erro ao buscar leads do form {form_id}: {e}")
                 
@@ -771,10 +802,12 @@ class MetaAdsClient:
                 insights_data.extend(data.get("data", []))
                 
                 paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    insights_params["after"] = paging["cursors"]["after"]
-                else:
+                if not paging.get("next"):
                     break
+                next_cursor = (paging.get("cursors") or {}).get("after")
+                if not next_cursor or next_cursor == insights_params.get("after"):
+                    raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                insights_params["after"] = next_cursor
         except MetaAPIError as e:
             logger.warning(
                 f"Erro ao buscar insights de anúncios (Organic mapping): {e}"
@@ -896,10 +929,12 @@ class MetaAdsClient:
                 ads_data.extend(data.get("data", []))
                 
                 paging = data.get("paging", {})
-                if "cursors" in paging and "after" in paging["cursors"]:
-                    ads_params["after"] = paging["cursors"]["after"]
-                else:
+                if not paging.get("next"):
                     break
+                next_cursor = (paging.get("cursors") or {}).get("after")
+                if not next_cursor or next_cursor == ads_params.get("after"):
+                    raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
+                ads_params["after"] = next_cursor
         except MetaAPIError as e:
             logger.warning(f"Erro ao buscar lista de anúncios (Organic mapping): {e}")
             sentry_sdk.capture_exception(e)

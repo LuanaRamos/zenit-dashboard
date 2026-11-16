@@ -217,6 +217,18 @@ class CampaignInsight(BaseModel):
         return cls(**parsed_data)
 
 
+def cost_per_account_conversation(campaigns: list[CampaignInsight]) -> float | None:
+    """Custo por conversa sobre todo o investimento da conta neste período.
+
+    Inclui inclusive campanhas sem conversa e campanhas com outros objetivos.
+    Não é um CPA restrito a campanhas exclusivamente de mensagens.
+    """
+    messages = sum(item.whatsapp_starts for item in campaigns)
+    if not messages:
+        return None
+    return sum(item.spend for item in campaigns) / messages
+
+
 class PageInsight(BaseModel):
     """
     Métricas da página/Instagram orgânico.
@@ -262,7 +274,9 @@ class CreativePerformance(BaseModel):
     whatsapp_starts: int = Field(default=0)
     instagram_follows: int = Field(default=0)
     profile_visits: int = Field(default=0)
-    cpa: float = Field(default=0.0)
+    cpa: float | None = Field(default=None)
+    cpl: float | None = Field(default=None)
+    cost_per_whatsapp: float | None = Field(default=None)
     cpc: float = Field(default=0.0)
     traffic_destination: str = Field(default="Não Identificado")
     # Público-alvo e agendamento

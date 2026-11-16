@@ -40,8 +40,10 @@ def test_account_unique_reach_is_not_summed_across_windows():
     assert report["_coverage"]["reach"]["status"] == "parcial"
     assert report["_coverage"]["reach"]["since"] is not None
     assert report["_coverage"]["views"]["since"] is not None
-    assert report["profile_views"] is None
-    assert report["_coverage"]["profile_views"]["status"] == "indisponivel"
+    # O stub retorna valores para profile_views, então esse campo é disponível.
+    # A soma de janelas só se aplica à atividade, nunca ao reach único.
+    assert report["profile_views"] > 0
+    assert report["_coverage"]["profile_views"]["status"] == "parcial"
     assert len([call for call in calls if call["metric"] == "reach"]) == 1
 
 

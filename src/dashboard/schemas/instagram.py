@@ -32,7 +32,7 @@ class InstagramMedia(BaseModel):
     caption: str = ""
     media_url: str | None = None
     # Tráfego Pago & Dark Post mapping
-    paid_reach: int = 0
+    paid_reach: int | None = None
     paid_impressions: int = 0
     paid_clicks: int = 0
     paid_link_clicks: int = 0
@@ -96,6 +96,7 @@ class InstagramMedia(BaseModel):
     insights_status: str = "indisponivel"
     insights_available: tuple[str, ...] = ()
     insights_missing: tuple[str, ...] = ()
+    insights_unsupported: tuple[str, ...] = ()
 
 
 

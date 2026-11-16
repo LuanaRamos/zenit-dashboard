@@ -12,10 +12,9 @@ from schemas.meta import CampaignInsight, PageInsight
 logger = logging.getLogger(__name__)
 
 
-@st.cache_resource
 def get_api_client(client_name: str) -> MetaAdsClient:
+    # requests.Session é mutável e não deve ser compartilhada entre sessões.
     clients = settings.get_clients()
-    _cache_buster = 3
     client_config = next(c for c in clients if c.name == client_name)
     return MetaAdsClient(client_config)
 
@@ -40,10 +39,8 @@ def get_account_creation_date_cached(client_name: str) -> datetime.date:
     return client.get_account_created_time()
 
 
-@st.cache_resource
 def get_instagram_client(client_name: str) -> InstagramClient:
     clients = settings.get_clients()
-    _cache_buster = 3
     client_config = next(c for c in clients if c.name == client_name)
     return InstagramClient(client_config)
 
@@ -117,7 +114,7 @@ def fetch_account_profile_cached(client_name: str) -> dict:
         }
 
 
-@st.cache_resource(ttl=900)
+@st.cache_data(ttl=900)
 def fetch_organic_media(
     date_preset: str, time_range: dict | None, client_name: str
 ) -> List[InstagramMedia]:
@@ -150,7 +147,7 @@ def fetch_organic_media(
     return ig_client.get_recent_media(limit=100, since_timestamp=since_timestamp)
 
 
-@st.cache_resource(ttl=900)
+@st.cache_data(ttl=900)
 def enrich_media_with_ads(
     media_list: List[InstagramMedia],
     date_preset: str,
@@ -268,7 +265,7 @@ def fetch_all_historic_comments(
         return []
 
 
-@st.cache_resource(ttl=3600)
+@st.cache_data(ttl=3600)
 def fetch_account_demographics(client_name: str):
     try:
         ig_client = get_instagram_client(client_name)

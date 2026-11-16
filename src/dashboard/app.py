@@ -41,7 +41,7 @@ def configure_page():
 def report_error(message, error):
     logger.error(message, exc_info=error)
     sentry_sdk.capture_exception(error)
-    st.error(f"{message}\n\nDetalhes do erro: {type(error).__name__} - {error}")
+    st.error(f"{message}\n\nFalha registrada para diagnóstico. Nenhum token ou detalhe técnico é exibido.")
 
 
 def render_ads_page(date_preset, time_range, client):
@@ -93,13 +93,12 @@ def render_ads_page(date_preset, time_range, client):
         for c in campaigns
         if c.leads > 0 or c.objective in {"OUTCOME_LEADS", "LEAD_GENERATION"}
     )
-    messages_spend = sum(
-        c.spend
-        for c in campaigns
-        if c.whatsapp_starts > 0 or c.objective == "MESSAGES"
-    )
+    # Métrica da CONTA: inclui todo o gasto, inclusive anúncios sem conversa.
+    # Não pressupõe que OUTCOME_ENGAGEMENT foi uma campanha de WhatsApp.
+    from schemas.meta import cost_per_account_conversation
+
     cpl = leads_spend / total_leads if total_leads else None
-    cost_per_message = messages_spend / total_messages if total_messages else None
+    cost_per_message = cost_per_account_conversation(campaigns)
     render_metric_cards(
         total_spend, total_leads, cpl, total_messages, cost_per_message
     )
@@ -310,10 +309,10 @@ def render_organic_page(date_preset, time_range, client):
                     )
                 with cols_act[1]:
                     render_metric_card(
-                        "Toques em links/botões",
+                        "Toques em botões do perfil",
                         _fmt(insights.get("profile_links_taps")),
                         "Fonte: profile_links_taps",
-                        "Métrica agregada; não identifica a URL específica da bio.",
+                        "Inclui ações de contato, não mede cliques em uma URL específica da bio.",
                     )
                 with cols_act[2]:
                     render_metric_card(

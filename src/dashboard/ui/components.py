@@ -240,8 +240,11 @@ def render_metric_cards(
         render_metric_card(
             label="CONVERSAS POR ANÚNCIOS",
             value=wpp_fmt,
-            subtext=f"Custo: {_format_brl(cpw)}" if cpw is not None else "Custo: N/D",
-            help_text="Mensagens atribuídas aos anúncios",
+            subtext=f"Custo global: {_format_brl(cpw)}" if cpw is not None else "Custo global: N/D",
+            help_text=(
+                "Investimento total da conta no período dividido por conversas atribuídas. "
+                "Inclui campanhas que não geraram conversas."
+            ),
         )
     with cols[3]:
         # Leads e conversas podem se sobrepor. Não criar um CPA combinado.

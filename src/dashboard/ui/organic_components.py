@@ -321,7 +321,10 @@ ACCOUNT_ENGAGEMENT_METRICS = (
     ("Respostas aos Stories", "replies"),
     ("Republicações", "reposts"),
     ("Visitas ao perfil", "profile_views"),
-    ("Toques em links do perfil", "profile_links_taps"),
+    ("Novos seguidores", "new_follows"),
+    ("Deixaram de seguir", "unfollows"),
+    ("Saldo de seguidores", "net_follows"),
+    ("Toques em botões de contato", "profile_links_taps"),
     ("Cliques no site (métrica API)", "website_clicks"),
     ("Toques no endereço comercial", "business_address_taps"),
     ("Cliques na URL específica da bio", "bio_url_clicks"),
@@ -334,7 +337,11 @@ def account_engagement_rows(insights: dict) -> list[dict[str, Any]]:
     rows = []
     for label, key in ACCOUNT_ENGAGEMENT_METRICS:
         value = insights.get(key)
-        scope = coverage.get(key) or {}
+        scope = coverage.get(
+            "follows_and_unfollows"
+            if key in {"new_follows", "unfollows", "net_follows"}
+            else key
+        ) or {}
         if key == "bio_url_clicks":
             value = None
             scope = {
@@ -346,7 +353,11 @@ def account_engagement_rows(insights: dict) -> list[dict[str, Any]]:
             }
         rows.append({
             "Indicador": label,
-            "Campo API": key if key != "bio_url_clicks" else "Sem campo equivalente",
+            "Campo API": (
+                "follows_and_unfollows (follow_type)"
+                if key in {"new_follows", "unfollows", "net_follows"}
+                else key if key != "bio_url_clicks" else "Sem campo equivalente"
+            ),
             "Valor": value,
             "Status": scope.get("status") or "indisponivel",
             "Início efetivo": scope.get("since"),
@@ -518,7 +529,7 @@ ORGANIC_POST_EXPORT_COLUMNS = ORGANIC_POST_COLUMNS + [
     "Visitas ao perfil atribuídas à publicação",
     "Atividade do perfil (publicação)", "Cliques na bio atribuídos à publicação",
     "Status da coleta de Insights", "Métricas retornadas", "Métricas indisponíveis",
-    "Origem dos valores",
+    "Métricas não suportadas neste formato", "Origem dos valores",
 ]
 
 _POST_COUNT_COLUMNS = ORGANIC_POST_COLUMNS[2:-1] + [
@@ -571,6 +582,7 @@ def _organic_post_rows(
                 "Status da coleta de Insights": _value(media, "insights_status", "indisponivel"),
                 "Métricas retornadas": ", ".join(_value(media, "insights_available", ()) or ()),
                 "Métricas indisponíveis": ", ".join(_value(media, "insights_missing", ()) or ()),
+                "Métricas não suportadas neste formato": ", ".join(_value(media, "insights_unsupported", ()) or ()),
                 "Origem dos valores": "Instagram Graph API; alcance e seguidores conforme fonte da linha",
             }
         )
