@@ -261,14 +261,14 @@ class MetaAdsClient:
     def get_demographics_insights(
         self, date_preset: str = "last_30d", time_range: dict[str, str] | None = None
     ) -> "InstagramDemographics":
-        """Busca insights demográficos (Idade, Gênero, Cidades, Países) para Ads"""
+        """Busca insights demográficos (idade, gênero, regiões e países) para Ads."""
         endpoint = f"{self.ad_account_id}/insights"
         
         age_gender = {}
         cities = {}
         countries = {}
 
-        breakdowns_list = ["age,gender", "country", "audience_city"]
+        breakdowns_list = ["age,gender", "country", "region"]
 
         for brk in breakdowns_list:
             params = {
@@ -300,9 +300,9 @@ class MetaAdsClient:
                             country = item.get("country", "Unknown")
                             if country != "Unknown":
                                 countries[country] = countries.get(country, 0) + val
-                        elif brk == "audience_city":
-                            # 'region' no Meta Ads = estado/região (o mais próximo de cidade disponível)
-                            region = item.get("audience_city", "Unknown")
+                        elif brk == "region":
+                            # Região/estado geográfico. Não confundir com cidade.
+                            region = item.get("region", "Unknown")
                             if region != "Unknown":
                                 cities[region] = cities.get(region, 0) + val
                                 
@@ -351,7 +351,7 @@ class MetaAdsClient:
 
         audience_map: dict[str, dict] = {}
 
-        for brk in ["age,gender", "audience_city", "country"]:
+        for brk in ["age,gender", "region", "country"]:
             params = {**base_params, "breakdowns": brk}
             try:
                 while True:
@@ -373,8 +373,8 @@ class MetaAdsClient:
                                 audience_map[ad_id]["age_gender"][key] = (
                                     audience_map[ad_id]["age_gender"].get(key, 0) + impressions
                                 )
-                        elif brk == "audience_city":
-                            region = item.get("audience_city", "")
+                        elif brk == "region":
+                            region = item.get("region", "")
                             if region:
                                 audience_map[ad_id]["regions"][region] = (
                                     audience_map[ad_id]["regions"].get(region, 0) + impressions
