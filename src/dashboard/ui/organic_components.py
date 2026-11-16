@@ -980,76 +980,67 @@ def render_historic_top_comment(
 
 
 def render_followers_timeline(history_data: list) -> None:
-    """Renderiza a linha do tempo de ganho de seguidores dos últimos 30 dias."""
+    """Gráfico Vision/Zenit: série diária real e média móvel, sem inventar dados."""
     if not history_data:
-        st.info("O histórico de seguidores não está disponível para esta conta.")
+        st.info("Histórico de seguidores indisponível neste período.")
         return
 
-    import pandas as pd
-    import plotly.express as px
+    import plotly.graph_objects as go
 
     df = pd.DataFrame(history_data)
-    if (
-        df.empty
-        or "Data" not in df.columns
-        or "Novos Seguidores" not in df.columns
-    ):
-        st.info("Sem dados suficientes de histórico no momento.")
+    if df.empty or "Data" not in df.columns or "Novos Seguidores" not in df.columns:
+        st.info("Sem dados suficientes para a evolução de seguidores.")
         return
 
-    st.markdown("### 📈 Evolução de Seguidores (Últimos 30 Dias)")
+    df["Novos Seguidores"] = pd.to_numeric(
+        df["Novos Seguidores"], errors="coerce"
+    )
+    df = df.dropna(subset=["Novos Seguidores"]).sort_values("Data")
+    if df.empty:
+        st.info("Sem valores de seguidores válidos para o gráfico.")
+        return
 
+    df["Média móvel"] = df["Novos Seguidores"].rolling(
+        window=7, min_periods=1
+    ).mean()
     peak_row = df.loc[df["Novos Seguidores"].idxmax()]
-    peak_val = peak_row["Novos Seguidores"]
-    peak_date = peak_row["Data"]
-
-    st.markdown(
-        f"""
-    <div class="metric-card" style="margin-bottom: 20px;">
-        <div class="metric-label">Maior Pico (Últimos 30d)</div>
-        <div class="metric-value" style="color: #FFB300;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #c4c9ac;">Seguidores</span></div>
-        <div style="font-size: 0.8rem; color: #c4c9ac; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
-    </div>
-    """,
-        unsafe_allow_html=True,
+    st.markdown("### Evolução de seguidores")
+    st.caption(
+        f"Pico diário: {int(peak_row['Novos Seguidores'])} novos seguidores "
+        f"em {peak_row['Data']}. Média móvel de 7 dias como referência."
     )
 
-    fig = px.area(
-        df, x="Data", y="Novos Seguidores", color_discrete_sequence=["#FFB300"]
-    )
-
-    fig.update_traces(
-        line_shape="spline",
-        mode="lines+markers",
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["Data"],
+        y=df["Novos Seguidores"],
+        mode="lines",
+        name="Novos seguidores",
         fill="tozeroy",
-        marker=dict(size=6, color="#FFB300", line=dict(width=1, color="white")),
-        hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>",
-    )
-
+        fillcolor="rgba(255,179,0,0.14)",
+        line=dict(color="#FFB300", width=3, shape="spline", smoothing=0.65),
+        hovertemplate="%{x}<br>Novos seguidores: %{y:,.0f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["Data"],
+        y=df["Média móvel"],
+        mode="lines",
+        name="Média móvel (7 dias)",
+        line=dict(color="#FFD56C", width=2, dash="dot"),
+        hovertemplate="%{x}<br>Média móvel: %{y:.1f}<extra></extra>",
+    ))
     fig.update_layout(
+        height=360,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#E2E8F0"),
-        xaxis=dict(
-            title="",
-            showgrid=False,
-            zeroline=False,
-            showline=True,
-            linecolor="rgba(255,255,255,0.1)",
-            tickangle=-45,
-        ),
-        yaxis=dict(
-            title="",
-            showgrid=True,
-            gridcolor="rgba(255,255,255,0.05)",
-            zeroline=True,
-            zerolinecolor="rgba(255,255,255,0.1)",
-        ),
-        margin=dict(l=10, r=45, t=10, b=45),
-        height=350,
+        font=dict(family="Inter", color="#cbd3df", size=12),
+        margin=dict(l=20, r=20, t=24, b=36),
         hovermode="x unified",
+        hoverlabel=dict(bgcolor="#131b29", font_color="#f1f4f8"),
+        xaxis=dict(title="", showgrid=False, zeroline=False),
+        yaxis=dict(title="", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
+                   rangemode="tozero", zeroline=False),
+        legend=dict(orientation="h", y=1.12, x=0,
+                    font=dict(color="#cbd3df", size=11)),
     )
-
-    st.plotly_chart(
-        fig, use_container_width=True, config={"displayModeBar": False}
-    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
