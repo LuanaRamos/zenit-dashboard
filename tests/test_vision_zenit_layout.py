@@ -115,3 +115,22 @@ def test_profile_notices_are_consolidated_under_diagnostics():
     assert '"Toques em botões de contato"' in inspect.getsource(
         organic_components.account_engagement_rows
     )
+
+
+def test_creative_metrics_use_plain_labels_not_emoji_icons():
+    import inspect
+    from ui import creatives_components
+
+    source = inspect.getsource(creatives_components._render_creative_card)
+    for emoji in ("💸", "👁", "🎯", "👥", "💬", "📋", "📈", "❤️", "🔁"):
+        assert emoji not in source
+
+
+def test_cost_bars_are_not_tiny_capsules(monkeypatch):
+    figures = []
+    monkeypatch.setattr(components, "render_glass_chart", lambda fig, **kw: figures.append(fig))
+    components.render_whatsapp_cost_chart([
+        CampaignInsight(campaign_name="Feriado", spend=50, whatsapp_starts=10, cost_per_whatsapp=5)
+    ])
+    assert figures[0].data[0].cornerradius <= 8
+    assert figures[0].data[0].width >= 0.4
