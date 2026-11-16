@@ -6,6 +6,7 @@ import plotly.express as px
 import streamlit as st
 import sentry_sdk
 import pandas as pd
+from html import escape as escape_html
 
 
 @st.cache_data(ttl=3600)
@@ -78,7 +79,7 @@ def _status_badge(status: str) -> str:
     color, bg, label = colors.get(status.upper(), ("#6b7280", "#f3f4f6", status))
     return (
         f'<span style="background:{bg};color:{color};padding:2px 10px;'
-        f'border-radius:20px;font-size:0.75rem;font-weight:700;">{label}</span>'
+        f'border-radius:20px;font-size:0.75rem;font-weight:700;">{escape_html(label)}</span>'
     )
 
 
@@ -317,8 +318,17 @@ def render_creatives_tab(
                 if any(p["platform"] == selected_platform
                        for p in ad.get("platform_breakdown", []))
             ]
-        st.caption(f"{len(data)} criativos encontrados na seleção.")
-        top_ads = data[:10]
+        st.caption(
+            f"{len(data)} criativos encontrados. O filtro de plataforma seleciona "
+            "quais anúncios aparecem; os cartões sempre mostram o total de todas as plataformas."
+        )
+        page_size = st.selectbox(
+            "Quantos criativos exibir?",
+            options=[10, 25, 50, "Todos"],
+            index=1,
+            key=f"creative_limit_{client_name}",
+        )
+        top_ads = data if page_size == "Todos" else data[:int(page_size)]
 
         for i in range(0, len(top_ads), 2):
             cols = st.columns(2, gap="medium")
@@ -350,7 +360,7 @@ def _render_creative_card(ad: dict) -> None:
     status_html = _status_badge(ad_status) if ad_status else ""
     st.markdown(
         f"<div style='margin-bottom:6px;'>"
-        f"<span style='font-weight:700;font-size:0.95rem;color:#F1F5F9;'>{ad_name}</span>"
+        f"<span style='font-weight:700;font-size:0.95rem;color:#F1F5F9;'>{escape_html(str(ad_name))}</span>"
         f"&nbsp;&nbsp;{status_html}</div>",
         unsafe_allow_html=True,
     )
@@ -382,8 +392,8 @@ def _render_creative_card(ad: dict) -> None:
 
     st.markdown(
         f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #c4c9ac;'>"
-        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{objective_friendly}</span><br>"
-        f"🔗 Destino: <span style='color: #F1F5F9;'>{traffic_dest}</span>"
+        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{escape_html(str(objective_friendly))}</span><br>"
+        f"🔗 Destino: <span style='color: #F1F5F9;'>{escape_html(str(traffic_dest))}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -493,7 +503,7 @@ def _render_creative_card(ad: dict) -> None:
         f"<div style='background:rgba(16,185,129,0.10);border-left:3px solid #10B981;"
         f"border-radius:0 8px 8px 0;padding:8px 12px;margin:8px 0;font-size:0.82rem;color:#A7F3D0;'>"
         f"<strong style='color:#6EE7B7;'>📅 Veiculação</strong>"
-        f"{' — ' + adset_name if adset_name else ''} {adset_badge}<br>"
+        f"{' — ' + escape_html(str(adset_name)) if adset_name else ''} {adset_badge}<br>"
         f"Início: <b>{start}</b>&nbsp;&nbsp;Fim: <b>{end}</b>"
         f"</div>",
         unsafe_allow_html=True,
