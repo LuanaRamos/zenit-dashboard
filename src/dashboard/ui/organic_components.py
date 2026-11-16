@@ -8,6 +8,7 @@ from api.exceptions import InstagramAPIError
 from core.meta_content_export import apply_content_export, read_content_export
 from schemas.instagram import InstagramMedia
 from ui.components import render_glass_table, render_metric_card
+from ui.iconography import lucide_icon
 
 
 @dataclass(frozen=True)
@@ -128,9 +129,10 @@ def render_profile_bio_header(profile_info: dict, client_name: str = "") -> None
         )
     else:
         avatar_html = (
-            '<div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(255,179,0,0.15); '
-            'display: flex; align-items: center; justify-content: center; font-size: 2rem; '
-            'border: 2px solid #FFB300; color: #FFB300; flex-shrink: 0;">👤</div>'
+            '<div style="width: 76px; height: 76px; border-radius: 14px; background: rgba(255,179,0,0.09); '
+            'display: flex; align-items: center; justify-content: center; '
+            'border: 1px solid rgba(255,179,0,0.3); color: #FFB300; flex-shrink: 0;">'
+            + lucide_icon("users", 30) + '</div>'
         )
 
     display_name = name or (f"@{username}" if username else "Instagram")
@@ -176,10 +178,10 @@ def render_account_insights_cards(
     insights: dict, paid_totals: dict, followers_history: list = None
 ) -> None:
     """Renderiza KPIs sem apresentar métricas mistas como se fossem orgânicas."""
-    st.markdown("### 👁️ Visão Geral da Conta")
+    st.markdown("### Visão geral da conta")
     if insights.get("_is_partial"):
         st.info(
-            "⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos."
+            "Nota sobre o período: A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos."
         )
     if insights.get("_is_segmented"):
         st.info(
@@ -213,7 +215,7 @@ def render_account_insights_cards(
     def paid_context(paid):
         return f"Pago no Instagram: {fmt(paid)} (já pode estar incluído no total)"
 
-    st.markdown("#### 🎯 Métricas Totais")
+    st.markdown("#### Métricas totais")
     cols_mix = st.columns(5)
     with cols_mix[0]:
         render_metric_card(
@@ -252,7 +254,7 @@ def render_account_insights_cards(
         )
 
     st.write("")
-    st.markdown("#### 👤 Ações Registradas no Perfil")
+    st.markdown("#### Ações registradas no perfil")
     cols_org = st.columns(4)
     with cols_org[0]:
         render_metric_card(
@@ -301,7 +303,7 @@ def render_account_insights_cards(
             "Novos Seguidores",
             fmt(new_followers_30d),
             "Total",
-            "⚠️ A Meta só permite consultar seguidores dos últimos 30 dias, independente do filtro.",
+            "A Meta limita o histórico consultável de seguidores.",
         )
     with cols_org2[3]:
         st.empty()
@@ -453,7 +455,7 @@ def render_account_engagement_summary(insights: dict) -> None:
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Show each engagement metric separately."""
-    st.markdown("### 📊 Desempenho das publicações")
+    st.markdown("### Desempenho das publicações")
     totals = aggregate_organic_metrics(list(media_list))
     cards = (
         ("Curtidas orgânicas", "like_count"),
@@ -630,7 +632,7 @@ def render_posts_table(
 ) -> None:
     """Render separate engagement counts and attribute reach and follows per source."""
     del stories_list  # Kept for compatibility with existing callers.
-    st.markdown("### 📝 Publicações orgânicas")
+    st.markdown("### Publicações orgânicas")
 
     filter_column, _ = st.columns([1, 3])
     with filter_column:
@@ -760,7 +762,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     Renderiza os posts em destaque ordenados primariamente por alcance (reach),
     com fallback para interações orgânicas totais.
     """
-    st.markdown("### 🏆 Top posts por alcance")
+    st.markdown("### Publicações de maior alcance")
 
     if not media_list:
         return
@@ -925,7 +927,7 @@ def render_historic_top_comment(
         if not best:
             return
 
-        st.markdown("### 💬 Comentário com mais curtidas entre os consultados")
+        st.markdown("### Comentário mais curtido entre os consultados")
 
         text = html_lib.escape(str(best.get("text", "")))
         username = html_lib.escape(str(best.get("username", "Usuário")))
@@ -934,7 +936,7 @@ def render_historic_top_comment(
         html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
     <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">\"{text}\"</div>
     <div style="color: #c4c9ac; font-size: 0.9rem;">
-        <strong>@{username}</strong> • 🏆 {int(likes):,} curtidas
+        <strong>@{username}</strong> · {int(likes):,} curtidas
     </div>
 </div>"""
         st.markdown(html, unsafe_allow_html=True)
@@ -964,7 +966,7 @@ def render_historic_top_comment(
         csv_data = df_comments.to_csv(index=False)
         csv_bytes = csv_data.encode("utf-8") if isinstance(csv_data, str) else csv_data
         st.download_button(
-            label="📥 Baixar comentários consultados (CSV)",
+            label="Baixar comentários consultados (CSV)",
             data=csv_bytes,
             file_name=f"comentarios_consultados_{client_name}.csv",
             mime="text/csv",
