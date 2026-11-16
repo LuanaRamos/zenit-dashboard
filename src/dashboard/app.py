@@ -21,7 +21,7 @@ def configure_page():
         page_title="Zenit Analytics",
         page_icon=str(icon) if icon.exists() else "📈",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="auto",
     )
     css = DASHBOARD_DIR / "ui" / "style.css"
     if css.exists():
@@ -164,9 +164,9 @@ def render_organic_page(date_preset, time_range, client):
     )
 
     tab_posts, tab_growth, tab_audience = st.tabs([
-        "📊 Publicações & Conteúdo",
-        "📈 Seguidores & Crescimento",
-        "👥 Audiência & Demografia",
+        "Publicações",
+        "Seguidores",
+        "Audiência",
     ])
 
     with tab_posts:
@@ -222,7 +222,7 @@ def render_organic_page(date_preset, time_range, client):
                         )
     
     with tab_growth:
-        st.markdown("### 📈 Crescimento e Histórico de Seguidores")
+        st.markdown("### Crescimento e histórico de seguidores")
         st.caption("Acompanhamento de novos seguidores diários e ações registradas no perfil.")
 
         # 1. Gráfico de novos seguidores diários (Plotly com spline e maior pico)
@@ -243,7 +243,7 @@ def render_organic_page(date_preset, time_range, client):
             insights = account_insights
             if insights:
                 st.write("")
-                st.markdown("#### 📅 Insights da Conta e Cobertura")
+                st.markdown("#### Insights da conta e cobertura")
                 st.caption(
                     "Esses Insights abrangem a conta, não são necessariamente "
                     "exclusivamente orgânicos. O período pode ser menor que o "
@@ -289,7 +289,7 @@ def render_organic_page(date_preset, time_range, client):
                             f"({period}). {info.get('note', '')}"
                         )
                 st.write("")
-                st.markdown("#### 👤 Ações e Interações no Perfil")
+                st.markdown("#### Ações e interações no perfil")
                 st.caption("Ações diretas realizadas pelos usuários no perfil do Instagram durante o período.")
                 cols_act = st.columns(4)
 

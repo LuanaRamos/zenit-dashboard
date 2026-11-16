@@ -61,8 +61,10 @@ def render_glass_table(
     for i, col in enumerate(display_cols):
         col_type = "num" if pd.api.types.is_numeric_dtype(df[col]) else "text"
         thead_cells.append(
-            f'<th data-idx="{i}" data-type="{col_type}">'
-            f'{html_lib.escape(str(col))}<span class="sort-arrow"></span></th>'
+            f'<th scope="col" aria-sort="none" data-idx="{i}" data-type="{col_type}">'
+            f'<button type="button" class="sort-button">'
+            f'{html_lib.escape(str(col))}<span class="sort-arrow" aria-hidden="true"></span>'
+            f'</button></th>'
         )
     if link_col:
         thead_cells.append("<th></th>")
@@ -119,7 +121,7 @@ def render_glass_table(
             if pd.notna(url) and url:
                 cells.append(
                     f'<td data-sort=""><a href="{html_lib.escape(str(url))}" target="_blank" '
-                    f'class="glass-link">{html_lib.escape(link_label)}</a></td>'
+                    f'class="glass-link" rel="noopener noreferrer">{html_lib.escape(link_label)}</a></td>'
                 )
             else:
                 cells.append('<td data-sort="">-</td>')
@@ -150,14 +152,15 @@ def render_glass_table(
                 <tbody>{"".join(rows_html)}</tbody>
             </table>
         </div>
-        {"" if hide_download else f'<a class="glass-download" download="{html_lib.escape(csv_filename)}" href="data:text/csv;charset=utf-8;base64,{csv_b64}">⬇ Baixar CSV completo</a>'}
+        {"" if hide_download else f'<a class="glass-download" download="{html_lib.escape(csv_filename)}" href="data:text/csv;charset=utf-8;base64,{csv_b64}">Baixar CSV completo</a>'}
         <script>
             (function() {{
                 const table = document.getElementById("{key}");
                 const headers = table.querySelectorAll("th[data-idx]");
                 let sortAsc = {{}};
                 headers.forEach(function(th) {{
-                    th.addEventListener("click", function() {{
+                    const trigger = th.querySelector("button.sort-button");
+                    trigger.addEventListener("click", function() {{
                         const idx = parseInt(th.getAttribute("data-idx"));
                         const type = th.getAttribute("data-type");
                         const asc = !sortAsc[idx];
@@ -173,7 +176,11 @@ def render_glass_table(
                             }}
                             return asc ? av.localeCompare(bv) : bv.localeCompare(av);
                         }});
-                        headers.forEach(function(h) {{ h.querySelector(".sort-arrow").textContent = ""; }});
+                        headers.forEach(function(h) {{
+                            h.setAttribute("aria-sort", "none");
+                            h.querySelector(".sort-arrow").textContent = "";
+                        }});
+                        th.setAttribute("aria-sort", asc ? "ascending" : "descending");
                         th.querySelector(".sort-arrow").textContent = asc ? "▲" : "▼";
                         rows.forEach(function(r) {{ tbody.appendChild(r); }});
                     }});
@@ -190,20 +197,20 @@ def render_metric_card(
     label: str, value: str, subtext: str = None, help_text: str = None
 ) -> None:
     sub_html = (
-        f"<div style='color: #FFFFFF; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; line-height: 1.25; word-break: break-word;'>{subtext}</div>"
+        f"<div style='color: #FFFFFF; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; line-height: 1.4; overflow-wrap: anywhere;'>{html_lib.escape(str(subtext))}</div>"
         if subtext
         else ""
     )
     help_html = (
-        f"<div style='font-size: 0.72rem; color: #c4c9ac; font-weight: 400; line-height: 1.2; word-break: break-word;'>{help_text}</div>"
+        f"<div style='font-size: 0.79rem; color: #c4c9ac; font-weight: 400; line-height: 1.45; overflow-wrap: anywhere;'>{html_lib.escape(str(help_text))}</div>"
         if help_text
         else ""
     )
 
     html = (
         '<div class="glass-card kpi-card">'
-        f'<div style="color: #FFFFFF; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.25; margin-bottom: 8px; hyphens: none; -webkit-hyphens: none; word-break: normal; overflow-wrap: normal;">{label}</div>'
-        f"<div style=\"background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.6rem, 2.2vw, 2.3rem); font-weight: 800; line-height: 1.15; margin-bottom: 8px; font-family: 'Montserrat', sans-serif; display: block; word-break: break-word;\">{value}</div>"
+        f'<div style="color: #FFFFFF; font-size: 0.80rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.25; margin-bottom: 8px; hyphens: none; -webkit-hyphens: none; word-break: normal; overflow-wrap: normal;">{html_lib.escape(str(label))}</div>'
+        f"<div style=\"background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.55rem, 2.1vw, 2.2rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.2; margin-bottom: 8px; font-family: 'Montserrat', sans-serif; display: block; word-break: break-word;\">{html_lib.escape(str(value))}</div>"
         f"{sub_html}"
         f"{help_html}"
         "</div>"

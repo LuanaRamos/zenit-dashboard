@@ -12,6 +12,10 @@
   --primary-dim: #FF6F00;
   --cyan: #62fae3;
   --danger: #ffb4ab;
+  --surface-raised: #1b1f25;
+  --border-muted: rgba(255, 255, 255, 0.14);
+  --focus-ring: #ffd166;
+  color-scheme: dark;
 }
 
 * { 
@@ -26,25 +30,25 @@ html, body {
     min-height: 100vh !important;
 }
 
-.block-container { 
-    padding-top: 1.5rem !important; 
-    max-width: 1200px !important; 
+.block-container {
+    padding: 1.75rem clamp(1rem, 3vw, 2rem) 2.5rem !important;
+    max-width: 1360px !important;
     width: 100% !important;
+    min-width: 0 !important;
 }
 
-[data-testid="stAppViewContainer"], [data-testid="stApp"] { 
+[data-testid="stAppViewContainer"], [data-testid="stApp"] {
     background-color: var(--bg-base) !important;
-    background-image: 
-        radial-gradient(at 0% 0%, rgba(255, 179, 0, 0.08) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(98, 250, 227, 0.06) 0px, transparent 50%),
-        radial-gradient(at 50% 50%, rgba(255, 179, 0, 0.03) 0px, transparent 70%) !important;
-    background-attachment: fixed !important;
+    background-image: radial-gradient(circle at 15% 0%, rgba(255, 179, 0, 0.035), transparent 45%) !important;
     min-height: 100vh !important;
+    min-width: 0 !important;
     width: 100% !important;
 }
 
-[data-testid="stHeader"] { 
-    display: none !important; 
+/* Não ocultar o cabeçalho: ele contém o controle de abertura da barra lateral. */
+[data-testid="stHeader"] {
+    background: rgba(17, 19, 23, 0.96) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 @keyframes pulseNeon {
@@ -58,16 +62,14 @@ html, body {
 }
 
 .glass-card, [data-testid="stPlotlyChart"], .glass-table-container, .glass-panel {
-    background: rgba(17, 19, 23, 0.40) !important;
-    backdrop-filter: blur(24px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+    background: var(--surface-raised) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
     border-radius: 12px !important;
     padding: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40) !important;
-    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 3px 16px rgba(0, 0, 0, 0.20) !important;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
     box-sizing: border-box !important;
 }
 
@@ -83,23 +85,22 @@ html, body {
 }
 
 .kpi-card {
-    background: rgba(17, 19, 23, 0.45) !important;
-    backdrop-filter: blur(24px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+    background: var(--surface-raised) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
     padding: 16px 14px !important;
     border-radius: 14px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40) !important;
-    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    min-height: 120px !important;
+    box-shadow: 0 3px 16px rgba(0, 0, 0, 0.20) !important;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+    min-height: 126px !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
 }
 
 .glass-card:hover, [data-testid="stPlotlyChart"]:hover {
     border-color: rgba(255, 179, 0, 0.50) !important;
     box-shadow: 0 8px 32px rgba(255, 179, 0, 0.06) !important;
-    transform: translateY(-2px);
 }
 .kpi-card:hover {
     border-color: rgba(255, 179, 0, 0.50) !important;
@@ -110,9 +111,18 @@ html, body {
 .metric-pill-gold { background: rgba(255, 179, 0, 0.1); color: var(--primary); border: 1px solid rgba(255, 179, 0, 0.15); padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 .metric-pill-red { background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.15); padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 
-.glass-table { width: 100%; border-collapse: collapse; color: var(--text-main); font-size: 12px; }
+.glass-table { width: max-content; min-width: 100%; border-collapse: collapse; color: var(--text-main); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
 .glass-table th { text-align: left; padding: 10px 14px; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; border-bottom: 1px solid rgba(142, 147, 121, 0.35); position: sticky; top: 0; background: rgba(12, 14, 18, 0.90); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10; cursor: pointer; user-select: none; }
 .glass-table th:hover { color: var(--primary); }
+.glass-table .sort-button {
+    display: inline-flex; align-items: center; justify-content: flex-start;
+    gap: 0.35rem; min-height: 44px; min-width: 0;
+    font: inherit; color: inherit; background: none; border: 0;
+    padding: 0; cursor: pointer; text-align: left;
+}
+.glass-table .sort-button:hover { color: var(--primary); }
+.glass-table th[aria-sort="ascending"] .sort-button,
+.glass-table th[aria-sort="descending"] .sort-button { color: var(--primary); }
 .glass-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.015); font-weight: 500; color: #E2E8F0; transition: background 0.2s ease; }
 .glass-table tr:hover td { background: rgba(255, 179, 0, 0.10); }
 #tbl_posts_org th, #tbl_posts_org td { padding-inline: 8px; }
@@ -121,18 +131,18 @@ html, body {
 
 .glass-download {
     display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 10px; padding: 5px 14px; font-size: 0.8rem;
+    margin-top: 10px; padding: 10px 16px; font-size: 0.875rem;
+    min-height: 44px; justify-content: center;
     color: #111317; background: linear-gradient(90deg, var(--primary), #FFD54F, var(--primary));
     background-size: 240% 100%;
     border: 1px solid var(--primary); border-radius: 8px;
-    text-decoration: none; cursor: pointer; transition: .22s;
+    text-decoration: none; cursor: pointer;
+    transition: box-shadow 160ms ease, background-color 160ms ease;
     font-weight: 900;
     box-shadow: 0 0 20px rgba(255, 179, 0, 0.30);
 }
-.glass-download:hover { 
-    transform: translateY(-2px); 
-    box-shadow: 0 0 30px rgba(255, 179, 0, 0.60); 
-    animation: shimmer 3s linear infinite, pulseNeon 2s ease-in-out infinite; 
+.glass-download:hover {
+    box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.28);
 }
 
 .title {
@@ -142,7 +152,7 @@ html, body {
 .plotly-graph-div { margin: 0 auto; }
 [data-testid="stSidebar"] { 
     background-color: rgba(17, 19, 23, 0.45) !important; 
-    backdrop-filter: blur(24px) saturate(150%) !important; 
+    backdrop-filter: blur(8px) !important; 
     border-right: 1px solid rgba(255, 255, 255, 0.08) !important; 
 }
 
@@ -186,18 +196,21 @@ section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover {
     border-radius: 10px !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     margin-bottom: 20px !important;
-    flex-wrap: wrap !important;
-    overflow-x: visible !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin !important;
 }
 
 .stTabs [data-baseweb="tab"] {
     border-radius: 8px !important;
-    padding: 6px 14px !important;
+    padding: 10px 14px !important;
+    min-height: 44px !important;
     color: #c4c9ac !important;
     font-size: 0.85rem !important;
     font-weight: 500 !important;
     white-space: nowrap !important;
-    transition: all 0.2s ease !important;
+    transition: background-color 160ms ease, color 160ms ease !important;
 }
 
 .stTabs [aria-selected="true"] {
@@ -210,32 +223,40 @@ h1, h2, h3, h4 { font-family: 'Montserrat', sans-serif !important; font-weight: 
 h1 { font-size: 2.2rem !important; font-weight: 800 !important; }
 h3 { font-size: 1.1rem !important; color: #E2E8F0 !important; }
 
-@keyframes float-up-reveal {
-    from { 
-        opacity: 0.01; 
-        transform: translateY(20px) scale(0.98); 
-        filter: blur(4px); 
+
+/* Controles nativos e links devem ser utilizáveis por teclado. */
+:where(button, a, input, select, textarea, [role="tab"], [role="button"]):focus-visible,
+.glass-table .sort-button:focus-visible {
+    outline: 2px solid var(--focus-ring) !important;
+    outline-offset: 3px !important;
+}
+a, button, [role="button"], [role="tab"] { touch-action: manipulation; }
+.glass-link { text-underline-offset: 3px; }
+.glass-link:hover, .glass-link:focus-visible { text-decoration: underline; }
+.glass-table-container { overscroll-behavior-x: contain; }
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="column"] { min-width: 0; }
+
+@media (max-width: 640px) {
+    .block-container { padding: 1rem 0.875rem 2rem !important; }
+    h1 { font-size: clamp(1.55rem, 7vw, 2rem) !important; }
+    .glass-card, .kpi-card, [data-testid="stPlotlyChart"] {
+        padding: 14px !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
     }
-    to { 
-        opacity: 1; 
-        transform: translateY(0) scale(1); 
-        filter: blur(0px); 
-    }
+    .glass-table-container { max-height: 420px; }
+    .glass-table th, .glass-table td { padding: 10px !important; }
+    .stTabs [data-baseweb="tab-list"] { margin-bottom: 12px !important; }
+    [data-testid="stSidebarContent"] { max-height: 100dvh !important; }
 }
 
-@keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .glass-card, .glass-table-container, [data-testid="stPlotlyChart"] {
-        animation: float-up-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        opacity: 0.01;
+/* Nunca manter cartões invisíveis durante a renderização ou exigir movimento. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
     }
-    div[data-testid="column"]:nth-child(1) .glass-card { animation-delay: 0.05s; }
-    div[data-testid="column"]:nth-child(2) .glass-card { animation-delay: 0.15s; }
-    div[data-testid="column"]:nth-child(3) .glass-card { animation-delay: 0.25s; }
-    [data-testid="stPlotlyChart"] { animation-delay: 0.35s; }
-    .glass-table-container { animation-delay: 0.45s; }
 }

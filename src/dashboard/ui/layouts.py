@@ -36,11 +36,11 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     Retorna (modulo_selecionado, date_preset, time_range, client_config).
     """
     with st.sidebar:
-        # Zenit Logo styling (Gold and Dark)
+        # Marca da Zenit e navegação de alto contraste
         logo_path = Path(__file__).parent.parent / "assets" / "zenit_logo.png"
         if logo_path.exists():
             logo_base64 = get_base64_image(logo_path)
-            logo_html = f'<img src="data:image/png;base64,{logo_base64}" style="width: 32px; height: 32px; border-radius: 6px; box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3); object-fit: contain;">'
+            logo_html = f'<img src="data:image/png;base64,{logo_base64}" alt="Logo da Zenit" width="32" height="32" style="width: 32px; height: 32px; border-radius: 6px; box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3); object-fit: contain;">'
         else:
             logo_html = '<div style="width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #FFB300, #FF6F00); box-shadow: 0 4px 12px rgba(255, 179, 0, 0.3);"></div>'
 
@@ -73,10 +73,6 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         if st.session_state.get("selected_client_name") not in client_names:
             st.session_state["selected_client_name"] = clients[0].name
 
-        st.markdown(
-            "<h4 style='color: #c4c9ac; font-size: 0.72rem; margin-top: 4px; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Cliente</h4>",
-            unsafe_allow_html=True,
-        )
 
         def on_client_change():
             # Os caches já usam client_name como chave; não invalidar outras contas.
@@ -86,7 +82,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             "Selecione o Cliente",
             options=client_names,
             key="selected_client_name",
-            label_visibility="collapsed",
+            label_visibility="visible",
             on_change=on_client_change,
         )
 
@@ -123,7 +119,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                     "color": "#c4c9ac",
                     "font-family": "Inter, sans-serif",
                     "font-weight": "500",
-                    "transition": "all 0.2s ease",
+                    "transition": "background-color 160ms ease, color 160ms ease",
                 },
                 "nav-link-selected": {
                     "background": "rgba(255, 179, 0, 0.08)",
@@ -146,10 +142,6 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         )
 
         # Filtro de Tempo Global
-        st.markdown(
-            "<h4 style='color: #c4c9ac; font-size: 0.75rem; margin-top: 10px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;'>Filtros</h4>",
-            unsafe_allow_html=True,
-        )
         periodo_selecionado = st.selectbox(
             "Período de Análise",
             [
@@ -157,7 +149,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 "Todo o histórico disponível",
                 "Personalizado",
             ],
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
         if selected_module == "Orgânico (Instagram)":
             st.caption(
@@ -246,7 +238,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
                 f"Zenit Analytics · v{version_file.read_text(encoding='utf-8').strip()}"
             )
 
-        if st.button("🔄 Forçar Atualização", use_container_width=True):
+        if st.button("Atualizar dados", use_container_width=True):
             st.cache_data.clear()
             st.cache_resource.clear()
             st.rerun()
