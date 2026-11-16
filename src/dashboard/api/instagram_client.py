@@ -29,10 +29,11 @@ class InstagramClient:
 
     def __init__(self, client_config) -> None:
         self.token = (
-            client_config.token
-            if getattr(client_config, "token", None)
-            else settings.meta_master_token.get_secret_value()
+            getattr(client_config, "token", None)
+            or (settings.meta_master_token.get_secret_value() if settings.meta_master_token else None)
         )
+        if not self.token:
+            raise ValueError("A conta selecionada não possui credencial Meta configurada.")
         self.page_id = client_config.page_id
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
