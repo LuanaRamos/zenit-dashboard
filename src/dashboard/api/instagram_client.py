@@ -300,6 +300,12 @@ class InstagramClient:
                 continue
             metrics_dict = metrics_by_media.get(ig_id, {})
             expected = requested_by_media.get(ig_id, ())
+            # A Graph API v27 rejeita estas métricas para Reels (erro 100).
+            # Separar ausência por incompatibilidade de ausência por falha.
+            unsupported = (
+                ("follows", "profile_visits", "profile_activity")
+                if item.get("media_product_type") == "REELS" else ()
+            )
             present = tuple(name for name in expected if name in metrics_dict)
             missing = tuple(name for name in expected if name not in metrics_dict)
             if not expected or not present:
@@ -340,6 +346,7 @@ class InstagramClient:
                     insights_status=status,
                     insights_available=present,
                     insights_missing=missing,
+                    insights_unsupported=unsupported,
                 )
                 media_list.append(media)
             except Exception as exc:
