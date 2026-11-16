@@ -112,8 +112,9 @@ def test_profile_notices_are_consolidated_under_diagnostics():
     assert '"Diagnóstico e cobertura"' in source
     assert 'st.info(' not in source
     assert 'st.warning(' not in source
-    assert '"Toques em botões de contato"' in inspect.getsource(
-        organic_components.account_engagement_rows
+    assert any(
+        row["Indicador"] == "Toques em botões de contato"
+        for row in organic_components.account_engagement_rows({})
     )
 
 
@@ -132,5 +133,5 @@ def test_cost_bars_are_not_tiny_capsules(monkeypatch):
     components.render_whatsapp_cost_chart([
         CampaignInsight(campaign_name="Feriado", spend=50, whatsapp_starts=10, cost_per_whatsapp=5)
     ])
-    assert figures[0].data[0].cornerradius <= 8
+    assert figures[0].data[0].marker.cornerradius <= 8
     assert figures[0].data[0].width >= 0.4
