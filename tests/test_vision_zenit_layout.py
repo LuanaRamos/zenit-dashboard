@@ -2,7 +2,6 @@
 from datetime import date, timedelta
 
 import plotly.graph_objects as go
-import pytest
 
 from schemas.meta import CampaignInsight
 from ui import components, organic_components
