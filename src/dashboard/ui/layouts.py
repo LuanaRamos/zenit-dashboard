@@ -21,6 +21,15 @@ def _client_name_sort_key(name: str) -> tuple[str, str, str]:
     return unaccented, folded, name
 
 
+def available_modules_for_client(client: "ClientConfig") -> list[str]:
+    """Exibe somente funcionalidades para as quais o cliente tem ativos."""
+    return (
+        ["Visão Geral (Ads)", "Orgânico (Instagram)"]
+        if client.has_ads
+        else ["Orgânico (Instagram)"]
+    )
+
+
 def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
     """
     Configura e renderiza a barra lateral de navegação e filtros.
@@ -89,10 +98,14 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         )
         selected_module = option_menu(
             menu_title=None,
-            options=["Visão Geral (Ads)", "Orgânico (Instagram)"],
-            icons=["bar-chart-line-fill", "instagram"],
+            options=available_modules_for_client(selected_client),
+            icons=(
+                ["bar-chart-line-fill", "instagram"]
+                if selected_client.has_ads else ["instagram"]
+            ),
             menu_icon="cast",
             default_index=0,
+            key=f"navigation_{selected_client.name}",
             styles={
                 "container": {
                     "padding": "0!important",
