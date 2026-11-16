@@ -431,8 +431,9 @@ class MetaAdsClient:
                 else:
                     break
         except Exception as e:
-            logger.error(f"Erro em ad insights: {e}")
+            logger.error("Falha na consulta obrigatória de Insights de criativos: %s", e)
             sentry_sdk.capture_exception(e)
+            raise
 
         # Passo 2: Buscar imagens/thumbnails + adset (targeting + schedule) no endpoint de ads
         ads_endpoint = f"{self.ad_account_id}/ads"
@@ -552,11 +553,20 @@ class MetaAdsClient:
             other_clicks = max(0, clicks - inline_link_clicks)
             
             objective = item.get("objective", "UNKNOWN")
-            if objective in ["OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"] and instagram_follows > 0:
+            cpl = spend / leads if leads > 0 else None
+            cost_per_whatsapp = spend / whatsapp if whatsapp > 0 else None
+            # Não somar cadastros e mensagens: podem ser o mesmo lead.
+            # CPA legado: prioriza o resultado correspondente ao objetivo.
+            if objective in {"OUTCOME_LEADS", "LEAD_GENERATION"} and cpl is not None:
+                cpa = cpl
+            elif cost_per_whatsapp is not None:
+                cpa = cost_per_whatsapp
+            elif cpl is not None:
+                cpa = cpl
+            elif objective in {"OUTCOME_TRAFFIC", "LINK_CLICKS", "OUTCOME_AWARENESS"} and instagram_follows > 0:
                 cpa = spend / instagram_follows
             else:
-                conversions = leads + whatsapp
-                cpa = spend / conversions if conversions > 0 else 0.0
+                cpa = None
 
             creative = creatives_map.get(ad_id, {})
             
@@ -597,6 +607,8 @@ class MetaAdsClient:
                 instagram_follows=instagram_follows,
                 profile_visits=profile_visits,
                 cpa=cpa,
+                cpl=cpl,
+                cost_per_whatsapp=cost_per_whatsapp,
                 cpc=spend / clicks if clicks > 0 else 0.0,
                 # Novos campos
                 ad_status=creative.get("ad_status", ""),
@@ -613,7 +625,9 @@ class MetaAdsClient:
                 target_regions=creative.get("regions", []),
             ))
 
-        return sorted(results, key=lambda x: (x.cpa == 0, x.cpa))
+        return sorted(
+            results, key=lambda x: (x.cpa is None, x.cpa if x.cpa is not None else float("inf"))
+        )
 
 
     def get_creative_platform_breakdown(
