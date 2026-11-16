@@ -692,10 +692,66 @@ class InstagramClient:
             "business_address_taps", None, None, "indisponivel",
             "Não foi validado um campo equivalente para toques no endereço comercial."
         )
-        _set_coverage(
-            "follows_and_unfollows", None, None, "indisponivel",
-            "Sem equivalente direto validado nesta consulta."
-        )
+        # Crescimento da conta: métricas explícitas por follow_type.
+        # Não atribuir os seguidores totais da conta a uma publicação/Reel.
+        follow_begin = max(start, end - datetime.timedelta(days=30))
+        result.update({
+            "new_follows": None, "unfollows": None, "net_follows": None,
+        })
+        try:
+            def follow_ts(day: datetime.date) -> int:
+                return int(datetime.datetime.combine(
+                    day, datetime.time.min, tzinfo=datetime.timezone.utc
+                ).timestamp())
+
+            response = self._make_request(endpoint, {
+                "metric": "follows_and_unfollows",
+                "metric_type": "total_value",
+                "period": "day",
+                "breakdown": "follow_type",
+                "since": str(follow_ts(follow_begin)),
+                "until": str(follow_ts(end)),
+            })
+            rows = [
+                item for item in response.get("data", [])
+                if item.get("name") == "follows_and_unfollows"
+            ]
+            counts: dict[str, int] = {}
+            for row in rows:
+                for group in (row.get("total_value") or {}).get("breakdowns", []):
+                    if "follow_type" not in group.get("dimension_keys", []):
+                        continue
+                    for bucket in group.get("results", []):
+                        keys = bucket.get("dimension_values") or []
+                        value = bucket.get("value")
+                        if keys and keys[0] in {"FOLLOWER", "NON_FOLLOWER"} and isinstance(value, (int, float)):
+                            counts[keys[0]] = counts.get(keys[0], 0) + int(value)
+
+            if counts:
+                new_follows = counts.get("FOLLOWER", 0)
+                unfollows = counts.get("NON_FOLLOWER", 0)
+                result["follows_and_unfollows"] = counts
+                result["new_follows"] = new_follows
+                result["unfollows"] = unfollows
+                result["net_follows"] = new_follows - unfollows
+                partial = follow_begin > start or clamped or requested_full_history
+                _set_coverage(
+                    "follows_and_unfollows", follow_begin, end,
+                    "parcial" if partial else "ok",
+                    ("Follow_type por até 30 dias; não equivale a seguidores "
+                     "atribuídos a publicações ou Reels."),
+                )
+            else:
+                _set_coverage(
+                    "follows_and_unfollows", None, None, "indisponivel",
+                    "A API não retornou breakdown follow_type neste período.",
+                )
+        except Exception as exc:
+            logger.warning("Crescimento de seguidores indisponível: %s", exc)
+            _set_coverage(
+                "follows_and_unfollows", None, None, "indisponivel",
+                "A Meta não disponibilizou o crescimento nesta conta/período.",
+            )
         result["_is_segmented"] = len(earliest) > 0 and (
             end - start
         ).days > 30
