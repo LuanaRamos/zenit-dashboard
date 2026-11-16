@@ -402,3 +402,47 @@ a, button, [role="button"], [role="tab"] { touch-action: manipulation; }
     .zenit-feature-note { max-width: 100%; }
     .kpi-card .kpi-value { font-size: 1.7rem; }
 }
+
+/* Ícones vetoriais Lucide: traços leves, sem emojis ou bolinhas. */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+.zenit-feature-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+.zenit-feature-eyebrow svg { flex: 0 0 auto; }
+.kpi-icon svg { stroke-width: 1.9; }
+.zenit-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 18px;
+    color: #aebace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+.zenit-notice svg { color: #ffb300; flex-shrink: 0; }
+.zenit-section-eyebrow {
+    color: #ffce60;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+}
+.zenit-section-note {
+    color: #b9c1cd;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin: 2px 0 16px;
+}
