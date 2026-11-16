@@ -1,3 +1,4 @@
+# Dependências do Zenit Analytics no Streamlit Community Cloud.
 streamlit
 streamlit-option-menu
 plotly
