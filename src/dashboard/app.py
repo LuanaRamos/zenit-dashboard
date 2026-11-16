@@ -200,26 +200,27 @@ def render_organic_page(date_preset, time_range, client):
             # 5. Tabela de publicações orgânicas com filtros
             render_posts_table(media)
 
-        with st.expander("Comparativo com anúncios do Instagram", expanded=False):
-            st.caption(
-                "Consulta opcional de anúncios vinculados às publicações acima. "
-                "Os resultados pagos não entram nos indicadores orgânicos."
-            )
-            if st.checkbox("Carregar comparação com Ads", key=f"compare_ads_{client.name}"):
-                try:
-                    from ui.organic_components import render_paid_comparison
-
-                    with st.spinner("Carregando comparação..."):
-                        compared = data_loader.enrich_media_with_ads(
-                            media, date_preset, time_range, client.name
+        if client.has_ads:
+            with st.expander("Comparativo com anúncios do Instagram", expanded=False):
+                st.caption(
+                    "Consulta opcional de anúncios vinculados às publicações acima. "
+                    "Os resultados pagos não entram nos indicadores orgânicos."
+                )
+                if st.checkbox("Carregar comparação com Ads", key=f"compare_ads_{client.name}"):
+                    try:
+                        from ui.organic_components import render_paid_comparison
+    
+                        with st.spinner("Carregando comparação..."):
+                            compared = data_loader.enrich_media_with_ads(
+                                media, date_preset, time_range, client.name
+                            )
+                        render_paid_comparison(compared)
+                    except Exception as error:
+                        sentry_sdk.capture_exception(error)
+                        st.warning(
+                            "Comparativo pago indisponível no momento. Os resultados orgânicos acima continuam disponíveis."
                         )
-                    render_paid_comparison(compared)
-                except Exception as error:
-                    sentry_sdk.capture_exception(error)
-                    st.warning(
-                        "Comparativo pago indisponível no momento. Os resultados orgânicos acima continuam disponíveis."
-                    )
-
+    
     with tab_growth:
         st.markdown("### 📈 Crescimento e Histórico de Seguidores")
         st.caption("Acompanhamento de novos seguidores diários e ações registradas no perfil.")
