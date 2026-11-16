@@ -14,9 +14,8 @@ def fetch_creatives(
 ) -> list[dict]:
     """
     Busca performance + público REAL entregue por anúncio.
-    Usa 2 chamadas paralelas à API:
-    1. get_creative_performance → métricas + criativo + datas
-    2. get_creative_real_audience → quem de fato viu o anúncio (age/gender/region/country)
+    Consolida métricas de todos os posicionamentos, público efetivamente
+    alcançado e comparativo por plataforma, sem somar duas vezes os anúncios.
     """
     from ui.data_loader import get_api_client
 
@@ -24,6 +23,14 @@ def fetch_creatives(
 
     creatives = client.get_creative_performance(date_preset, time_range)
     real_audience = client.get_creative_real_audience(date_preset, time_range)
+    try:
+        platform_breakdown = client.get_creative_platform_breakdown(date_preset, time_range)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Comparação por plataforma indisponível: %s", exc
+        )
+        platform_breakdown = {}
 
     results = []
     for d in creatives:
@@ -34,6 +41,7 @@ def fetch_creatives(
         dump["real_age_gender"] = aud.get("age_gender", {})
         dump["real_regions"] = aud.get("regions", {})
         dump["real_countries"] = aud.get("countries", {})
+        dump["platform_breakdown"] = platform_breakdown.get(d.ad_id, [])
         results.append(dump)
 
     return results
@@ -287,6 +295,29 @@ def render_creatives_tab(
             st.warning("Sem dados de criativos no período selecionado.")
             return
 
+        st.caption(
+            "Resultados consolidados de todos os posicionamentos da conta Meta Ads. "
+            "O comparativo por plataforma é exibido separadamente e não é somado ao total."
+        )
+        platforms = sorted({
+            entry["platform"]
+            for ad in data for entry in ad.get("platform_breakdown", [])
+        })
+        selected_platform = st.selectbox(
+            "Comparar posicionamentos",
+            options=["Todos os posicionamentos", *platforms],
+            key=f"creative_platform_{client_name}",
+        )
+        if selected_platform != "Todos os posicionamentos":
+            # Nunca recalcular o total do anúncio com métricas do Instagram apenas.
+            # O filtro seleciona os anúncios com entrega nesta plataforma; o
+            # cartão explicita a visão agregada e detalha o placement abaixo.
+            data = [
+                ad for ad in data
+                if any(p["platform"] == selected_platform
+                       for p in ad.get("platform_breakdown", []))
+            ]
+        st.caption(f"{len(data)} criativos encontrados na seleção.")
         top_ads = data[:10]
 
         for i in range(0, len(top_ads), 2):
@@ -416,6 +447,35 @@ def _render_creative_card(ad: dict) -> None:
                 f"{f'💾 {saves} Salvamentos<br>' if saves else ''}"
                 f"</div>",
                 unsafe_allow_html=True,
+            )
+
+    # ── Quebra por plataforma sem misturar com o total agregado ──────────────
+    placements = ad.get("platform_breakdown", [])
+    if placements:
+        with st.expander("Desempenho por plataforma", expanded=False):
+            platform_names = {
+                "instagram": "Instagram", "facebook": "Facebook",
+                "messenger": "Messenger", "audience_network": "Audience Network",
+                "threads": "Threads",
+            }
+            table = []
+            for part in placements:
+                spend_part = part["spend"]
+                messages = part["messaging_conversations"]
+                table.append({
+                    "Plataforma": platform_names.get(part["platform"], part["platform"]),
+                    "Investimento (R$)": spend_part,
+                    "Impressões": part["impressions"],
+                    "Cliques": part["clicks"],
+                    "Conversas": messages,
+                    "Custo/conversa (R$)": (
+                        round(spend_part / messages, 2) if messages else None
+                    ),
+                })
+            st.dataframe(pd.DataFrame(table), use_container_width=True, hide_index=True)
+            st.caption(
+                "Recorte por plataforma. Os totais do cartão são da consulta "
+                "agregada e não devem ser somados novamente."
             )
 
     # ── Público REAL Atraído ─────────────────────────────────────────────────
