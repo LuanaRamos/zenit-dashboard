@@ -4,6 +4,8 @@ from typing import Any, List
 
 import pandas as pd
 import streamlit as st
+from api.exceptions import InstagramAPIError
+from core.meta_content_export import apply_content_export, read_content_export
 from schemas.instagram import InstagramMedia
 from ui.components import render_glass_table, render_metric_card
 
@@ -21,6 +23,8 @@ ORGANIC_METRIC_FIELDS = (
     "total_interactions",
     "like_count",
     "comments_count",
+    "shares",
+    "saved",
     "organic_views",
 )
 
@@ -398,17 +402,18 @@ def render_account_engagement_summary(insights: dict) -> None:
 
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
-    """Render the four confirmed organic Media Insights aggregates."""
-    st.markdown("### 📊 Desempenho orgânico das publicações")
+    """Show each engagement metric separately."""
+    st.markdown("### 📊 Desempenho das publicações")
     totals = aggregate_organic_metrics(list(media_list))
     cards = (
-        ("Interações orgânicas", "total_interactions"),
         ("Curtidas orgânicas", "like_count"),
         ("Comentários orgânicos", "comments_count"),
+        ("Compartilhamentos", "shares"),
+        ("Salvamentos", "saved"),
         ("Visualizações orgânicas", "organic_views"),
     )
 
-    cols = st.columns(4)
+    cols = st.columns(len(cards))
     for column, (label, field) in zip(cols, cards):
         aggregate = totals[field]
         if aggregate.available == 0:
@@ -424,7 +429,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
                 label,
                 _format_optional_int(aggregate.total),
                 coverage,
-                "Soma dos resultados orgânicos disponíveis por publicação",
+                "Soma dos resultados disponíveis nos Insights de cada publicação",
             )
 
     st.caption(
@@ -433,31 +438,89 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     )
 
 
+def render_meta_content_import(
+    media_list: list[InstagramMedia], client_name: str,
+) -> list[InstagramMedia]:
+    """Use the official export for fields not reliably matched by the live API."""
+    with st.expander("Usar CSV do Meta Business Suite"):
+        st.caption(
+            "Em Conteúdo → Posts e reels → Exportar dados, selecione o Instagram "
+            "deste cliente. O CSV traz o alcance do Business Suite e seguidores "
+            "por publicação, inclusive para Reels."
+        )
+        uploaded = st.file_uploader(
+            "CSV de publicações da Meta",
+            type=["csv"],
+            key=f"meta_content_csv_{client_name}",
+        )
+        if uploaded is None:
+            return media_list
+        from ui.data_loader import get_instagram_client
+
+        try:
+            account = get_instagram_client(client_name).instagram_account_id
+            snapshot = read_content_export(uploaded.getvalue(), account)
+        except InstagramAPIError:
+            st.warning("Não consegui confirmar a conta do Instagram para usar este CSV.")
+            return media_list
+        except ValueError as error:
+            st.warning(str(error))
+            return media_list
+
+        updated = apply_content_export(media_list, snapshot)
+        reach_rows = sum(post.business_suite_reach is not None for post in updated)
+        follow_rows = sum(post.business_suite_follows is not None for post in updated)
+        if not (reach_rows or follow_rows):
+            st.warning("O CSV não tem alcance ou seguidores para as publicações carregadas.")
+        else:
+            st.success(
+                f"CSV aplicado: alcance em {reach_rows} de {len(updated)} publicações; "
+                f"seguidores em {follow_rows} de {len(updated)}."
+            )
+            st.caption("Os valores importados são os da exportação selecionada.")
+        return updated
+
+
+def _post_insight(media: Any, field: str) -> tuple[int | None, str]:
+    imported = _value(media, f"business_suite_{field}")
+    if imported is not None:
+        return imported, "Meta Business Suite (CSV)"
+    live = _value(media, field)
+    return live, "Instagram Media Insights (API)" if live is not None else ""
+
+
 POST_FOLLOWS_COLUMN = "Seguidores atribuídos à publicação"
+POST_SHARES_COLUMN = "Compartilhamentos (Media Insights)"
+POST_SAVES_COLUMN = "Salvamentos (Media Insights)"
 ORGANIC_POST_COLUMNS = [
     "Data e Hora",
     "Tipo",
-    "Interações orgânicas",
+    "Alcance",
+    "Visualizações orgânicas",
     "Curtidas orgânicas",
     "Comentários orgânicos",
-    "Visualizações orgânicas",
+    POST_SHARES_COLUMN,
+    POST_SAVES_COLUMN,
     POST_FOLLOWS_COLUMN,
     "Link",
 ]
 
-ORGANIC_POST_EXPORT_COLUMNS = [
-    column for column in ORGANIC_POST_COLUMNS if column != POST_FOLLOWS_COLUMN
-] + [
+ORGANIC_POST_EXPORT_COLUMNS = ORGANIC_POST_COLUMNS + [
     "ID da publicação", "Legenda", "URL da mídia", "URL da miniatura",
     "Tipo de mídia (API)", "Produto de mídia (API)",
-    "Alcance (Media Insights)", "Compartilhamentos (Media Insights)",
-    "Salvamentos (Media Insights)",
+    "Alcance (Media Insights)", "Alcance (CSV da Meta)", "Fonte do alcance",
+    "Seguidores (Media Insights)", "Seguidores (CSV da Meta)", "Fonte dos seguidores",
     "Curtidas públicas (objeto mídia)", "Comentários públicos (objeto mídia)",
     "Tempo total de Reel (ms)", "Tempo médio de Reel (ms)",
-    "Visitas ao perfil atribuídas à publicação", POST_FOLLOWS_COLUMN,
+    "Visitas ao perfil atribuídas à publicação",
     "Atividade do perfil (publicação)", "Cliques na bio atribuídos à publicação",
     "Status da coleta de Insights", "Métricas retornadas", "Métricas indisponíveis",
     "Origem dos valores",
+]
+
+_POST_COUNT_COLUMNS = ORGANIC_POST_COLUMNS[2:-1] + [
+    "Alcance (Media Insights)", "Alcance (CSV da Meta)",
+    "Seguidores (Media Insights)", "Seguidores (CSV da Meta)",
 ]
 
 
@@ -469,11 +532,13 @@ def _organic_post_rows(
         media_type = _media_type_label(media)
         if selected_type != "Todos" and media_type != selected_type:
             continue
+        reach, reach_source = _post_insight(media, "reach")
+        follows, follows_source = _post_insight(media, "follows")
         rows.append(
             {
                 "Data e Hora": _format_timestamp(_value(media, "timestamp")),
                 "Tipo": media_type,
-                "Interações orgânicas": _value(media, "total_interactions"),
+                "Alcance": reach,
                 "Curtidas orgânicas": _value(media, "like_count"),
                 "Comentários orgânicos": _value(media, "comments_count"),
                 "Visualizações orgânicas": _value(media, "organic_views"),
@@ -485,20 +550,25 @@ def _organic_post_rows(
                 "Tipo de mídia (API)": _value(media, "media_type", ""),
                 "Produto de mídia (API)": _value(media, "media_product_type", ""),
                 "Alcance (Media Insights)": _value(media, "reach"),
-                "Compartilhamentos (Media Insights)": _value(media, "shares"),
-                "Salvamentos (Media Insights)": _value(media, "saved"),
+                "Alcance (CSV da Meta)": _value(media, "business_suite_reach"),
+                "Fonte do alcance": reach_source,
+                POST_SHARES_COLUMN: _value(media, "shares"),
+                POST_SAVES_COLUMN: _value(media, "saved"),
                 "Curtidas públicas (objeto mídia)": _value(media, "visible_like_count"),
                 "Comentários públicos (objeto mídia)": _value(media, "visible_comments_count"),
                 "Tempo total de Reel (ms)": _value(media, "ig_reels_video_view_total_time"),
                 "Tempo médio de Reel (ms)": _value(media, "ig_reels_avg_watch_time"),
                 "Visitas ao perfil atribuídas à publicação": _value(media, "profile_visits"),
-                POST_FOLLOWS_COLUMN: _value(media, "follows"),
+                POST_FOLLOWS_COLUMN: follows,
+                "Seguidores (Media Insights)": _value(media, "follows"),
+                "Seguidores (CSV da Meta)": _value(media, "business_suite_follows"),
+                "Fonte dos seguidores": follows_source,
                 "Atividade do perfil (publicação)": _value(media, "profile_activity"),
                 "Cliques na bio atribuídos à publicação": _value(media, "bio_link_clicks"),
                 "Status da coleta de Insights": _value(media, "insights_status", "indisponivel"),
                 "Métricas retornadas": ", ".join(_value(media, "insights_available", ()) or ()),
                 "Métricas indisponíveis": ", ".join(_value(media, "insights_missing", ()) or ()),
-                "Origem dos valores": "Instagram Graph API: objeto mídia e Media Insights",
+                "Origem dos valores": "Instagram Graph API; alcance e seguidores conforme fonte da linha",
             }
         )
     return rows
@@ -507,7 +577,7 @@ def _organic_post_rows(
 def render_posts_table(
     media_list: List[InstagramMedia], stories_list: List[Any] | None = None
 ) -> None:
-    """Render the primary publication table with confirmed organic fields only."""
+    """Render separate engagement counts and attribute reach and follows per source."""
     del stories_list  # Kept for compatibility with existing callers.
     st.markdown("### 📝 Publicações orgânicas")
 
@@ -522,23 +592,12 @@ def render_posts_table(
         st.info("Nenhuma publicação encontrada no período.")
         return
 
-    filtered_media = [
-        media
-        for media in media_list
-        if selected_type == "Todos" or _media_type_label(media) == selected_type
-    ]
-    rows = _organic_post_rows(filtered_media, "Todos")
-    dataframe = pd.DataFrame(rows, columns=ORGANIC_POST_COLUMNS)
-    if dataframe.empty:
-        st.info("Nenhuma publicação corresponde ao filtro selecionado.")
-        return
-    dataframe[POST_FOLLOWS_COLUMN] = pd.to_numeric(dataframe[POST_FOLLOWS_COLUMN])
-
     # A exportação não herda o filtro de formato da tabela: inclui todas
     # as publicações que a consulta carregou no período global selecionado.
     export_rows = _organic_post_rows(media_list, "Todos")
-    export_frame = pd.DataFrame(export_rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
-    export_frame[POST_FOLLOWS_COLUMN] = export_frame[POST_FOLLOWS_COLUMN].astype("Int64")
+    export_frame = pd.DataFrame(export_rows, columns=ORGANIC_POST_EXPORT_COLUMNS).astype(
+        dict.fromkeys(_POST_COUNT_COLUMNS, "Int64")
+    )
     st.download_button(
         label="Baixar CSV completo das publicações carregadas",
         data=export_frame.to_csv(index=False).encode("utf-8-sig"),
@@ -549,13 +608,26 @@ def render_posts_table(
     st.caption(
         f"CSV: {len(export_rows)} publicações carregadas, independentemente do "
         "filtro de formato desta tabela. Para exportar todo o perfil acessível, "
-        "escolha 'Todo o histórico disponível' no menu lateral. "
-        "Campos não retornados pela API ficam vazios."
+        "escolha 'Todo o histórico disponível' no menu lateral. Campos sem dados ficam vazios."
     )
     st.caption(
-        "Seguidores atribuídos vêm dos Insights de cada publicação. "
-        "Nos Reels, essa métrica fica indisponível pela API."
+        "Alcance e seguidores ganhos usam o CSV da Meta quando há dado para o post; "
+        "nos demais, usam os Insights da API. O alcance pode variar entre as fontes. "
+        "Seguidores ganhos em Reels vêm do CSV. O arquivo baixado indica a fonte por métrica."
     )
+    dataframe = export_frame[ORGANIC_POST_COLUMNS].rename(columns={
+        "Curtidas orgânicas": "Curtidas",
+        "Comentários orgânicos": "Comentários",
+        "Visualizações orgânicas": "Visualizações",
+        POST_SHARES_COLUMN: "Compartilhamentos",
+        POST_SAVES_COLUMN: "Salvamentos",
+        POST_FOLLOWS_COLUMN: "Seguidores ganhos",
+    })
+    if selected_type != "Todos":
+        dataframe = dataframe[dataframe["Tipo"] == selected_type]
+    if dataframe.empty:
+        st.info("Nenhuma publicação corresponde ao filtro selecionado.")
+        return
     render_glass_table(
         dataframe,
         key="tbl_posts_org",
@@ -563,36 +635,6 @@ def render_posts_table(
         link_col="Link",
         link_label="Ver no Instagram",
     )
-
-    neutral_fields = ("reach", "saved", "shares")
-    if any(
-        _value(media, field) is not None
-        for media in filtered_media
-        for field in neutral_fields
-    ):
-        detail_rows = [
-            {
-                "Data e Hora": _format_timestamp(_value(media, "timestamp")),
-                "Tipo": _media_type_label(media),
-                "Alcance (Media Insights)": _value(media, "reach"),
-                "Salvamentos (Media Insights)": _value(media, "saved"),
-                "Compartilhamentos (Media Insights)": _value(media, "shares"),
-                "Link": _value(media, "permalink", ""),
-            }
-            for media in filtered_media
-        ]
-        with st.expander("Outros detalhes do Media Insights", expanded=False):
-            st.caption(
-                "Métricas informativas por publicação. A fonte não garante que sejam "
-                "exclusivamente orgânicas, por isso elas não entram nos totais acima."
-            )
-            render_glass_table(
-                pd.DataFrame(detail_rows),
-                key="tbl_posts_media_insights_details",
-                hide_download=True,
-                link_col="Link",
-                link_label="Ver no Instagram",
-            )
 
 
 def _has_paid_mapping(media: Any) -> bool:
@@ -629,12 +671,13 @@ def render_paid_comparison(media_list: List[InstagramMedia]) -> None:
             {
                 "Data e Hora": _format_timestamp(_value(media, "timestamp")),
                 "Tipo": _media_type_label(media),
-                "Interações orgânicas": _value(media, "total_interactions"),
                 "Curtidas orgânicas": _value(media, "like_count"),
                 "Curtidas líquidas pagas (Ads)": _value(media, "paid_likes"),
                 "Reações pagas (Ads)": _value(media, "paid_reactions"),
                 "Comentários orgânicos": _value(media, "comments_count"),
                 "Comentários pagos (Ads)": _value(media, "paid_comments"),
+                POST_SHARES_COLUMN: _value(media, "shares"),
+                POST_SAVES_COLUMN: _value(media, "saved"),
                 "Visualizações orgânicas (Media Insights)": _value(
                     media, "organic_views"
                 ),
@@ -674,7 +717,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     ranked_media = [
         media
         for media in media_list
-        if _value(media, "reach") is not None
+        if _post_insight(media, "reach")[0] is not None
         or _value(media, "total_interactions") is not None
     ]
     if not ranked_media:
@@ -684,7 +727,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
         return
 
     def _rank_sort_key(item: Any):
-        reach_val = _value(item, "reach")
+        reach_val, _ = _post_insight(item, "reach")
         interactions_val = _value(item, "total_interactions")
         has_reach = reach_val is not None
         # Primariamente por alcance; se reach não estiver disponível, usa interações como fallback
@@ -740,30 +783,27 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
                     'margin-bottom:15px;color:#c4c9ac;">Sem prévia</div>'
                 )
 
-            reach_val = _value(media, "reach")
+            reach_val, reach_source = _post_insight(media, "reach")
             reach_str = _format_optional_int(reach_val)
-            interactions_str = _format_optional_int(
-                _value(media, "total_interactions")
-            )
             likes = _format_optional_int(_value(media, "like_count"))
             comments = _format_optional_int(_value(media, "comments_count"))
             views = _format_optional_int(_value(media, "organic_views"))
+            shares = _format_optional_int(_value(media, "shares"))
+            saved = _format_optional_int(_value(media, "saved"))
+            follows = _format_optional_int(_post_insight(media, "follows")[0])
 
             if reach_val is not None:
                 highlight_html = (
                     f'<div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:4px;">'
                     f"{reach_str} de alcance</div>"
-                )
-                sub_interactions = (
-                    f'<div style="font-size:0.8rem;color:#c4c9ac;margin-bottom:12px;">'
-                    f"{interactions_str} interações orgânicas</div>"
+                    '<div style="font-size:0.8rem;color:#c4c9ac;margin-bottom:12px;">'
+                    f"{reach_source}</div>"
                 )
             else:
                 highlight_html = (
-                    f'<div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:12px;">'
-                    f"{interactions_str} interações orgânicas</div>"
+                    '<div style="color:#FFB300;font-size:1.2rem;font-weight:bold;margin-bottom:12px;">'
+                    "Alcance indisponível</div>"
                 )
-                sub_interactions = ""
 
             post_link = (
                 f'<a href="{safe_permalink}" target="_blank" class="glass-link">'
@@ -775,11 +815,13 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
             html = f"""<div class="glass-card" style="padding:15px;text-align:center;height:100%;">
     {preview}
     {highlight_html}
-    {sub_interactions}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
         <div><strong>{likes}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Curtidas orgânicas</span></div>
         <div><strong>{comments}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Comentários orgânicos</span></div>
         <div><strong>{views}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Visualizações orgânicas</span></div>
+        <div><strong>{shares}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;overflow-wrap:anywhere;">Compartilhamentos</span></div>
+        <div><strong>{saved}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Salvamentos</span></div>
+        <div><strong>{follows}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Seguidores ganhos</span></div>
     </div>
     {post_link}
 </div>"""

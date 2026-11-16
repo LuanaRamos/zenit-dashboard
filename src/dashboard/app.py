@@ -128,6 +128,7 @@ def render_organic_page(date_preset, time_range, client):
     from ui.organic_components import (
         render_followers_timeline,
         render_historic_top_comment,
+        render_meta_content_import,
         render_metric_card,
         render_organic_history_summary,
         render_organic_metrics_cards,
@@ -185,6 +186,8 @@ def render_organic_page(date_preset, time_range, client):
         else:
             if date_preset == "maximum":
                 render_organic_history_summary(media)
+
+            media = render_meta_content_import(media, client.name)
 
             # 2. Desempenho orgânico das publicações
             render_organic_metrics_cards(media)

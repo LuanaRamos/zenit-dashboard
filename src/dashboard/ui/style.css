@@ -115,6 +115,7 @@ html, body {
 .glass-table th:hover { color: var(--primary); }
 .glass-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.015); font-weight: 500; color: #E2E8F0; transition: background 0.2s ease; }
 .glass-table tr:hover td { background: rgba(255, 179, 0, 0.10); }
+#tbl_posts_org th, #tbl_posts_org td { padding-inline: 8px; }
 .sort-arrow { font-size: 0.7rem; margin-left: 4px; color: var(--primary); }
 .glass-link { color: var(--primary); text-decoration: none; }
 

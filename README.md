@@ -5,10 +5,12 @@ Painel Streamlit para acompanhar campanhas Meta Ads e conteúdo orgânico do Ins
 ## Organização
 
 - **Ads:** indicadores, campanhas, público pago e criativos, com dados da conta de anúncios.
-- **Orgânico:** interações, curtidas, comentários e visualizações de Media Insights em destaque; tabela orgânica e publicações de maior interação.
+- **Orgânico:** visualizações, curtidas, comentários, compartilhamentos e salvamentos em colunas separadas, com alcance e seguidores ganhos por publicação.
 - **Comparativo:** seção recolhida e carregamento opcional de Ads do Instagram vinculados às publicações selecionadas. Não representa todos os anúncios da conta nem inclui dark posts sem vínculo com publicações.
 
-O filtro orgânico seleciona **data de publicação**. As métricas são o acumulado das publicações até a consulta. Ads usa **datas de veiculação**. A comparação é descritiva, não uma decomposição exata de um total. Dados ausentes aparecem como N/D e somas parciais identificam a cobertura. Alcance, salvamentos e compartilhamentos de Media Insights permanecem em detalhes com rótulos neutros.
+O filtro orgânico seleciona **data de publicação**. As métricas são o acumulado das publicações até a consulta. Ads usa **datas de veiculação**. A comparação é descritiva, não uma decomposição exata de um total. Dados ausentes são sinalizados e somas parciais identificam a cobertura.
+
+Em **Publicações & Conteúdo → Usar CSV do Meta Business Suite**, escolha o CSV exportado em **Conteúdo → Posts e reels → Exportar dados** para o Instagram. O painel cruza os IDs da conta e da publicação e usa os totais de alcance e seguidores do arquivo onde houver dados. Nos demais posts, exibe os dados que a API fornecer. A API disponibiliza seguidores por publicação para o feed; para Reels, use o CSV. A importação é da sessão atual e representa o momento da exportação. O CSV do Zenit preserva os valores de cada fonte e indica qual foi exibido.
 
 No Instagram, **Histórico disponível** percorre todas as páginas sem corte por data, até a publicação mais antiga que a API disponibilizar para o perfil selecionado. O tamanho de 100 itens por página não limita o total. A busca continua mesmo após uma página vazia com continuação, remove publicações repetidas e informa erro se a paginação travar, em vez de apresentar um histórico parcial como completo. O painel mostra a quantidade e o período das publicações carregadas. O intervalo de Ads não limita essa busca. Publicações excluídas ou indisponíveis na API não podem ser recuperadas por essa consulta.
 

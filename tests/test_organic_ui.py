@@ -152,25 +152,26 @@ def test_metric_cards_show_nd_for_missing_and_partial_coverage(monkeypatch):
         ),
     )
     items = [
-        media(total_interactions=10, like_count=4, comments_count=2),
-        media(total_interactions=5, like_count=None, comments_count=1),
+        media(total_interactions=10, like_count=4, comments_count=2, shares=3, saved=0),
+        media(total_interactions=5, like_count=None, comments_count=1, shares=2),
         media(total_interactions=None, like_count=3, comments_count=None),
     ]
 
     organic_ui.render_organic_metrics_cards(items)
 
     assert [(label, value) for label, value, _, _ in cards] == [
-        ("Interações orgânicas", "15"),
         ("Curtidas orgânicas", "7"),
         ("Comentários orgânicos", "3"),
+        ("Compartilhamentos", "5"),
+        ("Salvamentos", "0"),
         ("Visualizações orgânicas", "N/D"),
     ]
     assert cards[0][2] == "Cobertura: 2 de 3 publicações"
-    assert cards[3][2] == "Sem dados nos Media Insights"
+    assert cards[-1][2] == "Sem dados nos Media Insights"
     assert any("data de publicação" in caption for caption in st.captions)
 
 
-def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
+def test_posts_table_breaks_down_engagement_and_keeps_followers_per_post(monkeypatch):
     st = StreamlitCapture()
     rendered = []
     monkeypatch.setattr(organic_ui, "st", st)
@@ -185,8 +186,11 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
             media(
                 total_interactions=12,
                 follows=5,
+                reach=90,
                 like_count=7,
                 comments_count=2,
+                shares=3,
+                saved=0,
                 organic_views=100,
                 paid_reach=9999,
                 paid_spend=123.45,
@@ -199,15 +203,18 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
     assert list(dataframe.columns) == [
         "Data e Hora",
         "Tipo",
-        "Interações orgânicas",
-        "Curtidas orgânicas",
-        "Comentários orgânicos",
-        "Visualizações orgânicas",
-        "Seguidores atribuídos à publicação",
+        "Alcance",
+        "Visualizações",
+        "Curtidas",
+        "Comentários",
+        "Compartilhamentos",
+        "Salvamentos",
+        "Seguidores ganhos",
         "Link",
     ]
-    assert dataframe.iloc[0]["Interações orgânicas"] == 12
-    assert dataframe.iloc[0]["Seguidores atribuídos à publicação"] == 5
+    row = dataframe.iloc[0]
+    assert (row["Curtidas"], row["Comentários"], row["Compartilhamentos"], row["Salvamentos"]) == (7, 2, 3, 0)
+    assert (row["Alcance"], row["Seguidores ganhos"]) == (90, 5)
     assert not any("Pago" in column or "Ads" in column for column in dataframe.columns)
     assert kwargs["link_col"] == "Link"
 
@@ -261,7 +268,7 @@ def test_posts_table_empty_filter_is_handled_without_dataframe_key_error(monkeyp
     assert any("filtro" in message.lower() for message in st.infos)
 
 
-def test_posts_table_keeps_neutral_media_insights_in_collapsed_details(monkeypatch):
+def test_table_and_csv_use_report_values_with_separate_api_provenance(monkeypatch):
     st = StreamlitCapture()
     rendered = []
     monkeypatch.setattr(organic_ui, "st", st)
@@ -272,24 +279,27 @@ def test_posts_table_keeps_neutral_media_insights_in_collapsed_details(monkeypat
     )
 
     organic_ui.render_posts_table(
-        [media(reach=120, saved=8, shares=3, total_interactions=12)]
+        [
+            media(
+                media_product_type="REELS", reach=120, business_suite_reach=100,
+                business_suite_follows=4,
+            ),
+            media(reach=44, follows=2, business_suite_follows=0),
+        ]
     )
 
-    assert len(rendered) == 2
-    details, _ = rendered[1]
-    assert list(details.columns) == [
-        "Data e Hora",
-        "Tipo",
-        "Alcance (Media Insights)",
-        "Salvamentos (Media Insights)",
-        "Compartilhamentos (Media Insights)",
-        "Link",
-    ]
-    assert details.iloc[0]["Alcance (Media Insights)"] == 120
-    assert st.expanders == [
-        (("Outros detalhes do Media Insights",), {"expanded": False})
-    ]
-    assert any("exclusivamente orgânicas" in caption for caption in st.captions)
+    table, _ = rendered[0]
+    assert table["Alcance"].tolist() == [100, 44]
+    assert table["Seguidores ganhos"].tolist() == [4, 0]
+    rows = list(csv.DictReader(io.StringIO(st.downloads[0]["data"].decode("utf-8-sig"))))
+    assert rows[0]["Alcance (Media Insights)"] == "120"
+    assert rows[0]["Alcance"] == "100"
+    assert rows[0]["Fonte do alcance"] == "Meta Business Suite (CSV)"
+    assert rows[1]["Fonte do alcance"] == "Instagram Media Insights (API)"
+    assert rows[1]["Seguidores (Media Insights)"] == "2"
+    assert rows[1]["Seguidores atribuídos à publicação"] == "0"
+    assert rows[1]["Fonte dos seguidores"] == "Meta Business Suite (CSV)"
+    assert "Interações orgânicas" not in rows[0]
 
 
 def test_paid_comparison_uses_raw_non_equivalent_ads_metrics_and_has_no_cards(monkeypatch):
@@ -373,8 +383,9 @@ def test_top_posts_falls_back_to_total_interactions_when_reach_is_none(monkeypat
 
     cards = [body for body in st.markdowns if "glass-card" in body]
     assert len(cards) == 2
-    assert "85" in cards[0]
-    assert "12" in cards[1]
+    assert "<strong>40</strong>" in cards[0]
+    assert "<strong>5</strong>" in cards[1]
+    assert all("interações orgânicas" not in card for card in cards)
 
 
 def test_top_posts_reach_takes_precedence_over_interactions_only(monkeypatch):
@@ -390,7 +401,7 @@ def test_top_posts_reach_takes_precedence_over_interactions_only(monkeypatch):
     cards = [body for body in st.markdowns if "glass-card" in body]
     assert len(cards) == 2
     assert "50" in cards[0]
-    assert "999" in cards[1]
+    assert "<strong>500</strong>" in cards[1]
 
 
 def test_top_posts_handles_reach_tie_using_interactions_or_likes(monkeypatch):
@@ -500,12 +511,14 @@ def test_top_posts_escapes_xss_in_permalinks_and_thumbnails(monkeypatch):
 def test_top_posts_card_displays_reach_when_available(monkeypatch):
     st = StreamlitCapture()
     monkeypatch.setattr(organic_ui, "st", st)
-    items = [media(reach=8500, total_interactions=40, like_count=30, comments_count=10)]
+    items = [media(reach=8500, business_suite_reach=8000, business_suite_follows=44)]
 
     organic_ui.render_top_posts_and_comments(items)
 
     cards = [body for body in st.markdowns if "glass-card" in body]
-    assert "8.500" in cards[0] or "8500" in cards[0]
+    assert "8.000" in cards[0]
+    assert "Meta Business Suite (CSV)" in cards[0]
+    assert "<strong>44</strong>" in cards[0]
     assert "alcance" in cards[0].lower()
 
 
