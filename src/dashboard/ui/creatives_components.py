@@ -7,6 +7,7 @@ import streamlit as st
 import sentry_sdk
 import pandas as pd
 from html import escape as escape_html
+from ui.iconography import lucide_icon
 
 
 @st.cache_data(ttl=3600)
@@ -70,22 +71,26 @@ def _parse_dt(dt_str: str | None) -> str:
 
 
 def _status_badge(status: str) -> str:
+    """Etiqueta retangular discreta, sem bolinhas ou caracteres decorativos."""
     colors = {
-        "ACTIVE": ("#16a34a", "#dcfce7", "● Ativo"),
-        "PAUSED": ("#d97706", "#fef3c7", "⏸ Pausado"),
-        "DELETED": ("#dc2626", "#fee2e2", "✕ Deletado"),
-        "ARCHIVED": ("#6b7280", "#f3f4f6", "↓ Arquivado"),
+        "ACTIVE": ("#9edbb3", "rgba(24, 120, 77, 0.14)", "Ativo"),
+        "PAUSED": ("#ffd56c", "rgba(255, 179, 0, 0.10)", "Pausado"),
+        "DELETED": ("#ffadad", "rgba(205, 58, 58, 0.14)", "Excluído"),
+        "ARCHIVED": ("#b9c1cd", "rgba(119, 136, 160, 0.13)", "Arquivado"),
     }
-    color, bg, label = colors.get(status.upper(), ("#6b7280", "#f3f4f6", status))
+    color, bg, label = colors.get(
+        status.upper(), ("#b9c1cd", "rgba(119,136,160,.12)", status)
+    )
     return (
-        f'<span style="background:{bg};color:{color};padding:2px 10px;'
-        f'border-radius:20px;font-size:0.75rem;font-weight:700;">{escape_html(label)}</span>'
+        f'<span style="background:{bg};color:{color};padding:5px 9px;'
+        f'border:1px solid rgba(255,255,255,.08);border-radius:6px;'
+        f'font-size:0.75rem;font-weight:650;">{escape_html(label)}</span>'
     )
 
 
 _GENDER_PT = {"male": "Masculino", "female": "Feminino", "unknown": "Indefinido"}
 _AGE_ORDER = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
-_COLORS = {"Masculino": "#2A85FF", "Feminino": "#FF2A85", "Indefinido": "#c4c9ac"}
+_COLORS = {"Masculino": "#FFB300", "Feminino": "#FFD56C", "Indefinido": "#78869B"}
 
 
 def _render_real_audience(ad: dict) -> None:
@@ -99,9 +104,10 @@ def _render_real_audience(ad: dict) -> None:
         return
 
     st.markdown(
-        "<div style='background:rgba(99,102,241,0.10);border-left:3px solid #6366F1;"
-        "border-radius:0 8px 8px 0;padding:6px 12px;margin-bottom:8px;'>"
-        "<span style='color:#A5B4FC;font-weight:700;font-size:0.82rem;'>👥 Público Atraído pelo Criativo</span>"
+        "<div style='background:rgba(255,179,0,0.045);border-left:2px solid #FFB300;"
+        "border-radius:0 7px 7px 0;padding:8px 12px;margin-bottom:10px;'>"
+        f"<span style='color:#FFD56C;display:inline-flex;align-items:center;gap:8px;"
+        f"font-weight:650;font-size:0.83rem;'>{lucide_icon('users', 15)} Público alcançado</span>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -195,10 +201,10 @@ def _render_real_audience(ad: dict) -> None:
         c1, c2 = st.columns(2)
         with c1:
             if regions:
-                _render_mini_bars(regions, "Top Regiões", "#2A85FF")
+                _render_mini_bars(regions, "Top regiões", "#FFB300")
         with c2:
             if countries:
-                _render_mini_bars(countries, "Top Países", "#6366F1")
+                _render_mini_bars(countries, "Top países", "#C48A24")
 
 
 def _render_mini_bars(data: dict, title: str, color: str, max_items: int = 6) -> None:
@@ -392,8 +398,8 @@ def _render_creative_card(ad: dict) -> None:
 
     st.markdown(
         f"<div style='margin-bottom: 8px; font-size: 0.85rem; color: #c4c9ac;'>"
-        f"🎯 Objetivo: <span style='color: #F1F5F9;'>{escape_html(str(objective_friendly))}</span><br>"
-        f"🔗 Destino: <span style='color: #F1F5F9;'>{escape_html(str(traffic_dest))}</span>"
+        f"{lucide_icon('target', 15)} Objetivo: <span style='color: #F1F5F9;'>{escape_html(str(objective_friendly))}</span><br>"
+        f"{lucide_icon('link', 15)} Destino: <span style='color: #F1F5F9;'>{escape_html(str(traffic_dest))}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -404,37 +410,37 @@ def _render_creative_card(ad: dict) -> None:
     c1, c2, c3 = st.columns(3)
 
     # Linha 1
-    c1.metric("💸 Gasto", _fmt_brl(gasto))
-    c2.metric("👁 Impressões", _fmt_int(impressions))
+    c1.metric("Investimento", _fmt_brl(gasto))
+    c2.metric("Impressões", _fmt_int(impressions))
 
     if objective_friendly == "Mensagens" or wpp > 0:
-        c3.metric("💬 Conversas por mensagens", _fmt_int(wpp))
+        c3.metric("Conversas iniciadas", _fmt_int(wpp))
         # Linha 2
-        c1.metric("🎯 Custo p/ Mens.", _fmt_brl(gasto / wpp) if wpp > 0 else "N/D")
+        c1.metric("Custo por conversa", _fmt_brl(gasto / wpp) if wpp > 0 else "N/D")
         if instagram_follows > 0:
-            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
+            c2.metric("Seguidores", _fmt_int(instagram_follows))
+            c3.metric("Custo por seguidor", _fmt_brl(gasto / instagram_follows))
     elif objective_friendly in ["Tráfego", "Reconhecimento"]:
         cpc_link = gasto / link_clicks if link_clicks > 0 else 0.0
         ctr_link = (link_clicks / impressions * 100) if impressions > 0 else 0.0
-        c3.metric("🎯 CPC (Link)", _fmt_brl(cpc_link) if cpc_link > 0 else "—")
+        c3.metric("CPC do link", _fmt_brl(cpc_link) if cpc_link > 0 else "—")
         # Linha 2
-        c1.metric("📈 CTR (Link)", f"{ctr_link:.2f}%" if ctr_link > 0 else "—")
+        c1.metric("CTR do link", f"{ctr_link:.2f}%" if ctr_link > 0 else "—")
         if instagram_follows > 0:
-            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
+            c2.metric("Seguidores", _fmt_int(instagram_follows))
+            c3.metric("Custo por seguidor", _fmt_brl(gasto / instagram_follows))
     else:
-        c3.metric("📋 Leads", _fmt_int(leads))
+        c3.metric("Leads", _fmt_int(leads))
         # Linha 2
-        c1.metric("🎯 Custo p/ Lead", _fmt_brl(gasto / leads) if leads > 0 else "N/D")
+        c1.metric("Custo por lead", _fmt_brl(gasto / leads) if leads > 0 else "N/D")
         if instagram_follows > 0:
-            c2.metric("👥 Seguidores", _fmt_int(instagram_follows))
-            c3.metric("🎯 Custo p/ Seg.", _fmt_brl(gasto / instagram_follows))
+            c2.metric("Seguidores", _fmt_int(instagram_follows))
+            c3.metric("Custo por seguidor", _fmt_brl(gasto / instagram_follows))
 
     # Linha 3 (Os 3 tipos de cliques separados, sem somar)
     c1.metric("Cliques no link", _fmt_int(link_clicks))
     c1.metric("Cliques de saída", _fmt_int(outbound_clicks))
-    c2.metric("👁 Visitas ao Perfil", _fmt_int(profile_visits))
+    c2.metric("Visitas ao perfil", _fmt_int(profile_visits))
 
     with c3:
         st.metric(
@@ -451,10 +457,10 @@ def _render_creative_card(ad: dict) -> None:
             # HTML para o texto pequeno alinhado ao Metric
             st.markdown(
                 f"<div style='font-size:0.75rem; color:#A0AEC0; margin-top:-10px; line-height:1.2;'>"
-                f"{f'❤️ {likes} Likes<br>' if likes else ''}"
-                f"{f'🔁 {shares} Compartilhamentos<br>' if shares else ''}"
-                f"{f'💬 {comments} Comentários<br>' if comments else ''}"
-                f"{f'💾 {saves} Salvamentos<br>' if saves else ''}"
+                f"{f'Curtidas: {likes}<br>' if likes else ''}"
+                f"{f'Compartilhamentos: {shares}<br>' if shares else ''}"
+                f"{f'Comentários: {comments}<br>' if comments else ''}"
+                f"{f'Salvamentos: {saves}<br>' if saves else ''}"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -500,9 +506,9 @@ def _render_creative_card(ad: dict) -> None:
     adset_badge = _status_badge(adset_status) if adset_status else ""
 
     st.markdown(
-        f"<div style='background:rgba(16,185,129,0.10);border-left:3px solid #10B981;"
-        f"border-radius:0 8px 8px 0;padding:8px 12px;margin:8px 0;font-size:0.82rem;color:#A7F3D0;'>"
-        f"<strong style='color:#6EE7B7;'>📅 Veiculação</strong>"
+        f"<div style='background:rgba(255,179,0,0.045);border-left:2px solid #FFB300;"
+        f"border-radius:0 8px 8px 0;padding:9px 12px;margin:8px 0;font-size:0.82rem;color:#cbd3df;'>"
+        f"<strong style='color:#FFD56C;'>{lucide_icon('calendar', 15)} Veiculação</strong>"
         f"{' — ' + escape_html(str(adset_name)) if adset_name else ''} {adset_badge}<br>"
         f"Início: <b>{start}</b>&nbsp;&nbsp;Fim: <b>{end}</b>"
         f"</div>",
