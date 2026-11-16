@@ -320,7 +320,10 @@ ACCOUNT_ENGAGEMENT_METRICS = (
     ("Contas engajadas", "accounts_engaged"),
     ("Respostas aos Stories", "replies"),
     ("Republicações", "reposts"),
-    ("Toques nos botões de contato", "profile_links_taps"),
+    ("Visitas ao perfil", "profile_views"),
+    ("Toques em links do perfil", "profile_links_taps"),
+    ("Cliques no site (métrica API)", "website_clicks"),
+    ("Toques no endereço comercial", "business_address_taps"),
     ("Cliques na URL específica da bio", "bio_url_clicks"),
 )
 
