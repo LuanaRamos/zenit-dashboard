@@ -125,6 +125,9 @@ def test_reel_never_requests_unsupported_follows_or_profile_visits():
     client.session = SimpleNamespace(post=fake_post)
     reel, feed = client.get_recent_media()
     assert reel.follows is None and reel.profile_visits is None
+    assert "follows" in reel.insights_unsupported
+    assert "profile_visits" in reel.insights_unsupported
+    assert feed.insights_unsupported == ()
     assert all(not (set(metrics) & {"follows", "profile_visits"})
                for media_id, metrics in calls if media_id == "reel-1")
     assert any("follows" in metrics for media_id, metrics in calls if media_id == "feed-1")
@@ -155,3 +158,22 @@ def test_account_follow_activity_parses_follow_type_breakdown():
     assert insights["unfollows"] == 3
     assert insights["net_follows"] == 5
     assert insights["_coverage"]["follows_and_unfollows"]["status"] == "ok"
+
+
+def test_dashboard_account_rows_preserve_follows_source_and_contact_button_meaning():
+    from ui.organic_components import account_engagement_rows
+
+    rows = account_engagement_rows({
+        "new_follows": 8, "unfollows": 3, "net_follows": 5,
+        "profile_links_taps": 2,
+        "_coverage": {"follows_and_unfollows": {
+            "status": "ok", "since": "2026-11-01", "until": "2026-11-15",
+        }},
+    })
+    by_label = {r["Indicador"]: r for r in rows}
+    assert by_label["Novos seguidores"]["Valor"] == 8
+    assert by_label["Deixaram de seguir"]["Valor"] == 3
+    assert by_label["Saldo de seguidores"]["Valor"] == 5
+    assert by_label["Novos seguidores"]["Status"] == "ok"
+    assert by_label["Toques em botões de contato"]["Valor"] == 2
+    assert by_label["Cliques na URL específica da bio"]["Valor"] is None
