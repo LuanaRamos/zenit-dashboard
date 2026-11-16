@@ -29,7 +29,7 @@ def test_kpi_uses_real_bootstrap_icon_and_never_invents_trend(monkeypatch):
         "INVESTIMENTO TOTAL", "R$ 800,00", "No período", "Valores da Meta"
     )
     html = rendered[0]
-    assert 'class="bi bi-wallet2"' in html
+    assert 'data-lucide="wallet"' in html
     assert 'aria-hidden="true"' in html
     assert 'R$ 800,00' in html
     assert "%" not in html
@@ -95,3 +95,23 @@ def test_followers_area_and_moving_average_use_real_history(monkeypatch):
     assert fig.data[0].fill == "tozeroy"
     assert "Média móvel" in fig.data[1].name
     assert list(fig.data[0].y) == [1, 0, 5, 2, 7, 3, 4, 6]
+
+
+def test_reusable_lucide_icons_have_accessible_vector_strokes():
+    from ui.iconography import lucide_icon
+    icon = lucide_icon("chart", size=20)
+    assert 'data-lucide="chart"' in icon
+    assert 'viewBox="0 0 24 24"' in icon
+    assert 'aria-hidden="true"' in icon
+    assert "<svg" in icon
+
+
+def test_profile_notices_are_consolidated_under_diagnostics():
+    import inspect
+    source = inspect.getsource(organic_components.render_account_engagement_summary)
+    assert '"Diagnóstico e cobertura"' in source
+    assert 'st.info(' not in source
+    assert 'st.warning(' not in source
+    assert '"Toques em botões de contato"' in inspect.getsource(
+        organic_components.account_engagement_rows
+    )
