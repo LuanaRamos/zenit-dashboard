@@ -2,8 +2,6 @@
 
 Os testes usam somente respostas simuladas, nunca tokens reais.
 """
-from datetime import date
-
 from api.meta_client import MetaAdsClient
 from api.instagram_client import InstagramClient
 from ui.organic_components import account_engagement_rows
