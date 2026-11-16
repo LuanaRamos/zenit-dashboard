@@ -291,7 +291,7 @@ def render_organic_page(date_preset, time_range, client):
                 st.write("")
                 st.markdown("#### 👤 Ações e Interações no Perfil")
                 st.caption("Ações diretas realizadas pelos usuários no perfil do Instagram durante o período.")
-                cols_act = st.columns(3)
+                cols_act = st.columns(4)
 
                 def _fmt(val):
                     if val is None:
@@ -303,25 +303,31 @@ def render_organic_page(date_preset, time_range, client):
 
                 with cols_act[0]:
                     render_metric_card(
-                        "Visitas ao Perfil",
+                        "Visitas ao perfil",
                         _fmt(insights.get("profile_views")),
-                        "Acessos à bio",
-                        "Indisponível: sem variável substituta equivalente validada",
+                        "Fonte: profile_views",
+                        "Consultado na API. N/D quando indisponível para a conta ou período.",
                     )
                 with cols_act[1]:
                     render_metric_card(
-                        "Toques em links/botões do perfil",
+                        "Toques em links/botões",
                         _fmt(insights.get("profile_links_taps")),
                         "Fonte: profile_links_taps",
-                        "Métrica agregada, não identifica a URL específica da bio",
+                        "Métrica agregada; não identifica a URL específica da bio.",
                     )
                 with cols_act[2]:
-                    engaged = insights.get("accounts_engaged")
                     render_metric_card(
-                        "Contas com Engajamento",
-                        _fmt(engaged),
-                        "Público ativo",
-                        "Contas únicas engajadas no período efetivamente consultado",
+                        "Cliques no site (API)",
+                        _fmt(insights.get("website_clicks")),
+                        "Fonte: website_clicks",
+                        "A API pode não disponibilizar este campo. Não equivale a cliques na URL específica.",
+                    )
+                with cols_act[3]:
+                    render_metric_card(
+                        "Toques no endereço",
+                        _fmt(insights.get("business_address_taps")),
+                        "Sem campo equivalente confirmado",
+                        "Aparece no aplicativo Instagram, mas não foi validado nesta API.",
                     )
         except Exception as error:
             logger.warning(f"Erro ao buscar ações do perfil de {client.name}: {error}")
