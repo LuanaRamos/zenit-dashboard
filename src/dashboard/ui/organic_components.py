@@ -927,7 +927,7 @@ def render_historic_top_comment(
         if not best:
             return
 
-        st.markdown("### Comentário mais curtido entre os consultados")
+        st.markdown("### Comentário com mais curtidas entre os consultados")
 
         text = html_lib.escape(str(best.get("text", "")))
         username = html_lib.escape(str(best.get("username", "Usuário")))
@@ -984,7 +984,7 @@ def render_historic_top_comment(
 def render_followers_timeline(history_data: list) -> None:
     """Gráfico Vision/Zenit: série diária real e média móvel, sem inventar dados."""
     if not history_data:
-        st.info("Histórico de seguidores indisponível neste período.")
+        st.info("O histórico de seguidores não está disponível neste período.")
         return
 
     import plotly.graph_objects as go
@@ -1007,9 +1007,9 @@ def render_followers_timeline(history_data: list) -> None:
     ).mean()
     peak_row = df.loc[df["Novos Seguidores"].idxmax()]
     st.markdown("### Evolução de seguidores")
-    st.caption(
-        f"Pico diário: {int(peak_row['Novos Seguidores'])} novos seguidores "
-        f"em {peak_row['Data']}. Média móvel de 7 dias como referência."
+    st.markdown(
+        f"**+{int(peak_row['Novos Seguidores'])}** novos seguidores no pico diário "
+        f"· {peak_row['Data']}. Média móvel de 7 dias como referência."
     )
 
     fig = go.Figure()
