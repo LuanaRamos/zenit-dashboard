@@ -23,8 +23,8 @@ _GENDER_MAP = {"M": "Masculino", "F": "Feminino", "U": "Indefinido",
 _AGE_ORDER = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
 
 _COLOR_GENDER = {
-    "Masculino": "#2A85FF",
-    "Feminino":  "#FF2A85",
+    "Masculino": "#FFB300",
+    "Feminino":  "#FFD56C",
     "Indefinido": "#c4c9ac",
 }
 
@@ -115,7 +115,7 @@ def render_age_gender_chart(demo: InstagramDemographics, title: str) -> None:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#E2E8F0", size=13),
+        font=dict(color="#d9e1ea", size=13),
         xaxis=dict(
             showgrid=True,
             gridcolor="rgba(255,255,255,0.08)",
@@ -175,7 +175,7 @@ def _format_city_name(raw: str) -> str:
 def render_top_locations(
     data: dict[str, int],
     title: str,
-    color: str = "#2A85FF",
+    color: str = "#FFB300",
     max_items: int = 15,
 ) -> None:
     """Renderiza barras de localização usando o sistema unificado de gráficos."""
@@ -247,13 +247,13 @@ def _render_full_demo_section(demo: InstagramDemographics, label: str) -> None:
         render_top_locations(
             demo.cities,
             f"Top Cidades — {label}",
-            color="#2A85FF",
+            color="#FFB300",
         )
     with col2:
         render_top_locations(
             demo.countries,
             f"Top Países — {label}",
-            color="#6366F1",
+            color="#C48A24",
         )
 
 
@@ -265,7 +265,7 @@ def render_demographics_dashboard(demo: AccountDemographics) -> None:
     """Renderiza dados demográficos da conta, sem atribuição orgânica."""
     st.markdown("### Audiência da conta no Instagram")
     st.markdown(
-        "<p style='color:#94A3B8;margin-bottom:8px;'>"
+        "<p style='color:#aebace;margin-bottom:8px;'>"
         "Quem são as pessoas que te seguem, interagem e são alcançadas pelo seu conteúdo."
         "</p>",
         unsafe_allow_html=True,
@@ -348,7 +348,7 @@ def _render_age_gender_impressions(ag: dict[str, int], title: str) -> None:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#E2E8F0", size=13),
+        font=dict(color="#d9e1ea", size=13),
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", showticklabels=False),
         yaxis=dict(
             showgrid=False,
@@ -380,7 +380,7 @@ def render_demographics_tab(date_preset: str, time_range: dict | None, client_na
     """Renderiza a aba Demográfica de Anúncios (Ads) — público real entregue pelo algoritmo."""
     st.markdown("### 👥 Perfil de Audiência (Anúncios Pagos — Meta Ads)")
     st.markdown(
-        "<p style='color:#94A3B8;margin-bottom:8px;'>"
+        "<p style='color:#aebace;margin-bottom:8px;'>"
         "Dados reais de entrega: quem de fato viu seus anúncios "
         "(Idade/Gênero, Estado/Região e País) — em Impressões."
         "</p>",
