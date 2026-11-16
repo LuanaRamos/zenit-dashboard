@@ -49,9 +49,14 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
 
         from core.config import settings
 
-        clients = settings.get_clients()
+        try:
+            clients = settings.get_clients()
+        except ValueError as exc:
+            # Mensagem inclui apenas índice/nomes de campos, nunca credenciais.
+            st.error(f"Configuração CLIENTS_JSON inválida: {exc}")
+            st.stop()
         if not clients:
-            st.error("⚠️ Nenhum cliente configurado no sistema (CLIENTS_JSON).")
+            st.error("Nenhum cliente configurado no sistema (CLIENTS_JSON).")
             st.stop()
 
         client_names = sorted((client.name for client in clients), key=_client_name_sort_key)
