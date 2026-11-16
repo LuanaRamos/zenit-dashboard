@@ -407,17 +407,17 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             go.Bar(
                 x=chart_data["Campanha"],
                 y=chart_data["Custo"],
-                width=0.15,
+                width=0.55,
                 marker=dict(
                     color="#FFB300",
                     line=dict(color="rgba(255, 179, 0, 0.8)", width=0),
-                    cornerradius="50%",
+                    cornerradius=6,
                 ),
                 text=chart_data["Custo"].apply(
                     lambda x: f"R$ {x:,.2f}".replace(".", ",")
                 ),
                 textposition="outside",
-                textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
+                textfont=dict(color="#E2E8F0", family="Inter", size=11),
                 hoverinfo="y+x",
             )
         )
@@ -435,7 +435,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor="rgba(255,255,255,0.03)",
+                gridcolor="rgba(255,255,255,0.07)",
                 gridwidth=1,
                 zeroline=True,
                 zerolinecolor="rgba(255,255,255,0.1)",
@@ -444,8 +444,8 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
                 tickprefix="R$ ",
                 tickfont=dict(size=10, family="Inter"),
             ),
-            margin=dict(l=0, r=0, t=10, b=40),  # Espaço embaixo para a label X
-            height=400,
+            margin=dict(l=12, r=12, t=15, b=48),  # Espaço embaixo para a label X
+            height=330,
             hovermode="x unified",
             hoverlabel=dict(
                 bgcolor="rgba(15, 23, 42, 0.95)",
@@ -455,8 +455,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
                 bordercolor="#7E89AC",
             ),
         )
-        # Mesma altura para os dois gráficos
-        render_glass_chart(fig, title="Desempenho de Custo", height=460)
+        render_glass_chart(fig, title="Custo por conversa, por campanha", height=380)
 
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:
