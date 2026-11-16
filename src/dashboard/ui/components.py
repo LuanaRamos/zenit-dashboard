@@ -218,7 +218,7 @@ def render_metric_card(
         f'aria-label="{safe_label}: {safe_value}">'
         f'<div class="kpi-icon">{icon}</div>'
         f'<div class="kpi-label">{safe_label}</div>'
-        f'<div class="kpi-value">{safe_value}</div>'
+        f'<div class="kpi-value" style="font-variant-numeric: tabular-nums">{safe_value}</div>'
         f'{sub_html}{help_html}'
         '</div>'
     )
