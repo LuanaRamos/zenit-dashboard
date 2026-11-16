@@ -19,7 +19,7 @@ def configure_page():
     icon = DASHBOARD_DIR / "assets" / "zenit_logo.png"
     st.set_page_config(
         page_title="Zenit Analytics",
-        page_icon=str(icon) if icon.exists() else "📈",
+        page_icon=str(icon) if icon.exists() else ":material/analytics:",
         layout="wide",
         initial_sidebar_state="auto",
     )
