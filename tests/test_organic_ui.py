@@ -743,7 +743,7 @@ def test_historic_comment_csv_download_content_and_headers(monkeypatch):
 
     assert len(st.downloads) == 1
     download = st.downloads[0]
-    assert download["label"] == "📥 Baixar comentários consultados (CSV)"
+    assert download["label"] == "Baixar comentários consultados (CSV)"
     assert download["file_name"] == "comentarios_consultados_cliente.csv"
     csv_text = download["data"].decode("utf-8")
     assert "Conteúdo teste para exportação" in csv_text
