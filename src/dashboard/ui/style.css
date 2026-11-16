@@ -2,17 +2,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base: #111317;
-  --surface: #111317;
-  --surface-low: #1a1c20;
+  --bg-base: #0b0f16;
+  --surface: #0f1520;
+  --surface-low: #131b29;
   --outline: #8e9379;
-  --text-main: #e2e2e8;
-  --text-muted: #c4c9ac;
+  --text-main: #f1f4f8;
+  --text-muted: #b9c1cd;
   --primary: #FFB300;
   --primary-dim: #FF6F00;
   --cyan: #62fae3;
   --danger: #ffb4ab;
-  --surface-raised: #1b1f25;
+  --surface-raised: #131b29;
+  --zenit-panel: #131b29;
+  --zenit-chart-gold: #FFB300;
+  --zenit-chart-soft: #FFD56C;
+  --zenit-panel-border: rgba(255, 255, 255, 0.09);
   --border-muted: rgba(255, 255, 255, 0.14);
   --focus-ring: #ffd166;
   color-scheme: dark;
@@ -32,14 +36,14 @@ html, body {
 
 .block-container {
     padding: 1.75rem clamp(1rem, 3vw, 2rem) 2.5rem !important;
-    max-width: 1360px !important;
+    max-width: 1510px !important;
     width: 100% !important;
     min-width: 0 !important;
 }
 
 [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     background-color: var(--bg-base) !important;
-    background-image: radial-gradient(circle at 15% 0%, rgba(255, 179, 0, 0.035), transparent 45%) !important;
+    background-image: radial-gradient(ellipse at 18% 0%, rgba(255, 179, 0, 0.055), transparent 48%), linear-gradient(180deg, #0b0f16 0%, #0c111b 100%) !important;
     min-height: 100vh !important;
     min-width: 0 !important;
     width: 100% !important;
@@ -62,11 +66,11 @@ html, body {
 }
 
 .glass-card, [data-testid="stPlotlyChart"], .glass-table-container, .glass-panel {
-    background: var(--surface-raised) !important;
+    background: linear-gradient(135deg, rgba(255, 179, 0, 0.027), transparent 60%), var(--zenit-panel) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
-    border-radius: 12px !important;
+    border-radius: 17px !important;
     padding: 16px !important;
     box-shadow: 0 3px 16px rgba(0, 0, 0, 0.20) !important;
     transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -90,10 +94,10 @@ html, body {
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
     padding: 16px 14px !important;
-    border-radius: 14px !important;
+    border-radius: 17px !important;
     box-shadow: 0 3px 16px rgba(0, 0, 0, 0.20) !important;
     transition: border-color 160ms ease, box-shadow 160ms ease;
-    min-height: 126px !important;
+    min-height: 124px !important;
     min-width: 0 !important;
     overflow-wrap: anywhere !important;
 }
@@ -151,7 +155,7 @@ html, body {
 }
 .plotly-graph-div { margin: 0 auto; }
 [data-testid="stSidebar"] { 
-    background-color: rgba(17, 19, 23, 0.45) !important; 
+    background: linear-gradient(180deg, #0e1420 0%, #111927 100%) !important; 
     backdrop-filter: blur(8px) !important; 
     border-right: 1px solid rgba(255, 255, 255, 0.08) !important; 
 }
@@ -220,7 +224,7 @@ section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover {
 }
 
 h1, h2, h3, h4 { font-family: 'Montserrat', sans-serif !important; font-weight: 700 !important; color: #ffffff !important; letter-spacing: -0.01em !important; margin-bottom: 0.5rem !important; }
-h1 { font-size: 2.2rem !important; font-weight: 800 !important; }
+h1 { font-size: clamp(1.75rem, 2.2vw, 2.15rem) !important; font-weight: 800 !important; }
 h3 { font-size: 1.1rem !important; color: #E2E8F0 !important; }
 
 
@@ -259,4 +263,142 @@ a, button, [role="button"], [role="tab"] { touch-action: manipulation; }
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+
+/* Vision UI reinterpretado com a identidade preta e dourada da Zenit. */
+.zenit-feature-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    min-height: 262px;
+    padding: clamp(22px, 3vw, 34px);
+    border: 1px solid rgba(255, 179, 0, 0.16);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 87% 22%, rgba(255, 179, 0, 0.22), transparent 26%),
+        radial-gradient(circle at 98% 96%, rgba(255, 143, 0, 0.12), transparent 40%),
+        linear-gradient(115deg, #17202e 0%, #101722 66%, #131928 100%);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.19);
+}
+.zenit-feature-card::after {
+    content: "";
+    position: absolute;
+    width: 225px;
+    height: 225px;
+    right: -92px;
+    top: -74px;
+    border: 1px solid rgba(255, 179, 0, 0.23);
+    border-radius: 50%;
+    box-shadow: 0 0 0 26px rgba(255, 179, 0, 0.025),
+                0 0 0 68px rgba(255, 179, 0, 0.018);
+    z-index: -1;
+    pointer-events: none;
+}
+.zenit-feature-eyebrow {
+    color: var(--zenit-chart-soft);
+    font-size: 0.76rem;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+.zenit-feature-card h2 {
+    margin: 10px 0 7px;
+    color: #f8fafc;
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    letter-spacing: -0.03em;
+}
+.zenit-feature-name {
+    margin: 18px 0 10px;
+    color: #ffffff;
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    font-weight: 700;
+    line-height: 1.35;
+    max-width: 80%;
+    overflow-wrap: anywhere;
+}
+.zenit-feature-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.zenit-feature-stat strong { font-size: clamp(2rem, 3vw, 2.65rem); }
+.zenit-feature-stat span { font-size: 0.85rem; color: #b9c1cd; }
+.zenit-feature-note {
+    font-size: 0.81rem;
+    line-height: 1.45;
+    color: #b9c1cd;
+    max-width: 90%;
+    margin: 13px 0 0;
+}
+.kpi-card { position: relative; }
+.kpi-card .kpi-label {
+    color: #aebace;
+    font-size: 0.76rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    max-width: calc(100% - 48px);
+    line-height: 1.45;
+}
+.kpi-card .kpi-value {
+    color: #f6f8fb;
+    font-size: clamp(1.45rem, 2.1vw, 2.08rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+}
+.kpi-card .kpi-subtext {
+    margin-top: 10px;
+    color: #cbd3df;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+.kpi-card .kpi-help {
+    margin-top: 3px;
+    color: #aebace;
+    font-size: 0.77rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+.kpi-icon {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 17px;
+    right: 16px;
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(145deg, #ffcc56, #ff9f00);
+    color: #111317;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(255, 179, 0, 0.11);
+    font-size: 1.02rem;
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2 {
+    letter-spacing: -0.03em !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-testid="stDateInput"] input {
+    background: #171f2c !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+}
+.stTabs [aria-selected="true"] {
+    box-shadow: inset 0 -2px 0 #ffb300;
+}
+[data-testid="stPlotlyChart"] {
+    background: linear-gradient(140deg, rgba(255,179,0,0.025), transparent 65%), var(--zenit-panel) !important;
+}
+@media (max-width: 640px) {
+    .zenit-feature-card { min-height: 232px; padding: 20px; }
+    .zenit-feature-name { max-width: 100%; }
+    .zenit-feature-note { max-width: 100%; }
+    .kpi-card .kpi-value { font-size: 1.7rem; }
 }
