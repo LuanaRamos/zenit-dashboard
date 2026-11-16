@@ -369,50 +369,86 @@ def account_engagement_rows(insights: dict) -> list[dict[str, Any]]:
 
 
 def render_account_engagement_summary(insights: dict) -> None:
-    """Mostra a atividade do período antes do ranking e dos posts."""
-    st.markdown("### Engajamento e atividade da conta")
-    st.caption(
-        "Esses indicadores usam a data da interação no período filtrado. "
-        "Os totais da conta podem incluir conteúdo promovido, conforme a definição "
-        "da Meta; não são necessariamente exclusivamente orgânicos."
-    )
+    """Visão compacta. A origem e as limitações ficam numa única seção."""
+    st.markdown("### Atividade da conta")
+    st.caption("Resultados da conta no período selecionado. Incluem conteúdo promovido quando informado pela Meta.")
     rows = account_engagement_rows(insights)
-    for offset in range(0, len(rows), 4):
+    primary_keys = (
+        "views", "reach", "accounts_engaged", "total_interactions",
+        "profile_views", "profile_links_taps", "new_follows", "net_follows",
+    )
+    by_field = {
+        ("new_follows" if row["Indicador"] == "Novos seguidores"
+         else "net_follows" if row["Indicador"] == "Saldo de seguidores"
+         else str(row["Campo API"]).split(" (")[0]): row
+        for row in rows
+    }
+    # Mostra o essencial primeiro. N/D não pode ser convertido em zero.
+    for offset in range(0, len(primary_keys), 4):
         columns = st.columns(4)
-        for column, row in zip(columns, rows[offset:offset + 4]):
+        for column, key in zip(columns, primary_keys[offset:offset + 4]):
+            row = by_field.get(key)
+            if not row:
+                continue
             with column:
-                st.metric(row["Indicador"], _format_optional_int(row["Valor"]))
-                if row["Início efetivo"] and row["Fim efetivo"]:
-                    st.caption(
-                        f"{row['Início efetivo']} a {row['Fim efetivo']}"
-                        + (" · Parcial" if row["Status"] == "parcial" else "")
-                    )
-                else:
-                    st.caption("Indisponível na API" if row["Valor"] is None else "Sem cobertura informada")
+                render_metric_card(
+                    row["Indicador"],
+                    _format_optional_int(row["Valor"]),
+                    ("Sem dados" if row["Valor"] is None else "No período"),
+                )
 
-    st.info(
-        "Toques nos botões de contato (profile_links_taps) não são cliques "
-        "na URL externa da bio. Para contar cliques em uma URL específica, "
-        "use um link rastreável ou registre a chegada no site."
-    )
-    with st.expander("Fonte, cobertura e disponibilidade de cada indicador"):
-        for row in rows:
-            scope = (
-                f"{row['Início efetivo']} até {row['Fim efetivo']}"
-                if row["Início efetivo"] and row["Fim efetivo"]
-                else "período indisponível"
-            )
-            st.markdown(
-                f"**{row['Indicador']}** · {row['Status']} · "
-                f"{scope}. {row['Observação']}"
-            )
-    st.download_button(
-        label="Baixar CSV de engajamento da conta",
-        data=pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig"),
-        file_name="engajamento_conta_instagram.csv",
-        mime="text/csv",
-        key="download_ig_account_engagement",
-    )
+    extra = [
+        row for row in rows
+        if row["Campo API"] not in primary_keys
+        and row["Indicador"] not in {"Novos seguidores", "Saldo de seguidores"}
+    ]
+    with st.expander(f"Outras métricas ({len(extra)})", expanded=False):
+        st.dataframe(
+            pd.DataFrame([
+                {
+                    "Indicador": row["Indicador"],
+                    "Valor": _format_optional_int(row["Valor"]),
+                }
+                for row in extra
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    with st.expander("Diagnóstico e cobertura", expanded=False):
+        st.caption(
+            "N/D significa indisponível, não zero. Algumas métricas são "
+            "acumuladas ou incluem resultados pagos, conforme a definição da Meta."
+        )
+        st.caption(
+            "Toques nos botões do perfil não medem uma URL específica da bio. "
+            "Para esse rastreamento, é necessário medir o destino."
+        )
+        if insights.get("_is_partial"):
+            st.caption("Histórico parcial: a Meta restringe alguns Insights da conta.")
+        if insights.get("_is_segmented"):
+            st.caption("Períodos extensos podem somar janelas com pessoas repetidas.")
+        st.dataframe(
+            pd.DataFrame([
+                {
+                    "Indicador": row["Indicador"],
+                    "Status": row["Status"],
+                    "Início": row["Início efetivo"],
+                    "Fim": row["Fim efetivo"],
+                    "Observação": row["Observação"],
+                }
+                for row in rows
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.download_button(
+            label="Exportar diagnóstico (CSV)",
+            data=pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig"),
+            file_name="engajamento_conta_instagram.csv",
+            mime="text/csv",
+            key="download_ig_account_engagement",
+        )
 
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
