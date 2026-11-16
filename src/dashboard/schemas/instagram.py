@@ -96,6 +96,7 @@ class InstagramMedia(BaseModel):
     insights_status: str = "indisponivel"
     insights_available: tuple[str, ...] = ()
     insights_missing: tuple[str, ...] = ()
+    insights_unsupported: tuple[str, ...] = ()
 
 
 
