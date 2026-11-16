@@ -18,7 +18,7 @@ class MetaAdsClient:
     Responsável por fazer o fetch de insights das campanhas e páginas.
     """
 
-    API_VERSION = "v26.0"
+    API_VERSION = "v27.0"
     BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
     def __init__(self, client_config) -> None:

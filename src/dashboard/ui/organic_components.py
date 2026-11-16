@@ -433,6 +433,7 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     )
 
 
+POST_FOLLOWS_COLUMN = "Seguidores atribuídos à publicação"
 ORGANIC_POST_COLUMNS = [
     "Data e Hora",
     "Tipo",
@@ -440,17 +441,20 @@ ORGANIC_POST_COLUMNS = [
     "Curtidas orgânicas",
     "Comentários orgânicos",
     "Visualizações orgânicas",
+    POST_FOLLOWS_COLUMN,
     "Link",
 ]
 
-ORGANIC_POST_EXPORT_COLUMNS = ORGANIC_POST_COLUMNS + [
+ORGANIC_POST_EXPORT_COLUMNS = [
+    column for column in ORGANIC_POST_COLUMNS if column != POST_FOLLOWS_COLUMN
+] + [
     "ID da publicação", "Legenda", "URL da mídia", "URL da miniatura",
     "Tipo de mídia (API)", "Produto de mídia (API)",
     "Alcance (Media Insights)", "Compartilhamentos (Media Insights)",
     "Salvamentos (Media Insights)",
     "Curtidas públicas (objeto mídia)", "Comentários públicos (objeto mídia)",
     "Tempo total de Reel (ms)", "Tempo médio de Reel (ms)",
-    "Visitas ao perfil atribuídas à publicação", "Seguidores atribuídos à publicação",
+    "Visitas ao perfil atribuídas à publicação", POST_FOLLOWS_COLUMN,
     "Atividade do perfil (publicação)", "Cliques na bio atribuídos à publicação",
     "Status da coleta de Insights", "Métricas retornadas", "Métricas indisponíveis",
     "Origem dos valores",
@@ -488,7 +492,7 @@ def _organic_post_rows(
                 "Tempo total de Reel (ms)": _value(media, "ig_reels_video_view_total_time"),
                 "Tempo médio de Reel (ms)": _value(media, "ig_reels_avg_watch_time"),
                 "Visitas ao perfil atribuídas à publicação": _value(media, "profile_visits"),
-                "Seguidores atribuídos à publicação": _value(media, "follows"),
+                POST_FOLLOWS_COLUMN: _value(media, "follows"),
                 "Atividade do perfil (publicação)": _value(media, "profile_activity"),
                 "Cliques na bio atribuídos à publicação": _value(media, "bio_link_clicks"),
                 "Status da coleta de Insights": _value(media, "insights_status", "indisponivel"),
@@ -528,15 +532,16 @@ def render_posts_table(
     if dataframe.empty:
         st.info("Nenhuma publicação corresponde ao filtro selecionado.")
         return
+    dataframe[POST_FOLLOWS_COLUMN] = pd.to_numeric(dataframe[POST_FOLLOWS_COLUMN])
 
     # A exportação não herda o filtro de formato da tabela: inclui todas
     # as publicações que a consulta carregou no período global selecionado.
     export_rows = _organic_post_rows(media_list, "Todos")
+    export_frame = pd.DataFrame(export_rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
+    export_frame[POST_FOLLOWS_COLUMN] = export_frame[POST_FOLLOWS_COLUMN].astype("Int64")
     st.download_button(
         label="Baixar CSV completo das publicações carregadas",
-        data=pd.DataFrame(export_rows, columns=ORGANIC_POST_EXPORT_COLUMNS)
-        .to_csv(index=False)
-        .encode("utf-8-sig"),
+        data=export_frame.to_csv(index=False).encode("utf-8-sig"),
         file_name="publicacoes_instagram_completo.csv",
         mime="text/csv",
         key="download_all_ig_posts",
@@ -546,6 +551,10 @@ def render_posts_table(
         "filtro de formato desta tabela. Para exportar todo o perfil acessível, "
         "escolha 'Todo o histórico disponível' no menu lateral. "
         "Campos não retornados pela API ficam vazios."
+    )
+    st.caption(
+        "Seguidores atribuídos vêm dos Insights de cada publicação. "
+        "Nos Reels, essa métrica fica indisponível pela API."
     )
     render_glass_table(
         dataframe,

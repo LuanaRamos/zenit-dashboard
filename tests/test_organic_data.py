@@ -21,9 +21,6 @@ def _make_client():
     client = object.__new__(InstagramClient)
     client.instagram_account_id = "17841400000000"
     client.token = "test-token"
-    client.API_VERSION = "v26.0"
-    client.BASE_URL = "https://graph.facebook.com/v26.0"
-    client.BATCH_URL = "https://graph.facebook.com"
     client.session = SimpleNamespace()
     return client
 

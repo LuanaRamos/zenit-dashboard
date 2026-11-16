@@ -100,3 +100,46 @@ def test_media_metric_fallback_preserves_other_metrics():
     assert "reach" in media.insights_available
     assert "shares" in media.insights_missing
     assert media.insights_status == "parcial"
+
+
+def test_followers_use_media_insights_for_feed_and_keep_real_zero():
+    import json
+
+    from api.instagram_client import InstagramClient
+
+    client = object.__new__(InstagramClient)
+    client.instagram_account_id = "ig-account"
+    client.token = "test-token"
+    client._make_request = lambda endpoint, params: {
+        "data": [
+            {"id": "photo", "media_type": "IMAGE", "media_product_type": "FEED"},
+            {"id": "carousel", "media_type": "CAROUSEL_ALBUM", "media_product_type": "FEED"},
+            {"id": "reel", "media_type": "VIDEO", "media_product_type": "REELS"},
+        ]
+    }
+    follows_requests = set()
+
+    def batch_request(_url, data=None, timeout=None):
+        payload = []
+        for entry in json.loads(data["batch"]):
+            path, requested = entry["relative_url"].split("?metric=")
+            assert path.startswith("/v27.0/")
+            post_id = path.split("/")[2]
+            metrics = requested.split(",")
+            insights = []
+            if "follows" in metrics:
+                follows_requests.add(post_id)
+                value = {"photo": 3, "carousel": 0}.get(post_id)
+                if value is not None:
+                    insights.append({"name": "follows", "values": [{"value": value}]})
+            if "views" in metrics:
+                insights.append({"name": "views", "values": [{"value": 12}]})
+            payload.append({"code": 200, "body": json.dumps({"data": insights})})
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: payload)
+
+    client.session = SimpleNamespace(post=batch_request)
+    photo, carousel, reel = client.get_recent_media()
+    assert (photo.follows, carousel.follows, reel.follows) == (3, 0, None)
+    assert follows_requests == {"photo", "carousel"}
+    assert reel.organic_views == 12
+    assert "follows" in carousel.insights_available

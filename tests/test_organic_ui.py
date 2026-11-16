@@ -184,6 +184,7 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
         [
             media(
                 total_interactions=12,
+                follows=5,
                 like_count=7,
                 comments_count=2,
                 organic_views=100,
@@ -202,9 +203,11 @@ def test_posts_table_contains_only_confirmed_organic_columns(monkeypatch):
         "Curtidas orgânicas",
         "Comentários orgânicos",
         "Visualizações orgânicas",
+        "Seguidores atribuídos à publicação",
         "Link",
     ]
     assert dataframe.iloc[0]["Interações orgânicas"] == 12
+    assert dataframe.iloc[0]["Seguidores atribuídos à publicação"] == 5
     assert not any("Pago" in column or "Ads" in column for column in dataframe.columns)
     assert kwargs["link_col"] == "Link"
 
@@ -216,8 +219,8 @@ def test_posts_csv_preserves_full_captions_media_links_and_exports_every_format(
     caption = 'Café, rio e "paz" 🌿\\n' + "Uma legenda completa. " * 30
     organic_ui.render_posts_table(
         [
-            media(id="image-1", caption="Imagem fora do filtro"),
-            media(id="carousel-1", media_type="CAROUSEL_ALBUM", caption=caption),
+            media(id="image-1", caption="Imagem fora do filtro", follows=5),
+            media(id="carousel-1", media_type="CAROUSEL_ALBUM", caption=caption, follows=0),
             media(
                 id="carousel-2",
                 media_type="CAROUSEL_ALBUM",
@@ -238,6 +241,7 @@ def test_posts_csv_preserves_full_captions_media_links_and_exports_every_format(
     assert rows[1]["URL da mídia"] == "https://example.com/media.jpg"
     assert rows[1]["URL da miniatura"] == "https://example.com/thumb.jpg"
     assert rows[1]["Link"] == "https://instagram.com/p/post-1"
+    assert [row["Seguidores atribuídos à publicação"] for row in rows] == ["5", "0", ""]
     assert rows[2]["Legenda"] == ""
     assert rows[2]["URL da mídia"] == ""
     assert rows[2]["URL da miniatura"] == ""

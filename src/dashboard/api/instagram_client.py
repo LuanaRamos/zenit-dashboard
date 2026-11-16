@@ -22,7 +22,7 @@ class InstagramClient:
     e informações cadastrais do perfil.
     """
 
-    API_VERSION = "v26.0"
+    API_VERSION = "v27.0"
     BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
     # O Batch API recebe a versão em cada relative_url.
     BATCH_URL = "https://graph.facebook.com"
@@ -200,16 +200,20 @@ class InstagramClient:
         base_metrics = ("reach", "views", "likes", "comments", "saved",
                         "shares", "total_interactions")
         reel_metrics = ("ig_reels_video_view_total_time", "ig_reels_avg_watch_time")
-        profile_metrics = ("profile_activity", "profile_visits", "follows")
+        feed_profile_metrics = ("profile_activity", "profile_visits", "follows")
         requested_by_media = {}
         for item in media_items_data:
             media_id = str(item.get("id") or "")
             if not media_id:
                 continue
             relevant = list(base_metrics)
-            if item.get("media_product_type") == "REELS":
+            product_type = item.get("media_product_type")
+            if product_type == "REELS":
                 relevant.extend(reel_metrics)
-                relevant.extend(profile_metrics)
+            elif product_type == "FEED" or (
+                not product_type and item.get("media_type") in {"IMAGE", "CAROUSEL_ALBUM"}
+            ):
+                relevant.extend(feed_profile_metrics)
             requested_by_media[media_id] = tuple(relevant)
 
         metrics_by_media: dict[str, dict] = {
@@ -267,7 +271,7 @@ class InstagramClient:
             ("reach", "views"),
             ("likes", "comments", "saved", "shares", "total_interactions"),
             reel_metrics,
-            profile_metrics,
+            feed_profile_metrics,
         )
         for group in groups:
             requests_list = [
