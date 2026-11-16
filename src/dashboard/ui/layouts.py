@@ -152,9 +152,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
             label_visibility="visible",
         )
         if selected_module == "Orgânico (Instagram)":
-            st.caption(
-                "Período de publicação dos conteúdos. No comparativo, Ads usa datas de veiculação."
-            )
+            st.caption("Posts por data de publicação.")
 
         date_preset = "last_30d"
         time_range = None
@@ -162,26 +160,25 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         if periodo_selecionado == "Todo o histórico disponível":
             date_preset = "maximum"
             if selected_module == "Orgânico (Instagram)":
-                st.caption(
-                    "Publicações: desde o primeiro post acessível. Insights da conta: "
-                    "maior período retornado por métrica, com avisos de cobertura."
-                )
+                with st.expander("Cobertura do período", expanded=False):
+                    st.caption(
+                        "Posts desde a primeira publicação acessível. "
+                        "Insights da conta respeitam limites próprios da Meta."
+                    )
             else:
                 from ui.data_loader import fetch_ads_history_coverage_cached
 
                 history = fetch_ads_history_coverage_cached(selected_client.name)
-                if history.get("status") == "ok":
-                    st.caption(
-                        "Primeira entrega recuperável: "
-                        f"{history.get('first_delivery', 'N/D')}. "
-                        f"Consulta desde {history.get('requested_since', 'N/D')}. "
-                        "A API pode não fornecer anúncios anteriores ao seu limite histórico."
-                    )
-                else:
-                    st.caption(
-                        "Buscando a maior janela permitida da API. "
-                        + history.get("note", "Início de veiculação não confirmado.")
-                    )
+                with st.expander("Cobertura do período", expanded=False):
+                    if history.get("status") == "ok":
+                        st.caption(
+                            f"Primeira entrega identificada: {history.get('first_delivery', 'N/D')}. "
+                            f"Início da consulta: {history.get('requested_since', 'N/D')}."
+                        )
+                    else:
+                        st.caption(
+                            history.get("note", "Início histórico não confirmado.")
+                        )
         elif "Personalizado" in periodo_selecionado:
             date_preset = "custom"
 
@@ -208,7 +205,7 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
 
             if start_date and end_date:
                 if start_date > end_date:
-                    st.error("⚠️ A Data Inicial não pode ser maior que a Data Final.")
+                    st.error("A data inicial precisa ser anterior à data final.")
                     st.stop()
                 else:
                     delta = end_date - start_date

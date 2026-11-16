@@ -69,8 +69,8 @@ _render_creative_card({"ad_name": "Teste", "spend": 100.0,
     assert metrics.get("Cliques no link") == "30"
     assert metrics.get("Cliques de saída") == "12"
     assert metrics.get("Outros cliques") == "70"
-    assert metrics.get("💬 Conversas por mensagens") == "5"
-    assert metrics.get("🎯 Custo p/ Mens.") == "R$ 20,00"
+    assert metrics.get("Conversas iniciadas") == "5"
+    assert metrics.get("Custo por conversa") == "R$ 20,00"
 
 
 def test_campaign_table_keeps_aggregate_leads_without_inventing_source_breakdown(monkeypatch):

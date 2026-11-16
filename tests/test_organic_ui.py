@@ -634,7 +634,7 @@ def test_historic_comment_copy_describes_consulted_subset_and_escapes_text(monke
     assert "olá, &lt;script&gt;alert(1)&lt;/script&gt;" in output
     assert "&lt;admin&gt;" in output
     assert "Recorde da Conta" not in output
-    assert st.downloads[0]["label"] == "📥 Baixar comentários consultados (CSV)"
+    assert st.downloads[0]["label"] == "Baixar comentários consultados (CSV)"
 
 
 def test_historic_comment_with_media_list_parameter(monkeypatch):
@@ -743,7 +743,7 @@ def test_historic_comment_csv_download_content_and_headers(monkeypatch):
 
     assert len(st.downloads) == 1
     download = st.downloads[0]
-    assert download["label"] == "📥 Baixar comentários consultados (CSV)"
+    assert download["label"] == "Baixar comentários consultados (CSV)"
     assert download["file_name"] == "comentarios_consultados_cliente.csv"
     csv_text = download["data"].decode("utf-8")
     assert "Conteúdo teste para exportação" in csv_text
@@ -775,5 +775,5 @@ def test_render_followers_timeline_with_data_renders_peak_and_chart(monkeypatch)
     output = "\n".join(str(m) for m in st.markdowns)
     assert "+45" in output
     assert "02/09" in output
-    assert "Evolução de Seguidores" in output
+    assert "Evolução de seguidores" in output
 

@@ -6,6 +6,7 @@ import streamlit.components.v1 as components
 from schemas.meta import CampaignInsight
 import plotly.graph_objects as go
 from pathlib import Path
+from ui.iconography import lucide_icon, icon_for_label
 
 
 def get_global_css() -> str:
@@ -196,26 +197,56 @@ def render_glass_table(
 def render_metric_card(
     label: str, value: str, subtext: str = None, help_text: str = None
 ) -> None:
+    """KPI Vision/Zenit: ícone vetorial, microcopy e ajuda acessível.
+
+    Detalhes de cobertura/limites ficam no painel Diagnóstico e cobertura.
+    """
+    safe_label = html_lib.escape(str(label))
+    safe_value = html_lib.escape(str(value))
+    safe_subtext = html_lib.escape(str(subtext or ""))
+    safe_help = html_lib.escape(str(help_text or ""))
+    icon = lucide_icon(icon_for_label(label))
+    # Ajuda detalhada não ocupa espaço no cartão, mas segue acessível.
     sub_html = (
-        f"<div style='color: #FFFFFF; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; line-height: 1.4; overflow-wrap: anywhere;'>{html_lib.escape(str(subtext))}</div>"
-        if subtext
-        else ""
+        f'<div class="kpi-subtext">{safe_subtext}</div>' if subtext else ""
     )
     help_html = (
-        f"<div style='font-size: 0.79rem; color: #c4c9ac; font-weight: 400; line-height: 1.45; overflow-wrap: anywhere;'>{html_lib.escape(str(help_text))}</div>"
-        if help_text
-        else ""
+        f'<span class="sr-only">{safe_help}</span>' if help_text else ""
     )
-
     html = (
-        '<div class="glass-card kpi-card">'
-        f'<div style="color: #FFFFFF; font-size: 0.80rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.25; margin-bottom: 8px; hyphens: none; -webkit-hyphens: none; word-break: normal; overflow-wrap: normal;">{html_lib.escape(str(label))}</div>'
-        f"<div style=\"background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.55rem, 2.1vw, 2.2rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.2; margin-bottom: 8px; font-family: 'Montserrat', sans-serif; display: block; word-break: break-word;\">{html_lib.escape(str(value))}</div>"
-        f"{sub_html}"
-        f"{help_html}"
-        "</div>"
+        '<div class="glass-card kpi-card" role="group" '
+        f'aria-label="{safe_label}: {safe_value}">'
+        f'<div class="kpi-icon">{icon}</div>'
+        f'<div class="kpi-label">{safe_label}</div>'
+        f'<div class="kpi-value" style="font-variant-numeric: tabular-nums">{safe_value}</div>'
+        f'{sub_html}{help_html}'
+        '</div>'
     )
     st.markdown(html, unsafe_allow_html=True)
+
+
+def render_campaign_highlight(campaigns: list[CampaignInsight]) -> None:
+    """Destaque editorial em dados reais, sem inferir reservas ou vendas."""
+    eligible = [campaign for campaign in campaigns if campaign.whatsapp_starts > 0]
+    if not eligible:
+        return
+    best = max(eligible, key=lambda item: (item.whatsapp_starts, -item.spend))
+    campaign_name = html_lib.escape(best.campaign_name)
+    conversations = _format_int(best.whatsapp_starts)
+    spend = _format_brl(best.spend)
+    icon = lucide_icon("message", 20)
+    st.markdown(
+        '<section class="zenit-feature-card" aria-label="Campanha destaque">'
+        f'<div class="zenit-feature-eyebrow">{icon} Destaque da conta</div>'
+        '<h2>Mais conversas no período</h2>'
+        f'<div class="zenit-feature-name">{campaign_name}</div>'
+        f'<div class="zenit-feature-stat"><strong>{conversations}</strong>'
+        '<span>conversas atribuídas</span></div>'
+        f'<p class="zenit-feature-note">Investimento: {spend}. '
+        'Conversas não equivalem a vendas confirmadas.</p>'
+        '</section>',
+        unsafe_allow_html=True,
+    )
 
 
 def render_metric_cards(
@@ -310,10 +341,13 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
     fig = go.Figure(
         data=[
             go.Pie(
+                hole=0.68,
+                sort=False,
+                direction="clockwise",
                 labels=labels,
                 values=values,
                 marker=dict(
-                    colors=["#FFB300", "#FFC107", "#E5A000", "#FFFFFF", "#4A4A4A"],
+                    colors=["#FFB300", "#FFD56C", "#B98125", "#E9BF60", "#78869B"],
                     line=dict(color="rgba(0,0,0,0)", width=0),
                 ),
                 textinfo="none",
@@ -326,28 +360,30 @@ def render_objective_pie_chart(campaigns: list[CampaignInsight]) -> None:
         separators=",.",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#c4c9ac", "family": "Inter, sans-serif"},
-        margin={
-            "l": 0,
-            "r": 0,
-            "t": 10,
-            "b": 60,
-        },  # Margem bottom bem maior para a legenda caber
+        font={"color": "#d5dce5", "family": "Inter, sans-serif"},
+        margin={"l": 12, "r": 12, "t": 12, "b": 48},
         showlegend=True,
         legend={
             "orientation": "h",
-            "y": -0.25,
+            "y": -0.17,
             "font": {"size": 11, "color": "#F1F5F9"},
         },
-        height=400,  # Aumenta a altura interna do Plotly
+        height=330,
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
             bordercolor="#FFB300",
             font=dict(family="Montserrat", size=13, color="#FFFFFF"),
         ),
     )
-    # Mesma altura para os dois gráficos
-    render_glass_chart(fig, title="Distribuição de Investimento", height=460)
+    fig.add_annotation(
+        text="Investimento", x=0.5, y=0.53, showarrow=False,
+        font={"size": 13, "color": "#aebace"},
+    )
+    fig.add_annotation(
+        text=_format_brl(sum(values)), x=0.5, y=0.44, showarrow=False,
+        font={"size": 17, "color": "#f1f4f8", "family": "Inter"},
+    )
+    render_glass_chart(fig, title="Investimento por objetivo", height=362)
 
 
 def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
@@ -371,17 +407,17 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             go.Bar(
                 x=chart_data["Campanha"],
                 y=chart_data["Custo"],
-                width=0.15,
+                width=0.55,
                 marker=dict(
                     color="#FFB300",
                     line=dict(color="rgba(255, 179, 0, 0.8)", width=0),
-                    cornerradius="50%",
+                    cornerradius=6,
                 ),
                 text=chart_data["Custo"].apply(
                     lambda x: f"R$ {x:,.2f}".replace(".", ",")
                 ),
                 textposition="outside",
-                textfont=dict(color="#E2E8F0", family="Inter", size=11, weight="bold"),
+                textfont=dict(color="#E2E8F0", family="Inter", size=11),
                 hoverinfo="y+x",
             )
         )
@@ -399,7 +435,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor="rgba(255,255,255,0.03)",
+                gridcolor="rgba(255,255,255,0.07)",
                 gridwidth=1,
                 zeroline=True,
                 zerolinecolor="rgba(255,255,255,0.1)",
@@ -408,8 +444,8 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
                 tickprefix="R$ ",
                 tickfont=dict(size=10, family="Inter"),
             ),
-            margin=dict(l=0, r=0, t=10, b=40),  # Espaço embaixo para a label X
-            height=400,
+            margin=dict(l=12, r=12, t=15, b=48),  # Espaço embaixo para a label X
+            height=330,
             hovermode="x unified",
             hoverlabel=dict(
                 bgcolor="rgba(15, 23, 42, 0.95)",
@@ -419,8 +455,7 @@ def render_whatsapp_cost_chart(campaigns: list[CampaignInsight]) -> None:
                 bordercolor="#7E89AC",
             ),
         )
-        # Mesma altura para os dois gráficos
-        render_glass_chart(fig, title="Desempenho de Custo", height=460)
+        render_glass_chart(fig, title="Custo por conversa, por campanha", height=380)
 
 
 def render_whatsapp_campaigns(campaigns: list[CampaignInsight]) -> None:

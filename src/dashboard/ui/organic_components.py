@@ -8,6 +8,7 @@ from api.exceptions import InstagramAPIError
 from core.meta_content_export import apply_content_export, read_content_export
 from schemas.instagram import InstagramMedia
 from ui.components import render_glass_table, render_metric_card
+from ui.iconography import lucide_icon
 
 
 @dataclass(frozen=True)
@@ -128,9 +129,10 @@ def render_profile_bio_header(profile_info: dict, client_name: str = "") -> None
         )
     else:
         avatar_html = (
-            '<div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(255,179,0,0.15); '
-            'display: flex; align-items: center; justify-content: center; font-size: 2rem; '
-            'border: 2px solid #FFB300; color: #FFB300; flex-shrink: 0;">👤</div>'
+            '<div style="width: 76px; height: 76px; border-radius: 14px; background: rgba(255,179,0,0.09); '
+            'display: flex; align-items: center; justify-content: center; '
+            'border: 1px solid rgba(255,179,0,0.3); color: #FFB300; flex-shrink: 0;">'
+            + lucide_icon("users", 30) + '</div>'
         )
 
     display_name = name or (f"@{username}" if username else "Instagram")
@@ -176,10 +178,10 @@ def render_account_insights_cards(
     insights: dict, paid_totals: dict, followers_history: list = None
 ) -> None:
     """Renderiza KPIs sem apresentar métricas mistas como se fossem orgânicas."""
-    st.markdown("### 👁️ Visão Geral da Conta")
+    st.markdown("### Visão geral da conta")
     if insights.get("_is_partial"):
         st.info(
-            "⚠️ **Nota sobre o Período:** A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos."
+            "Nota sobre o período: A Meta restringe algumas métricas gerais de conta aos últimos 13 meses. Insights detalhados de publicações ficam disponíveis por até 2 anos."
         )
     if insights.get("_is_segmented"):
         st.info(
@@ -213,7 +215,7 @@ def render_account_insights_cards(
     def paid_context(paid):
         return f"Pago no Instagram: {fmt(paid)} (já pode estar incluído no total)"
 
-    st.markdown("#### 🎯 Métricas Totais")
+    st.markdown("#### Métricas totais")
     cols_mix = st.columns(5)
     with cols_mix[0]:
         render_metric_card(
@@ -252,7 +254,7 @@ def render_account_insights_cards(
         )
 
     st.write("")
-    st.markdown("#### 👤 Ações Registradas no Perfil")
+    st.markdown("#### Ações registradas no perfil")
     cols_org = st.columns(4)
     with cols_org[0]:
         render_metric_card(
@@ -301,7 +303,7 @@ def render_account_insights_cards(
             "Novos Seguidores",
             fmt(new_followers_30d),
             "Total",
-            "⚠️ A Meta só permite consultar seguidores dos últimos 30 dias, independente do filtro.",
+            "A Meta limita o histórico consultável de seguidores.",
         )
     with cols_org2[3]:
         st.empty()
@@ -369,55 +371,91 @@ def account_engagement_rows(insights: dict) -> list[dict[str, Any]]:
 
 
 def render_account_engagement_summary(insights: dict) -> None:
-    """Mostra a atividade do período antes do ranking e dos posts."""
-    st.markdown("### Engajamento e atividade da conta")
-    st.caption(
-        "Esses indicadores usam a data da interação no período filtrado. "
-        "Os totais da conta podem incluir conteúdo promovido, conforme a definição "
-        "da Meta; não são necessariamente exclusivamente orgânicos."
-    )
+    """Visão compacta. A origem e as limitações ficam numa única seção."""
+    st.markdown("### Atividade da conta")
+    st.caption("Resultados da conta no período selecionado. Incluem conteúdo promovido quando informado pela Meta.")
     rows = account_engagement_rows(insights)
-    for offset in range(0, len(rows), 4):
+    primary_keys = (
+        "views", "reach", "accounts_engaged", "total_interactions",
+        "profile_views", "profile_links_taps", "new_follows", "net_follows",
+    )
+    by_field = {
+        ("new_follows" if row["Indicador"] == "Novos seguidores"
+         else "net_follows" if row["Indicador"] == "Saldo de seguidores"
+         else str(row["Campo API"]).split(" (")[0]): row
+        for row in rows
+    }
+    # Mostra o essencial primeiro. N/D não pode ser convertido em zero.
+    for offset in range(0, len(primary_keys), 4):
         columns = st.columns(4)
-        for column, row in zip(columns, rows[offset:offset + 4]):
+        for column, key in zip(columns, primary_keys[offset:offset + 4]):
+            row = by_field.get(key)
+            if not row:
+                continue
             with column:
-                st.metric(row["Indicador"], _format_optional_int(row["Valor"]))
-                if row["Início efetivo"] and row["Fim efetivo"]:
-                    st.caption(
-                        f"{row['Início efetivo']} a {row['Fim efetivo']}"
-                        + (" · Parcial" if row["Status"] == "parcial" else "")
-                    )
-                else:
-                    st.caption("Indisponível na API" if row["Valor"] is None else "Sem cobertura informada")
+                render_metric_card(
+                    row["Indicador"],
+                    _format_optional_int(row["Valor"]),
+                    ("Sem dados" if row["Valor"] is None else "No período"),
+                )
 
-    st.info(
-        "Toques nos botões de contato (profile_links_taps) não são cliques "
-        "na URL externa da bio. Para contar cliques em uma URL específica, "
-        "use um link rastreável ou registre a chegada no site."
-    )
-    with st.expander("Fonte, cobertura e disponibilidade de cada indicador"):
-        for row in rows:
-            scope = (
-                f"{row['Início efetivo']} até {row['Fim efetivo']}"
-                if row["Início efetivo"] and row["Fim efetivo"]
-                else "período indisponível"
-            )
-            st.markdown(
-                f"**{row['Indicador']}** · {row['Status']} · "
-                f"{scope}. {row['Observação']}"
-            )
-    st.download_button(
-        label="Baixar CSV de engajamento da conta",
-        data=pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig"),
-        file_name="engajamento_conta_instagram.csv",
-        mime="text/csv",
-        key="download_ig_account_engagement",
-    )
+    extra = [
+        row for row in rows
+        if row["Campo API"] not in primary_keys
+        and row["Indicador"] not in {"Novos seguidores", "Saldo de seguidores"}
+    ]
+    with st.expander(f"Outras métricas ({len(extra)})", expanded=False):
+        st.dataframe(
+            pd.DataFrame([
+                {
+                    "Indicador": row["Indicador"],
+                    "Valor": _format_optional_int(row["Valor"]),
+                }
+                for row in extra
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    with st.expander("Diagnóstico e cobertura", expanded=False):
+        st.caption(
+            "N/D significa indisponível, não zero. Algumas métricas são "
+            "acumuladas ou incluem resultados pagos, conforme a definição da Meta."
+        )
+        st.caption(
+            "Toques nos botões do perfil não medem uma URL específica da bio. "
+            "Para esse rastreamento, é necessário medir o destino."
+        )
+        if insights.get("_is_partial"):
+            st.caption("Histórico parcial: a Meta restringe alguns Insights da conta.")
+        if insights.get("_is_segmented"):
+            st.caption("Períodos extensos podem somar janelas com pessoas repetidas.")
+        st.dataframe(
+            pd.DataFrame([
+                {
+                    "Indicador": row["Indicador"],
+                    "Status": row["Status"],
+                    "Início": row["Início efetivo"],
+                    "Fim": row["Fim efetivo"],
+                    "Observação": row["Observação"],
+                }
+                for row in rows
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.download_button(
+            label="Exportar diagnóstico (CSV)",
+            data=pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig"),
+            file_name="engajamento_conta_instagram.csv",
+            mime="text/csv",
+            key="download_ig_account_engagement",
+        )
 
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
     """Show each engagement metric separately."""
-    st.markdown("### 📊 Desempenho das publicações")
+    st.markdown("### Desempenho das publicações")
     totals = aggregate_organic_metrics(list(media_list))
     cards = (
         ("Curtidas orgânicas", "like_count"),
@@ -594,7 +632,7 @@ def render_posts_table(
 ) -> None:
     """Render separate engagement counts and attribute reach and follows per source."""
     del stories_list  # Kept for compatibility with existing callers.
-    st.markdown("### 📝 Publicações orgânicas")
+    st.markdown("### Publicações orgânicas")
 
     filter_column, _ = st.columns([1, 3])
     with filter_column:
@@ -724,7 +762,7 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
     Renderiza os posts em destaque ordenados primariamente por alcance (reach),
     com fallback para interações orgânicas totais.
     """
-    st.markdown("### 🏆 Top posts por alcance")
+    st.markdown("### Publicações de maior alcance")
 
     if not media_list:
         return
@@ -889,7 +927,7 @@ def render_historic_top_comment(
         if not best:
             return
 
-        st.markdown("### 💬 Comentário com mais curtidas entre os consultados")
+        st.markdown("### Comentário com mais curtidas entre os consultados")
 
         text = html_lib.escape(str(best.get("text", "")))
         username = html_lib.escape(str(best.get("username", "Usuário")))
@@ -898,7 +936,7 @@ def render_historic_top_comment(
         html = f"""<div class="glass-card" style="padding: 20px; border-left: 4px solid #FFB300; background: rgba(255,179,0,0.05); border-radius: 8px; margin-bottom: 20px;">
     <div style="font-size: 1.1rem; color: #E2E8F0; margin-bottom: 8px; font-style: italic;">\"{text}\"</div>
     <div style="color: #c4c9ac; font-size: 0.9rem;">
-        <strong>@{username}</strong> • 🏆 {int(likes):,} curtidas
+        <strong>@{username}</strong> · {int(likes):,} curtidas
     </div>
 </div>"""
         st.markdown(html, unsafe_allow_html=True)
@@ -928,7 +966,7 @@ def render_historic_top_comment(
         csv_data = df_comments.to_csv(index=False)
         csv_bytes = csv_data.encode("utf-8") if isinstance(csv_data, str) else csv_data
         st.download_button(
-            label="📥 Baixar comentários consultados (CSV)",
+            label="Baixar comentários consultados (CSV)",
             data=csv_bytes,
             file_name=f"comentarios_consultados_{client_name}.csv",
             mime="text/csv",
@@ -944,76 +982,67 @@ def render_historic_top_comment(
 
 
 def render_followers_timeline(history_data: list) -> None:
-    """Renderiza a linha do tempo de ganho de seguidores dos últimos 30 dias."""
+    """Gráfico Vision/Zenit: série diária real e média móvel, sem inventar dados."""
     if not history_data:
-        st.info("O histórico de seguidores não está disponível para esta conta.")
+        st.info("O histórico de seguidores não está disponível neste período.")
         return
 
-    import pandas as pd
-    import plotly.express as px
+    import plotly.graph_objects as go
 
     df = pd.DataFrame(history_data)
-    if (
-        df.empty
-        or "Data" not in df.columns
-        or "Novos Seguidores" not in df.columns
-    ):
-        st.info("Sem dados suficientes de histórico no momento.")
+    if df.empty or "Data" not in df.columns or "Novos Seguidores" not in df.columns:
+        st.info("Sem dados suficientes para a evolução de seguidores.")
         return
 
-    st.markdown("### 📈 Evolução de Seguidores (Últimos 30 Dias)")
+    df["Novos Seguidores"] = pd.to_numeric(
+        df["Novos Seguidores"], errors="coerce"
+    )
+    df = df.dropna(subset=["Novos Seguidores"]).sort_values("Data")
+    if df.empty:
+        st.info("Sem valores de seguidores válidos para o gráfico.")
+        return
 
+    df["Média móvel"] = df["Novos Seguidores"].rolling(
+        window=7, min_periods=1
+    ).mean()
     peak_row = df.loc[df["Novos Seguidores"].idxmax()]
-    peak_val = peak_row["Novos Seguidores"]
-    peak_date = peak_row["Data"]
-
+    st.markdown("### Evolução de seguidores")
     st.markdown(
-        f"""
-    <div class="metric-card" style="margin-bottom: 20px;">
-        <div class="metric-label">Maior Pico (Últimos 30d)</div>
-        <div class="metric-value" style="color: #FFB300;">+{int(peak_val)} <span style="font-size: 0.9rem; font-weight: normal; color: #c4c9ac;">Seguidores</span></div>
-        <div style="font-size: 0.8rem; color: #c4c9ac; margin-top: 5px;">Recorde registrado em: <strong>{peak_date}</strong></div>
-    </div>
-    """,
-        unsafe_allow_html=True,
+        f"**+{int(peak_row['Novos Seguidores'])}** novos seguidores no pico diário "
+        f"· {peak_row['Data']}. Média móvel de 7 dias como referência."
     )
 
-    fig = px.area(
-        df, x="Data", y="Novos Seguidores", color_discrete_sequence=["#FFB300"]
-    )
-
-    fig.update_traces(
-        line_shape="spline",
-        mode="lines+markers",
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["Data"],
+        y=df["Novos Seguidores"],
+        mode="lines",
+        name="Novos seguidores",
         fill="tozeroy",
-        marker=dict(size=6, color="#FFB300", line=dict(width=1, color="white")),
-        hovertemplate="<b>%{x}</b><br>Novos Seguidores: %{y}<extra></extra>",
-    )
-
+        fillcolor="rgba(255,179,0,0.14)",
+        line=dict(color="#FFB300", width=3, shape="spline", smoothing=0.65),
+        hovertemplate="%{x}<br>Novos seguidores: %{y:,.0f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["Data"],
+        y=df["Média móvel"],
+        mode="lines",
+        name="Média móvel (7 dias)",
+        line=dict(color="#FFD56C", width=2, dash="dot"),
+        hovertemplate="%{x}<br>Média móvel: %{y:.1f}<extra></extra>",
+    ))
     fig.update_layout(
+        height=360,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#E2E8F0"),
-        xaxis=dict(
-            title="",
-            showgrid=False,
-            zeroline=False,
-            showline=True,
-            linecolor="rgba(255,255,255,0.1)",
-            tickangle=-45,
-        ),
-        yaxis=dict(
-            title="",
-            showgrid=True,
-            gridcolor="rgba(255,255,255,0.05)",
-            zeroline=True,
-            zerolinecolor="rgba(255,255,255,0.1)",
-        ),
-        margin=dict(l=10, r=45, t=10, b=45),
-        height=350,
+        font=dict(family="Inter", color="#cbd3df", size=12),
+        margin=dict(l=20, r=20, t=24, b=36),
         hovermode="x unified",
+        hoverlabel=dict(bgcolor="#131b29", font_color="#f1f4f8"),
+        xaxis=dict(title="", showgrid=False, zeroline=False),
+        yaxis=dict(title="", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
+                   rangemode="tozero", zeroline=False),
+        legend=dict(orientation="h", y=1.12, x=0,
+                    font=dict(color="#cbd3df", size=11)),
     )
-
-    st.plotly_chart(
-        fig, use_container_width=True, config={"displayModeBar": False}
-    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})

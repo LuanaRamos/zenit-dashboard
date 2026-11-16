@@ -19,7 +19,7 @@ def configure_page():
     icon = DASHBOARD_DIR / "assets" / "zenit_logo.png"
     st.set_page_config(
         page_title="Zenit Analytics",
-        page_icon=str(icon) if icon.exists() else "📈",
+        page_icon=str(icon) if icon.exists() else ":material/analytics:",
         layout="wide",
         initial_sidebar_state="auto",
     )
@@ -52,14 +52,12 @@ def render_ads_page(date_preset, time_range, client):
         render_profile_campaigns,
         render_whatsapp_campaigns,
         render_whatsapp_cost_chart,
+        render_campaign_highlight,
     )
     from ui.data_loader import fetch_campaigns_v8
 
     st.title("Desempenho dos anúncios")
-    st.markdown(f"Resultados pagos de **{client.name}**.")
-    st.caption(
-        "Fonte: Meta Ads · Campanhas e posicionamentos da conta de anúncios no período selecionado."
-    )
+    st.caption(f"{client.name} · Meta Ads · Dados do período selecionado.")
     with st.spinner("Carregando anúncios..."):
         campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
     if not campaigns:
@@ -112,10 +110,16 @@ def render_ads_page(date_preset, time_range, client):
         if c not in messages and (c.instagram_follows > 0 or c.profile_visits > 0)
     ]
     other = [c for c in campaigns if c not in messages and c not in profile]
-    chart1, chart2 = st.columns(2)
-    with chart1:
+    if any(item.whatsapp_starts > 0 for item in campaigns):
+        overview, distribution = st.columns([1.35, 1])
+        with overview:
+            render_campaign_highlight(campaigns)
+        with distribution:
+            render_objective_pie_chart(campaigns)
+    else:
         render_objective_pie_chart(campaigns)
-    with chart2:
+
+    if messages:
         render_whatsapp_cost_chart(messages)
     render_whatsapp_campaigns(messages)
     render_profile_campaigns(profile)
@@ -136,12 +140,8 @@ def render_organic_page(date_preset, time_range, client):
         render_top_posts_and_comments,
     )
 
-    st.title("Conteúdo orgânico do Instagram")
-    st.markdown(f"Resultados orgânicos de **{client.name}**.")
-    st.caption(
-        "O filtro seleciona a data de publicação. Os Insights mostram os resultados acumulados "
-        "dessas publicações até a consulta, não somente as interações ocorridas no período."
-    )
+    st.title("Instagram")
+    st.caption(f"{client.name} · Atividade da conta no período selecionado.")
 
     # Primeiro bloco visível: atividade do período, independente da data
     # de publicação dos posts listados nas abas abaixo.
@@ -157,11 +157,7 @@ def render_organic_page(date_preset, time_range, client):
     render_account_engagement_summary(account_insights)
 
     st.divider()
-    st.caption(
-        "A tabela abaixo filtra posts pela data de publicação. Já os cartões "
-        "acima consultam a atividade ocorrida nas datas disponíveis da API. "
-        "Métricas acumuladas de posts não são contagens por dia de interação."
-    )
+    st.caption("Publicações: filtro por data de postagem; resultados acumulados desde a publicação.")
 
     tab_posts, tab_growth, tab_audience = st.tabs([
         "Publicações",
@@ -177,7 +173,7 @@ def render_organic_page(date_preset, time_range, client):
         except Exception as error:
             logger.error(f"Erro ao carregar publicações orgânicas de {client.name}: {error}")
             sentry_sdk.capture_exception(error)
-            st.warning(f"Aviso sobre as publicações do Instagram ({client.name}): {error}")
+            st.warning("Publicações indisponíveis. Consulte Diagnóstico e cobertura ou tente atualizar.")
             media = []
 
         if not media:
@@ -222,116 +218,53 @@ def render_organic_page(date_preset, time_range, client):
                         )
     
     with tab_growth:
-        st.markdown("### Crescimento e histórico de seguidores")
-        st.caption("Acompanhamento de novos seguidores diários e ações registradas no perfil.")
-
-        # 1. Gráfico de novos seguidores diários (Plotly com spline e maior pico)
+        st.markdown("### Seguidores")
         try:
             with st.spinner("Carregando evolução de seguidores..."):
                 followers_history = data_loader.fetch_followers_history_cached(client.name)
             if followers_history:
                 render_followers_timeline(followers_history)
             else:
-                st.info("Histórico de novos seguidores diários não disponível no momento para esta conta.")
+                st.caption("Histórico diário não disponível nesta conta.")
         except Exception as error:
-            logger.warning(f"Erro ao buscar histórico de seguidores de {client.name}: {error}")
+            logger.warning("Falha no histórico de seguidores de %s: %s", client.name, error)
             sentry_sdk.capture_exception(error)
-            st.info("Histórico de novos seguidores diários não disponível no momento para esta conta.")
+            st.caption("Histórico diário indisponível.")
 
-        # 2. Ações no perfil (visitas, toques no link, engajamento)
-        try:
+        if account_insights:
             insights = account_insights
-            if insights:
-                st.write("")
-                st.markdown("#### Insights da conta e cobertura")
-                st.caption(
-                    "Esses Insights abrangem a conta, não são necessariamente "
-                    "exclusivamente orgânicos. O período pode ser menor que o "
-                    "histórico de publicações."
+
+            def _fmt(val):
+                if val is None:
+                    return "N/D"
+                try:
+                    return f"{int(val):,}".replace(",", ".")
+                except (TypeError, ValueError):
+                    return "N/D"
+
+            st.markdown("### Ações no perfil")
+            cols_act = st.columns(4)
+            with cols_act[0]:
+                render_metric_card(
+                    "Visitas ao perfil", _fmt(insights.get("profile_views")),
+                    "Conta · Período selecionado",
                 )
-                coverage = insights.get("_coverage", {})
-
-                def _metric_with_scope(title, key):
-                    value = insights.get(key)
-                    info = coverage.get(key, {})
-                    display = (
-                        f"{int(value):,}".replace(",", ".")
-                        if value is not None else "N/D"
-                    )
-                    st.metric(title, display)
-                    if info.get("since") and info.get("until"):
-                        st.caption(
-                            f"Dados de {info['since']} a {info['until']}. "
-                            f"{info.get('note', '')}"
-                        )
-                    else:
-                        st.caption(info.get("note", "Não retornado pela Meta."))
-
-                c_reach, c_views = st.columns(2)
-                with c_reach:
-                    _metric_with_scope("Alcance único da conta", "reach")
-                with c_views:
-                    _metric_with_scope("Visualizações da conta", "views")
-
-                with st.expander("Cobertura e limitações de cada métrica", expanded=(date_preset == "maximum")):
-                    st.caption(
-                        "N/D significa que não houve valor confirmado, e não zero. "
-                        "Métricas únicas não são somadas entre meses."
-                    )
-                    for metric, info in coverage.items():
-                        period = (
-                            f"{info['since']} a {info['until']}"
-                            if info.get("since") and info.get("until")
-                            else "sem período confirmado"
-                        )
-                        st.markdown(
-                            f"**{metric}**: {info.get('status', 'N/D')} "
-                            f"({period}). {info.get('note', '')}"
-                        )
-                st.write("")
-                st.markdown("#### Ações e interações no perfil")
-                st.caption("Ações diretas realizadas pelos usuários no perfil do Instagram durante o período.")
-                cols_act = st.columns(4)
-
-                def _fmt(val):
-                    if val is None:
-                        return "N/D"
-                    try:
-                        return f"{int(val):,}".replace(",", ".")
-                    except (TypeError, ValueError):
-                        return "N/D"
-
-                with cols_act[0]:
-                    render_metric_card(
-                        "Visitas ao perfil",
-                        _fmt(insights.get("profile_views")),
-                        "Fonte: profile_views",
-                        "Consultado na API. N/D quando indisponível para a conta ou período.",
-                    )
-                with cols_act[1]:
-                    render_metric_card(
-                        "Toques em botões do perfil",
-                        _fmt(insights.get("profile_links_taps")),
-                        "Fonte: profile_links_taps",
-                        "Inclui ações de contato, não mede cliques em uma URL específica da bio.",
-                    )
-                with cols_act[2]:
-                    render_metric_card(
-                        "Cliques no site (API)",
-                        _fmt(insights.get("website_clicks")),
-                        "Fonte: website_clicks",
-                        "A API pode não disponibilizar este campo. Não equivale a cliques na URL específica.",
-                    )
-                with cols_act[3]:
-                    render_metric_card(
-                        "Toques no endereço",
-                        _fmt(insights.get("business_address_taps")),
-                        "Sem campo equivalente confirmado",
-                        "Aparece no aplicativo Instagram, mas não foi validado nesta API.",
-                    )
-        except Exception as error:
-            logger.warning(f"Erro ao buscar ações do perfil de {client.name}: {error}")
-            sentry_sdk.capture_exception(error)
+            with cols_act[1]:
+                render_metric_card(
+                    "Toques em botões", _fmt(insights.get("profile_links_taps")),
+                    "Ações de contato",
+                )
+            with cols_act[2]:
+                render_metric_card(
+                    "Cliques no site", _fmt(insights.get("website_clicks")),
+                    "Métrica da API",
+                )
+            with cols_act[3]:
+                render_metric_card(
+                    "Toques no endereço", _fmt(insights.get("business_address_taps")),
+                    "Métrica não confirmada",
+                )
+            st.caption("Detalhes da fonte e dos períodos: Diagnóstico e cobertura, na visão geral.")
 
     with tab_audience:
         # Demografia e Audiência do Instagram
