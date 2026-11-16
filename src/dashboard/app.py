@@ -309,10 +309,10 @@ def render_organic_page(date_preset, time_range, client):
                     )
                 with cols_act[1]:
                     render_metric_card(
-                        "Toques em links/botões",
+                        "Toques em botões do perfil",
                         _fmt(insights.get("profile_links_taps")),
                         "Fonte: profile_links_taps",
-                        "Métrica agregada; não identifica a URL específica da bio.",
+                        "Inclui ações de contato, não mede cliques em uma URL específica da bio.",
                     )
                 with cols_act[2]:
                     render_metric_card(
