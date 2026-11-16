@@ -6,9 +6,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class ClientConfig(BaseModel):
     name: str
-    ad_account_id: str
+    ad_account_id: str = ""
     page_id: str
     token: Optional[str] = None
+
+    @property
+    def has_ads(self) -> bool:
+        """Clientes podem usar somente Instagram, sem conta de anúncios."""
+        return bool(self.ad_account_id.strip().removeprefix("act_"))
 
 
 class Settings(BaseSettings):
@@ -66,21 +71,22 @@ class Settings(BaseSettings):
                 ) from None
 
             name_key = client.name.strip().casefold()
-            account_key = client.ad_account_id.removeprefix("act_")
-            if not name_key or not account_key or not client.page_id.strip():
+            account_key = client.ad_account_id.strip().removeprefix("act_")
+            if not name_key or not client.page_id.strip():
                 raise ValueError(
                     f"CLIENTS_JSON: cliente {index} possui nome ou IDs vazios."
                 )
             if name_key in names:
                 raise ValueError(f"CLIENTS_JSON: nome de cliente duplicado na entrada {index}.")
-            if account_key in account_ids:
+            if account_key and account_key in account_ids:
                 raise ValueError(f"CLIENTS_JSON: conta de anúncios duplicada na entrada {index}.")
             if not client.token and not self.meta_master_token:
                 raise ValueError(
                     f"CLIENTS_JSON: cliente {index} sem token próprio ou META_MASTER_TOKEN."
                 )
             names.add(name_key)
-            account_ids.add(account_key)
+            if account_key:
+                account_ids.add(account_key)
             clients.append(client)
         return clients
 
