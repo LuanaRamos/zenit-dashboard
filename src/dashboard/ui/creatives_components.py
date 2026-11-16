@@ -277,7 +277,7 @@ def render_creatives_tab(
     date_preset: str, time_range: dict | None, client_name: str
 ) -> None:
     """Renderiza o Laboratório de Criativos com público real atraído e datas de veiculação."""
-    st.subheader("🎨 Laboratório de Criativos")
+    st.subheader("Laboratório de criativos")
     st.markdown(
         "<p style='color:#94A3B8;margin-bottom:8px;'>"
         "Analise quais criativos performam melhor e quem eles estão atraindo de verdade "
