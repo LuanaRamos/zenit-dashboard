@@ -647,13 +647,54 @@ class InstagramClient:
                      if partial else "Agregado único do período sem somas entre janelas.")
                 )
 
-        # Não reaproveitar nomes descontinuados ou não equivalentes.
-        for metric in ("profile_views", "website_clicks", "follows_and_unfollows"):
-            _set_coverage(
-                metric, None, None, "indisponivel",
-                ("Sem equivalente direto validado nesta consulta. "
-                 "Não foi substituído por outra métrica de significado diferente.")
-            )
+        # Atividade no perfil: cada métrica é consultada pelo nome original.
+        # Uma resposta vazia ou rejeitada pela API é N/D, não zero nem
+        # substituição por outra métrica parecida.
+        for metric in ("profile_views", "website_clicks"):
+            metric_start = None
+            metric_end = None
+            total = 0
+            incomplete = False
+            activity_cursor = end
+            while activity_cursor > start:
+                activity_begin = max(start, activity_cursor - datetime.timedelta(days=30))
+                try:
+                    value = _request((metric,), activity_begin, activity_cursor).get(metric)
+                except Exception as exc:
+                    logger.info("Métrica de perfil %s indisponível: %s", metric, exc)
+                    value = None
+                if value is None:
+                    incomplete = True
+                    break
+                total += value
+                metric_start = activity_begin
+                if metric_end is None:
+                    metric_end = activity_cursor
+                activity_cursor = activity_begin
+            if metric_start is None:
+                _set_coverage(metric, None, None, "indisponivel",
+                              "Não retornado pela API para esta conta, versão ou período.")
+            else:
+                result[metric] = total
+                partial = incomplete or clamped or requested_full_history
+                _set_coverage(
+                    metric, metric_start, metric_end,
+                    "parcial" if partial else "ok",
+                    ("Contagem de atividade em janelas disjuntas; histórico parcial."
+                     if partial else "Contagem de atividade nas datas consultadas."),
+                )
+
+        # O app pode exibir toques no endereço, mas não há, nesta
+        # implementação, um campo oficial equivalente confirmado.
+        result["business_address_taps"] = None
+        _set_coverage(
+            "business_address_taps", None, None, "indisponivel",
+            "Não foi validado um campo equivalente para toques no endereço comercial."
+        )
+        _set_coverage(
+            "follows_and_unfollows", None, None, "indisponivel",
+            "Sem equivalente direto validado nesta consulta."
+        )
         result["_is_segmented"] = len(earliest) > 0 and (
             end - start
         ).days > 30
