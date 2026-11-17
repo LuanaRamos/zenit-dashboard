@@ -446,3 +446,66 @@ a, button, [role="button"], [role="tab"] { touch-action: manipulation; }
     line-height: 1.5;
     margin: 2px 0 16px;
 }
+
+
+/* Responsividade pela largura REAL do painel, mesmo quando o navegador
+   móvel solicita versão desktop e mantém a barra lateral aberta. */
+[data-testid="stMain"] {
+    container-type: inline-size;
+}
+.zenit-post-card {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+}
+.zenit-post-card img {
+    max-width: 100%;
+    height: clamp(135px, 20vw, 200px) !important;
+    object-fit: cover;
+}
+.zenit-post-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 9px;
+}
+.zenit-post-stats > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.zenit-post-stats strong {
+    font-variant-numeric: tabular-nums;
+}
+.zenit-post-stats span {
+    color: #bcc7d6;
+    line-height: 1.45;
+    font-size: 0.75rem;
+}
+@container (max-width: 920px) {
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        align-items: stretch;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        min-width: min(100%, 220px) !important;
+        flex: 1 1 220px !important;
+        width: auto !important;
+    }
+    .kpi-card {
+        min-height: 104px !important;
+    }
+    .zenit-post-card .zenit-post-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@container (max-width: 460px) {
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+}
