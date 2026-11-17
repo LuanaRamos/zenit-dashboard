@@ -70,10 +70,11 @@ def render_ads_page(date_preset, time_range, client):
         return
 
     # Seleção explícita evita buscar público/criativos em cada visita ao resumo.
-    section = st.radio(
+    section = st.segmented_control(
         "Análise de anúncios",
-        ["Visão geral", "Público dos anúncios", "Criativos"],
-        horizontal=True,
+        options=["Visão geral", "Público dos anúncios", "Criativos"],
+        selection_mode="single",
+        default="Visão geral",
         label_visibility="collapsed",
         key=f"ads_section_{client.name}",
     )
