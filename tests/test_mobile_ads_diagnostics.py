@@ -113,3 +113,63 @@ def test_compact_post_metrics_keep_coverage_in_single_diagnostic_section(monkeyp
     assert any("Cobertura" in label for label in cap.expanders)
     assert all("Cobertura:" not in (subtitle or "") for *_, subtitle, __ in cap.metric_cards)
     assert [x[1] for x in cap.metric_cards] == ["10", "3", "2", "0", "150"]
+
+
+def test_ads_fields_fallback_preserves_spend_when_optional_field_rejected():
+    from api.meta_client import MetaAdsClient
+
+    client = object.__new__(MetaAdsClient)
+    client.ad_account_id = "act_fixture"
+    fields_seen = []
+    def make_request(endpoint, params):
+        fields_seen.append(params["fields"])
+        if "outbound_clicks" in params["fields"]:
+            raise MetaAPIError("Unknown field outbound_clicks on insights")
+        return {"data": [{
+            "campaign_id": "42",
+            "campaign_name": "A",
+            "objective": "OUTCOME_ENGAGEMENT",
+            "spend": "87.50",
+            "impressions": "1500",
+            "actions": [{"action_type": "onsite_conversion.messaging_conversation_started_7d", "value": "5"}],
+        }]}
+    client._make_request = make_request
+    result = client.get_campaign_insights("last_30d")
+    assert len(result) == 1
+    assert result[0].spend == 87.5
+    assert len(fields_seen) <= 3
+    assert "outbound_clicks" not in fields_seen[-1]
+
+
+def test_ads_overview_with_messages_and_charts_does_not_raise(monkeypatch):
+    from types import SimpleNamespace
+    from streamlit.testing.v1 import AppTest
+    from schemas.meta import CampaignInsight
+    from ui import data_loader, layouts
+
+    monkeypatch.setattr(
+        layouts,
+        "render_sidebar",
+        lambda: (
+            "Visão Geral (Ads)", "last_30d", None,
+            SimpleNamespace(name="Conta Teste", ad_account_id="123", has_ads=True),
+        ),
+    )
+    monkeypatch.setattr(
+        data_loader,
+        "fetch_campaigns_v8",
+        lambda *a: [
+            CampaignInsight(
+                campaign_name="Campanha real", objective="OUTCOME_ENGAGEMENT",
+                spend=300.0, whatsapp_starts=15, impressions=5000,
+            ),
+            CampaignInsight(
+                campaign_name="Campanha sem conversa", objective="OUTCOME_TRAFFIC",
+                spend=20.0, impressions=400,
+            ),
+        ],
+    )
+    app = AppTest.from_file(str(APP)).run(timeout=20)
+    assert not app.exception
+    assert not app.error
+    assert any("320" in element.value for element in app.markdown)
