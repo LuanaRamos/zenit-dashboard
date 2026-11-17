@@ -67,6 +67,13 @@ def test_mobile_layout_wraps_columns_at_main_container_width():
     assert "minmax(0, 1fr)" in css
 
 
+def test_ads_navigation_is_segmented_without_radio_circles():
+    app = APP.read_text(encoding="utf-8")
+    ads_section = app.split("def render_ads_page(", 1)[1].split("def render_organic_page(", 1)[0]
+    assert "st.segmented_control(" in ads_section
+    assert "st.radio(" not in ads_section
+
+
 def test_version_marker_is_visible_in_sidebar():
     c = LAYOUT.read_text(encoding="utf-8")
     assert "UI_BUILD_ID" in c
