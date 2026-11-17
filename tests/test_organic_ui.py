@@ -166,8 +166,9 @@ def test_metric_cards_show_nd_for_missing_and_partial_coverage(monkeypatch):
         ("Salvamentos", "0"),
         ("Visualizações orgânicas", "N/D"),
     ]
-    assert cards[0][2] == "Cobertura: 2 de 3 publicações"
-    assert cards[-1][2] == "Sem dados nos Media Insights"
+    assert cards[0][2] is None
+    assert cards[-1][2] is None
+    assert any("Cobertura" in args[0][0] for args in st.expanders)
     assert any("data de publicação" in caption for caption in st.captions)
 
 
