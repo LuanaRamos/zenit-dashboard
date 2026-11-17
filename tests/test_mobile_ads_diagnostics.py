@@ -33,6 +33,7 @@ def test_safe_ads_error_classification(message, expected):
 
 
 def test_ads_diagnostics_never_discloses_access_token():
+    from ui import ads_diagnostics
     result = ads_diagnostics.classify_ads_error(
         MetaAPIError("Error validating access token SECRET_ABC123")
     )
