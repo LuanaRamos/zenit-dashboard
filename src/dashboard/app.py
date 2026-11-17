@@ -307,6 +307,8 @@ def main():
             "Não foi possível carregar esta área. Verifique a configuração da conta e tente novamente.",
             error,
         )
+    from ui.build_info import UI_BUILD_ID
+    st.caption(f"Zenit Analytics · build {UI_BUILD_ID}")
 
 
 if __name__ == "__main__":
