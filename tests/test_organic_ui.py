@@ -67,6 +67,9 @@ class StreamlitCapture:
     def caption(self, body, **kwargs):
         self.captions.append(body)
 
+    def dataframe(self, *args, **kwargs):
+        pass
+
     def warning(self, body, **kwargs):
         self.warnings.append(body)
 
