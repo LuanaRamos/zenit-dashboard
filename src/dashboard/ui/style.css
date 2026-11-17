@@ -509,3 +509,25 @@ a, button, [role="button"], [role="tab"] { touch-action: manipulation; }
         flex: 1 1 100% !important;
     }
 }
+
+/* Segmentos no lugar dos radios com bolinhas da seção Meta Ads. */
+[data-testid="stSegmentedControl"] {
+    max-width: 100%;
+}
+[data-testid="stSegmentedControl"] [role="radiogroup"] {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+}
+[data-testid="stSegmentedControl"] button,
+[data-testid="stSegmentedControl"] [role="radio"] {
+    min-height: 42px !important;
+    border-radius: 9px !important;
+    border: 1px solid var(--zenit-panel-border) !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+}
+[data-testid="stSegmentedControl"] [aria-checked="true"] {
+    background: rgba(255, 179, 0, 0.13) !important;
+    border-color: rgba(255, 179, 0, 0.4) !important;
+    color: #ffcf63 !important;
+}
