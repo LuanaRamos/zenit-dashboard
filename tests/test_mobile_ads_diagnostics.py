@@ -76,7 +76,8 @@ def test_version_marker_is_visible_in_sidebar():
 def test_ads_errors_have_diagnostic_action_not_only_global_fallback():
     c = APP.read_text(encoding="utf-8")
     assert "render_ads_diagnostic(" in c
-    assert "Testar acesso à conta" in c
+    diagnostic_source = (ROOT / "src/dashboard/ui/ads_diagnostics.py").read_text(encoding="utf-8")
+    assert "Testar acesso à conta" in diagnostic_source
 
 
 def test_compact_post_metrics_keep_coverage_in_single_diagnostic_section(monkeypatch):
@@ -105,9 +106,10 @@ def test_compact_post_metrics_keep_coverage_in_single_diagnostic_section(monkeyp
         lambda label, value, subtext=None, help_text=None:
             cap.metric_cards.append((label, value, subtext, help_text)),
     )
+    from types import SimpleNamespace
     media = [
-        {"like_count": 10, "comments_count": 2, "shares": 1, "saved": 0, "organic_views": 100},
-        {"like_count": None, "comments_count": 1, "shares": 1, "saved": 0, "organic_views": 50},
+        SimpleNamespace(like_count=10, comments_count=2, shares=1, saved=0, organic_views=100),
+        SimpleNamespace(like_count=None, comments_count=1, shares=1, saved=0, organic_views=50),
     ]
     organic_components.render_organic_metrics_cards(media)
     assert cap.columns_calls == [2, 2, 1]
