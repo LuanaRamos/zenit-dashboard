@@ -21,7 +21,7 @@ def configure_page():
         page_title="Zenit Analytics",
         page_icon=str(icon) if icon.exists() else ":material/analytics:",
         layout="wide",
-        initial_sidebar_state="auto",
+        initial_sidebar_state="collapsed",
     )
     css = DASHBOARD_DIR / "ui" / "style.css"
     if css.exists():
@@ -58,17 +58,23 @@ def render_ads_page(date_preset, time_range, client):
 
     st.title("Desempenho dos anúncios")
     st.caption(f"{client.name} · Meta Ads · Dados do período selecionado.")
-    with st.spinner("Carregando anúncios..."):
-        campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
+    try:
+        with st.spinner("Carregando anúncios..."):
+            campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
+    except Exception as error:
+        from ui.ads_diagnostics import render_ads_diagnostic
+        render_ads_diagnostic(client, error, stage="consulta de campanhas")
+        return
     if not campaigns:
         st.info("Nenhum resultado de anúncios disponível para este período.")
         return
 
     # Seleção explícita evita buscar público/criativos em cada visita ao resumo.
-    section = st.radio(
+    section = st.segmented_control(
         "Análise de anúncios",
-        ["Visão geral", "Público dos anúncios", "Criativos"],
-        horizontal=True,
+        options=["Visão geral", "Público dos anúncios", "Criativos"],
+        selection_mode="single",
+        default="Visão geral",
         label_visibility="collapsed",
         key=f"ads_section_{client.name}",
     )
@@ -290,7 +296,11 @@ def main():
 
         module, date_preset, time_range, client = render_sidebar()
         if module == "Visão Geral (Ads)":
-            render_ads_page(date_preset, time_range, client)
+            try:
+                render_ads_page(date_preset, time_range, client)
+            except Exception as error:
+                from ui.ads_diagnostics import render_ads_diagnostic
+                render_ads_diagnostic(client, error, stage="renderização dos anúncios")
         else:
             render_organic_page(date_preset, time_range, client)
     except Exception as error:
@@ -298,6 +308,8 @@ def main():
             "Não foi possível carregar esta área. Verifique a configuração da conta e tente novamente.",
             error,
         )
+    from ui.build_info import UI_BUILD_ID
+    st.caption(f"Zenit Analytics · build {UI_BUILD_ID}")
 
 
 if __name__ == "__main__":

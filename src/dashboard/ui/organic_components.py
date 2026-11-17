@@ -454,7 +454,7 @@ def render_account_engagement_summary(insights: dict) -> None:
 
 
 def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
-    """Show each engagement metric separately."""
+    """Mostra números, com cobertura em uma única seção recolhida."""
     st.markdown("### Desempenho das publicações")
     totals = aggregate_organic_metrics(list(media_list))
     cards = (
@@ -464,30 +464,37 @@ def render_organic_metrics_cards(media_list: List[InstagramMedia]) -> None:
         ("Salvamentos", "saved"),
         ("Visualizações orgânicas", "organic_views"),
     )
-
-    cols = st.columns(len(cards))
-    for column, (label, field) in zip(cols, cards):
-        aggregate = totals[field]
-        if aggregate.available == 0:
-            coverage = "Sem dados nos Media Insights"
-        elif aggregate.available < aggregate.selected:
-            coverage = (
-                f"Cobertura: {aggregate.available} de {aggregate.selected} publicações"
-            )
-        else:
-            coverage = f"Cobertura: {aggregate.selected} de {aggregate.selected} publicações"
-        with column:
-            render_metric_card(
-                label,
-                _format_optional_int(aggregate.total),
-                coverage,
-                "Soma dos resultados disponíveis nos Insights de cada publicação",
-            )
-
-    st.caption(
-        "Resultados acumulados das publicações selecionadas pela data de publicação; "
-        "não representam apenas interações ocorridas dentro do período filtrado."
-    )
+    coverage_rows: list[dict[str, Any]] = []
+    for offset in range(0, len(cards), 2):
+        selected = cards[offset:offset + 2]
+        cols = st.columns(len(selected))
+        for column, (label, field) in zip(cols, selected):
+            aggregate = totals[field]
+            coverage_rows.append({
+                "Indicador": label,
+                "Publicações com dados": aggregate.available,
+                "Publicações selecionadas": aggregate.selected,
+                "Status": (
+                    "Indisponível" if aggregate.available == 0
+                    else "Parcial" if aggregate.available < aggregate.selected
+                    else "Completo"
+                ),
+            })
+            with column:
+                render_metric_card(
+                    label,
+                    _format_optional_int(aggregate.total),
+                )
+    with st.expander("Cobertura dos indicadores", expanded=False):
+        st.caption(
+            "Valores acumulados desde a publicação de cada post, não apenas "
+            "interações recebidas dentro das datas filtradas pela data de publicação."
+        )
+        st.dataframe(
+            pd.DataFrame(coverage_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def render_meta_content_import(
@@ -859,16 +866,16 @@ def render_top_posts_and_comments(media_list: List[InstagramMedia]) -> None:
                 )
 
             post_link = (
-                f'<a href="{safe_permalink}" target="_blank" class="glass-link">'
+                f'<a href="{safe_permalink}" target="_blank" rel="noopener noreferrer" class="glass-link">'
                 "Ver no Instagram</a>"
                 if permalink
                 else ""
             )
 
-            html = f"""<div class="glass-card" style="padding:15px;text-align:center;height:100%;">
+            html = f"""<div class="glass-card zenit-post-card" style="padding:15px;text-align:center;height:100%;">
     {preview}
     {highlight_html}
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+    <div class="zenit-post-stats">
         <div><strong>{likes}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Curtidas orgânicas</span></div>
         <div><strong>{comments}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Comentários orgânicos</span></div>
         <div><strong>{views}</strong><br><span style="font-size:0.7rem;color:#c4c9ac;">Visualizações orgânicas</span></div>
