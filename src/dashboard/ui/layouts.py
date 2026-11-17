@@ -1,6 +1,7 @@
 import datetime
 import unicodedata
 import streamlit as st
+from ui.build_info import UI_BUILD_ID
 from streamlit_option_menu import option_menu
 from core.config import ClientConfig
 
@@ -232,8 +233,11 @@ def render_sidebar() -> tuple[str, str, dict[str, str] | None, "ClientConfig"]:
         version_file = Path(__file__).resolve().parents[3] / "VERSION"
         if version_file.exists():
             st.caption(
-                f"Zenit Analytics · v{version_file.read_text(encoding='utf-8').strip()}"
+                f"Zenit Analytics · v{version_file.read_text(encoding='utf-8').strip()} "
+                f"· build {UI_BUILD_ID}"
             )
+        else:
+            st.caption(f"Zenit Analytics · build {UI_BUILD_ID}")
 
         if st.button("Atualizar dados", use_container_width=True):
             st.cache_data.clear()
