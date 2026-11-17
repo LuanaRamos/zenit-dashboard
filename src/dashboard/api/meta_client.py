@@ -82,6 +82,16 @@ class MetaAdsClient:
                 "Não foi possível conectar aos servidores da Meta. Verifique sua conexão."
             )
 
+    def probe_ads_account(self) -> dict[str, bool]:
+        """Confirma leitura do cadastro da conta (GET, nenhuma alteração)."""
+        account = self._make_request(
+            self.ad_account_id, {"fields": "id,name,account_status"}
+        )
+        return {
+            "ok": str(account.get("id") or "") == self.ad_account_id
+            or str(account.get("id") or "") == self.ad_account_id.removeprefix("act_")
+        }
+
     def get_ads_history_range(self) -> dict[str, str]:
         """Maior janela retroativa consultável, limitada pela idade da conta.
 
@@ -218,43 +228,64 @@ class MetaAdsClient:
         else:
             params["date_preset"] = date_preset
 
-        insights = []
+        # Consulta resiliente: campos opcionais não podem impedir a leitura de
+        # investimento, impressões e ações. Não repetir falhas de permissão/token.
+        complete_fields = params["fields"]
+        without_profile_fields = complete_fields.replace(
+            ",instagram_profile_follow,instagram_profile_visits", ""
+        )
+        essential_fields = (
+            "campaign_name,campaign_id,objective,spend,impressions,clicks,actions"
+        )
+        field_profiles = list(dict.fromkeys((
+            complete_fields, without_profile_fields, essential_fields,
+        )))
+        insights: list[CampaignInsight] = []
         try:
             while True:
-                try:
-                    data = self._make_request(endpoint, params)
-                except MetaAPIError as exc:
-                    # Nem toda conta/consulta aceita os campos novos. A falha
-                    # não pode ocultar spend, impressões e ações tradicionais.
-                    if "instagram_profile_follow" not in params["fields"]:
-                        raise
-                    logger.warning(
-                        "Campos de seguidores/visitas não aceitos na consulta: %s", exc
+                data = None
+                last_field_error = None
+                for fields in field_profiles:
+                    params["fields"] = fields
+                    try:
+                        data = self._make_request(endpoint, params)
+                        break
+                    except MetaAPIError as exc:
+                        lowered = str(exc).casefold()
+                        if not any(token in lowered for token in (
+                            "unknown field", "unsupported field",
+                            "nonexisting field", "invalid field",
+                            "field not found", "campo inválido",
+                        )):
+                            raise
+                        last_field_error = exc
+                        logger.warning(
+                            "Campo não aceito na consulta de anúncios; "
+                            "tentando conjunto mínimo de métricas."
+                        )
+                if data is None:
+                    raise last_field_error or MetaAPIError(
+                        "Não foi possível consultar as campanhas."
                     )
-                    params["fields"] = params["fields"].replace(
-                        ",instagram_profile_follow,instagram_profile_visits", ""
-                    )
-                    data = self._make_request(endpoint, params)
-                insights_data = data.get("data") or []
-                
-                for item in insights_data:
+
+                for item in data.get("data") or []:
                     try:
                         insights.append(CampaignInsight.from_api_response(item))
-                    except Exception as e:
-                        logger.error(f"Erro ao converter insight da campanha: {e}")
-                        sentry_sdk.capture_exception(e)
-                
-                paging = data.get("paging", {})
+                    except (ValueError, TypeError) as exc:
+                        logger.warning("Insight de campanha malformado: %s", type(exc).__name__)
+                        sentry_sdk.capture_exception(exc)
+
+                paging = data.get("paging") or {}
                 if not paging.get("next"):
                     break
                 next_cursor = (paging.get("cursors") or {}).get("after")
                 if not next_cursor or next_cursor == params.get("after"):
                     raise MetaAPIError("Paginação da Meta com cursor ausente ou repetido.")
                 params["after"] = next_cursor
-        except Exception as e:
-            logger.error(f"Erro durante paginação de campanhas: {e}")
-            sentry_sdk.capture_exception(e)
-            raise e
+        except Exception as exc:
+            logger.exception("Falha ao consultar Insights de campanhas")
+            sentry_sdk.capture_exception(exc)
+            raise
 
         return insights
 
