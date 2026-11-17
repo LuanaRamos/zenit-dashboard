@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from api.exceptions import MetaAPIError
-from ui import ads_diagnostics, organic_components
+from ui import organic_components
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +25,7 @@ LAYOUT = ROOT / "src/dashboard/ui/layouts.py"
     ],
 )
 def test_safe_ads_error_classification(message, expected):
+    from ui import ads_diagnostics
     result = ads_diagnostics.classify_ads_error(MetaAPIError(message))
     assert result["code"] == expected
     assert "title" in result and "action" in result
