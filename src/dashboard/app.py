@@ -21,7 +21,7 @@ def configure_page():
         page_title="Zenit Analytics",
         page_icon=str(icon) if icon.exists() else ":material/analytics:",
         layout="wide",
-        initial_sidebar_state="auto",
+        initial_sidebar_state="collapsed",
     )
     css = DASHBOARD_DIR / "ui" / "style.css"
     if css.exists():
@@ -58,8 +58,13 @@ def render_ads_page(date_preset, time_range, client):
 
     st.title("Desempenho dos anúncios")
     st.caption(f"{client.name} · Meta Ads · Dados do período selecionado.")
-    with st.spinner("Carregando anúncios..."):
-        campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
+    try:
+        with st.spinner("Carregando anúncios..."):
+            campaigns = fetch_campaigns_v8(date_preset, time_range, client.name)
+    except Exception as error:
+        from ui.ads_diagnostics import render_ads_diagnostic
+        render_ads_diagnostic(client, error, stage="consulta de campanhas")
+        return
     if not campaigns:
         st.info("Nenhum resultado de anúncios disponível para este período.")
         return
@@ -290,7 +295,11 @@ def main():
 
         module, date_preset, time_range, client = render_sidebar()
         if module == "Visão Geral (Ads)":
-            render_ads_page(date_preset, time_range, client)
+            try:
+                render_ads_page(date_preset, time_range, client)
+            except Exception as error:
+                from ui.ads_diagnostics import render_ads_diagnostic
+                render_ads_diagnostic(client, error, stage="renderização dos anúncios")
         else:
             render_organic_page(date_preset, time_range, client)
     except Exception as error:
